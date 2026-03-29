@@ -2428,6 +2428,15 @@ function createTokenEl(token) {
   });
   el.addEventListener('mousedown', e => {
     if (e.button === 2) return; // botão direito reservado para pan do mapa
+    // Régua: inicia a medição a partir do centro do token
+    if (ACTIVE_TOOL === 'ruler' && e.button === 0) {
+      e.stopPropagation();
+      isMeasuring = true;
+      measureStartX = token.x;
+      measureStartY = token.y;
+      updateRuler(measureStartX, measureStartY, measureStartX, measureStartY);
+      return;
+    }
     e.stopPropagation();
     // Somente GM ou dono do token pode arrastar
     const canDrag = SESSION.role === 'gm' || token.playerId === SESSION.pid;
