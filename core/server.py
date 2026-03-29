@@ -110,7 +110,15 @@ else:
     APP_DIR      = PROJECT_DIR / 'app'
     STATIC_CORE_DIR = PROJECT_DIR / 'core'
 
-DATA_DIR      = PROJECT_DIR / 'data'
+import platform
+if getattr(sys, 'frozen', False):
+    DATA_DIR = PROJECT_DIR / 'data'
+else:
+    if platform.system() == 'Linux':
+        DATA_DIR = Path.home() / '.TartantisVTT' / 'data'
+    else:
+        DATA_DIR = PROJECT_DIR / 'data'
+
 GM_PASS_FILE  = DATA_DIR / 'gm-password.txt'
 CAMPAIGNS_DIR = DATA_DIR / 'campaigns'
 IMAGES_DIR    = DATA_DIR / 'images'
