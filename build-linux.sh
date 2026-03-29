@@ -84,8 +84,17 @@ except: print('127.0.0.1')
 ")
 URL="http://${LOCAL_IP}:${PORT}/portal.html"
 
-command -v xdg-open &>/dev/null && { xdg-open "$URL" >/dev/null 2>&1 & exit 0; }
-notify-send "Tartantis VTT" "Acesse: $URL" 2>/dev/null || echo "Abra: $URL"
+command -v xdg-open &>/dev/null && { xdg-open "$URL" >/dev/null 2>&1 & }
+
+if command -v zenity &>/dev/null; then
+  zenity --info --title="Tartantis VTT" --text="O Servidor do Tartantis VTT está rodando!\nO jogo foi aberto no seu navegador padrão.\n\nFeche esta janela (ou clique OK) para desligar o servidor."
+else
+  python3 -c "import tkinter as tk; root=tk.Tk(); root.title('Tartantis VTT'); root.geometry('350x120'); tk.Label(root, text='O Servidor do Tartantis VTT está rodando!\nO jogo foi aberto no navegador.\n\nFeche esta janela para desligar.', justify='center').pack(expand=True); root.mainloop()" 2>/dev/null
+fi
+
+[ -f "$PIDFILE" ] && kill "$(cat "$PIDFILE")" 2>/dev/null
+rm -f "$PIDFILE"
+exit 0
 APPRUN
 chmod +x "$APPDIR/AppRun"
 

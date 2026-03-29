@@ -115,11 +115,23 @@ def main():
 
     webbrowser.open(url)
 
-    if is_frozen:
-        while True:
-            time.sleep(1)
-    else:
-        server_proc.wait()
+    def run_gui():
+        import tkinter as tk
+        root = tk.Tk()
+        root.title("Tartantis VTT")
+        root.geometry("350x120")
+        
+        icon_path = BASE_DIR / 'assets' / 'icon.ico'
+        if icon_path.exists():
+            try:
+                root.iconbitmap(str(icon_path))
+            except: pass
+            
+        tk.Label(root, text="O Servidor do Tartantis VTT está rodando!\nO jogo foi aberto no seu navegador padrão.\n\nFeche esta janela para desligar o servidor e encerrar.", justify="center").pack(expand=True)
+        root.mainloop()
+        os._exit(0)
+
+    run_gui()
 
 
 if __name__ == '__main__':
