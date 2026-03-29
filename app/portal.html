@@ -680,7 +680,7 @@ async function loadShareInfo(c) {
 
 function copyLink(t) {
   if(!_camp||!_sinfo)return;
-  const sfx=`?join=${_camp.code}`;
+  const sfx=`/portal.html?join=${_camp.code}`;
   const m={lan:_sinfo.localUrl,pub:_sinfo.publicUrl,tun:_sinfo.tunnelUrl};
   const url=(m[t]||'')+sfx;
   if(!m[t]){toast('✦ Link não disponível.');return;}

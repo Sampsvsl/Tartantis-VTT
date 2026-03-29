@@ -354,8 +354,12 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         elif p.startswith('/api/lobby/'):   self._lobby_public(p)
         elif p.startswith('/api/room/'):    self._room_get(p)
         elif p.startswith('/core/'):        self._serve_static(STATIC_CORE_DIR / p.replace('/core/', '', 1), base_dir=STATIC_CORE_DIR)
-        elif p in ('/', ''):               self._redirect('/portal.html')
-        elif p == '/index.html':           self._redirect('/portal.html')
+        elif p in ('/', ''):
+            qs = ('?' + self.path.split('?', 1)[1]) if '?' in self.path else ''
+            self._redirect('/portal.html' + qs)
+        elif p == '/index.html':
+            qs = ('?' + self.path.split('?', 1)[1]) if '?' in self.path else ''
+            self._redirect('/portal.html' + qs)
         else:                               super().do_GET()
 
     def do_OPTIONS(self):
