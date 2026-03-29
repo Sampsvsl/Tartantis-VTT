@@ -84,10 +84,6 @@ except: print('127.0.0.1')
 ")
 URL="http://${LOCAL_IP}:${PORT}/portal.html"
 
-for b in chromium chromium-browser google-chrome google-chrome-stable; do
-  command -v "$b" &>/dev/null && { "$b" --app="$URL" --window-size=1280,820 >/dev/null 2>&1 & exit 0; }
-done
-command -v firefox  &>/dev/null && { firefox  "$URL" >/dev/null 2>&1 & exit 0; }
 command -v xdg-open &>/dev/null && { xdg-open "$URL" >/dev/null 2>&1 & exit 0; }
 notify-send "Tartantis VTT" "Acesse: $URL" 2>/dev/null || echo "Abra: $URL"
 APPRUN
