@@ -1,18 +1,16 @@
 # ⚔ Tartantis VTT
 
+![Build](https://github.com/Sampsvsl/Tartantis-VTT/actions/workflows/build.yml/badge.svg)
+
 **A mesa virtual de RPG gratuita, open source e feita de fã para fãs de Mighty Blade.**
 
 Sem assinatura. Sem servidor pago. Sem complicação. Você baixa, clica duas vezes e está jogando em segundos — com seus amigos, pela sua própria rede.
-
----
 
 ## 🐉 O que é o Tartantis VTT?
 
 O Tartantis VTT é um **Virtual Tabletop (VTT)** criado especialmente para mesas de **Mighty Blade**, rodando 100% na sua máquina como um servidor local. O Mestre sobe o servidor, os jogadores entram pelo browser — sem precisar instalar nada.
 
 Pensa nele como o Foundry VTT, mas gratuito, leve e com a identidade visual do universo de Tartantis.
-
----
 
 ## ✨ Funcionalidades
 
@@ -43,8 +41,6 @@ Pensa nele como o Foundry VTT, mas gratuito, leve e com a identidade visual do u
 - Chat em tempo real via WebSocket
 - Todos os dados, tokens e mapa sincronizam instantaneamente entre todos os jogadores
 
----
-
 ## 🚀 Como instalar
 
 ### Windows
@@ -52,19 +48,18 @@ Pensa nele como o Foundry VTT, mas gratuito, leve e com a identidade visual do u
 2. Execute — ele abre o firewall automaticamente e inicia o servidor
 3. Compartilhe o link exibido na tela para os jogadores entrarem
 
+### macOS
+1. Baixe o `TartantisVTT-macOS.zip` na [página de releases](../../releases/latest)
+2. Extraia o `.zip` e mova o `TartantisVTT.app` para a pasta Aplicativos
+3. Na primeira vez, clique com botão direito → **Abrir** (necessário para bypass do Gatekeeper)
+4. O servidor inicia e o portal abre automaticamente no browser
+
 ### Linux (AppImage)
 1. Baixe o `.AppImage` na [página de releases](../../releases/latest)
 2. Dê permissão de execução e rode:
 ```bash
 chmod +x TartantisVTT-x86_64.AppImage
 ./TartantisVTT-x86_64.AppImage
-```
-
-### Linux / macOS (código fonte)
-```bash
-git clone https://github.com/Sampsvsl/Tartantis-VTT.git
-cd Tartantis-VTT
-bash install.sh
 ```
 
 ### Raspberry Pi (servidor 24/7)
@@ -76,8 +71,6 @@ python3 core/server.py
 ```
 Os jogadores acessam pelo IP da Raspberry na porta **30000** de qualquer dispositivo na rede.
 
----
-
 ## 🌐 Jogando com amigos pela internet
 
 O Tartantis usa a porta **30000** (a mesma do Foundry VTT).
@@ -86,24 +79,24 @@ O Tartantis usa a porta **30000** (a mesma do Foundry VTT).
 
 **Pela internet:** use o túnel Cloudflare integrado no portal do Mestre, ou faça port-forward da porta **30000** no seu roteador.
 
----
-
 ## 🛠 Build (para desenvolvedores)
 
-### Linux — AppImage
-```bash
-bash build-linux.sh
-```
+Os builds são gerados automaticamente pelo GitHub Actions a cada nova tag de versão — o release sai com `.exe`, `.AppImage` e `.app` já prontos.
 
-### Windows — EXE
+Para buildar localmente:
+
 ```bash
-cd windows
-build.bat
+# Linux — AppImage
+bash build-linux.sh
+
+# macOS — .app
+bash build-macos.sh
+
+# Windows — EXE
+cd windows && build.bat
 ```
 
 Dependências: **Python 3.8+** (sem bibliotecas externas — tudo na stdlib).
-
----
 
 ## ☕ Apoie o Projeto
 
@@ -111,13 +104,8 @@ O Tartantis é feito de fã para fãs, **100% gratuito e open source**. Se o VTT
 
 👉 **[Apoie o Tartantis no Apoia.se](https://apoia.se)**
 
----
-
 ## 📜 Licença
 
 Distribuído sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
----
-
-*Um grande abraço e boas rolagens,*
-*Samps* ⚔
+*Um grande abraço e boas rolagens, Samps* ⚔
