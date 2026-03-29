@@ -2012,8 +2012,21 @@ function mapMouseDown(e) {
     isMeasuring = true;
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     const gs = MAP_DATA.gridSize || 50;
-    measureStartX = Math.floor(mx / gs) * gs + gs / 2;
-    measureStartY = Math.floor(my / gs) * gs + gs / 2;
+    const clickedCol = Math.floor(mx / gs);
+    const clickedRow = Math.floor(my / gs);
+    // Verifica se há um token no mesmo quadrado do clique
+    const tokenNoQuadrado = Array.isArray(MAP_DATA.tokens) && MAP_DATA.tokens.find(t => {
+      const tCol = Math.floor(t.x / gs);
+      const tRow = Math.floor(t.y / gs);
+      return tCol === clickedCol && tRow === clickedRow;
+    });
+    if (tokenNoQuadrado) {
+      measureStartX = tokenNoQuadrado.x;
+      measureStartY = tokenNoQuadrado.y;
+    } else {
+      measureStartX = clickedCol * gs + gs / 2;
+      measureStartY = clickedRow * gs + gs / 2;
+    }
     updateRuler(measureStartX, measureStartY, measureStartX, measureStartY);
     return;
   }
