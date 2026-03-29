@@ -15,7 +15,7 @@ set -e
 
 BOLD="\033[1m"; GOLD="\033[33m"; GREEN="\033[32m"; RED="\033[31m"; DIM="\033[2m"; RESET="\033[0m"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PORT=3000
+PORT=30000
 MODE="${1:-}"
 
 _header() {

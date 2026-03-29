@@ -1,6 +1,6 @@
 """
 Tartantis VTT — Windows Launcher
-Abre a porta 3000 no firewall, inicia o servidor Python e abre o browser.
+Abre a porta 30000 no firewall, inicia o servidor Python e abre o browser.
 """
 import os
 import sys
@@ -26,7 +26,7 @@ import re
 import platform
 from pathlib import Path
 
-PORT = 3000
+PORT = 30000
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent

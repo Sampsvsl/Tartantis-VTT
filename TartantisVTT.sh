@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════
 #  Tartantis VTT — Launcher Linux
-#  Abre a porta 3000, inicia o servidor e abre o browser.
+#  Abre a porta 30000, inicia o servidor e abre o browser.
 #  Funciona tanto pelo terminal quanto pelo ícone do sistema.
 # ═══════════════════════════════════════════════════════════
 
-PORT=3000
+PORT=30000
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIDFILE="$DIR/.server.pid"
 LOGFILE="$DIR/.server.log"
@@ -25,7 +25,7 @@ if ! command -v python3 &>/dev/null; then
   exit 1
 fi
 
-# ── Abre a porta 3000 no firewall (como o Foundry faz) ────
+# ── Abre a porta 30000 no firewall (como o Foundry faz) ────
 _open_port() {
   local port=$1
   # Tenta via pkexec (diálogo gráfico) primeiro, depois sudo silencioso

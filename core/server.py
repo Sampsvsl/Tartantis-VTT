@@ -99,7 +99,7 @@ def _ws_recv_frame(sock):
     payload=rx(ln) if ln else b''
     if masked:payload=bytes(b^mask[i%4] for i,b in enumerate(payload))
     return op,payload
-PORT = 3000
+PORT = 30000
 
 if getattr(sys, 'frozen', False):
     PROJECT_DIR  = Path(sys.executable).parent.resolve()

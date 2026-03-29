@@ -44,7 +44,7 @@ mkdir -p "$SHARE/data"
 # ── AppRun ───────────────────────────────────────────────────────
 cat > "$APPDIR/AppRun" << 'APPRUN'
 #!/usr/bin/env bash
-PORT=3000
+PORT=30000
 SELF="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 APP="$SELF/usr/share/tartantis"
 PIDFILE="$HOME/.tvtt.pid"
