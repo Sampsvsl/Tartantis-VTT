@@ -366,6 +366,12 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         self._cors_headers(200)
         self.end_headers()
 
+    def end_headers(self):
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
+        super().end_headers()
+
     # ── Helpers base ──────────────────────────────────────
     def _body(self) -> dict:
         n   = int(self.headers.get('Content-Length', 0))
