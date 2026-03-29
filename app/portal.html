@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tartantis VTT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&display=swap">
+<link rel="stylesheet" href="../core/tvtt-shared.css">
+<style>
+/* ═══════════════════════════════════════
+   LAYOUT BASE
+═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--pale);
+  font-family: 'Cinzel', serif;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#particles { position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden; }
+.pt { position:absolute;width:2px;height:2px;background:var(--ember);border-radius:50%;opacity:0;animation:float-up linear infinite; }
+@keyframes float-up { 0%{transform:translateY(0) scale(1);opacity:0}10%{opacity:.6}90%{opacity:.2}100%{transform:translateY(-100vh) scale(.3);opacity:0} }
+
+.stage-wrap { position:relative;z-index:10;width:100%;max-width:560px;padding:20px;animation:fadeIn .4s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1} }
+
+/* Logo */
+.logo-wrap { text-align:center;margin-bottom:22px; }
+.logo-title { font-family:'Cinzel Decorative',cursive;font-size:clamp(1.5rem,4vw,2.2rem);font-weight:700;color:var(--gold);text-shadow:0 0 28px rgba(212,168,67,.5),0 2px 4px rgba(0,0,0,.8);letter-spacing:.12em;line-height:1; }
+.logo-sub { font-size:.58rem;letter-spacing:.28em;color:var(--dim);text-transform:uppercase;margin-top:5px; }
+
+/* Painel */
+.panel { background:linear-gradient(160deg,rgba(28,23,18,.97) 0%,rgba(17,14,10,.99) 100%);border:1px solid rgba(200,113,42,.25);border-radius:2px;padding:26px 30px;position:relative;box-shadow:0 0 0 1px rgba(200,113,42,.07),0 20px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(212,168,67,.08); }
+.panel::before{content:'✦';position:absolute;top:8px;left:12px;font-size:10px;color:var(--ember);opacity:.5}
+.panel::after{content:'✦';position:absolute;bottom:8px;right:12px;font-size:10px;color:var(--ember);opacity:.5}
+.panel-title { font-size:1.2rem;letter-spacing:.1em;color:var(--gold);text-align:center;margin-bottom:4px; }
+.panel-sub { font-size:.58rem;letter-spacing:.22em;color:var(--dim);text-align:center;margin-bottom:20px;text-transform:uppercase; }
+hr.divider { border:none;border-top:1px solid rgba(200,113,42,.18);margin:16px 0; }
+
+/* Botões */
+.btn { width:100%;padding:11px 20px;border-radius:2px;cursor:pointer;font-family:'Cinzel',serif;font-size:.8rem;letter-spacing:.15em;text-transform:uppercase;transition:all .18s;border:1px solid transparent;margin-bottom:7px;display:block; }
+.btn:last-child{margin-bottom:0}.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-gm    { background:linear-gradient(135deg,rgba(200,113,42,.25),rgba(139,26,26,.15));border-color:rgba(200,113,42,.4);color:var(--gold); }
+.btn-gm:hover:not(:disabled)    { background:rgba(200,113,42,.35);border-color:var(--ember);box-shadow:0 0 16px rgba(200,113,42,.2); }
+.btn-player{ background:linear-gradient(135deg,rgba(58,122,170,.2),rgba(30,70,110,.15));border-color:rgba(58,122,170,.4);color:#7ab4d4; }
+.btn-player:hover:not(:disabled){ background:rgba(58,122,170,.3);border-color:#7ab4d4; }
+.btn-green { background:linear-gradient(135deg,rgba(80,184,80,.2),rgba(40,100,40,.15));border-color:rgba(80,184,80,.4);color:#90c090; }
+.btn-green:hover:not(:disabled) { background:rgba(80,184,80,.3); }
+.btn-ghost { background:transparent;border-color:rgba(200,113,42,.18);color:var(--dim);font-size:.63rem; }
+.btn-ghost:hover { color:var(--pale);border-color:var(--border-h); }
+.btn-danger{ background:rgba(139,26,26,.15);border-color:rgba(139,26,26,.35);color:#c84040;font-size:.68rem; }
+.btn-danger:hover { background:rgba(139,26,26,.3); }
+.btn-sm { padding:4px 9px;font-size:.6rem;letter-spacing:.08em;border-radius:2px;cursor:pointer;border:1px solid;font-family:'Cinzel',serif;text-transform:uppercase;transition:all .15s;display:inline-block;margin:0;width:auto; }
+.btn-sm.key { border-color:rgba(212,168,67,.3);color:var(--gold);background:rgba(212,168,67,.08); }
+.btn-sm.key:hover { background:rgba(212,168,67,.2); }
+.btn-sm.rm  { border-color:rgba(139,26,26,.35);color:#c84040;background:rgba(139,26,26,.1); }
+.btn-sm.rm:hover  { background:rgba(139,26,26,.28); }
+
+/* Inputs */
+.field-group { margin-bottom:13px; }
+.field-group label { display:block;font-size:.58rem;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;margin-bottom:5px; }
+.field-group input { width:100%;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(200,113,42,.25);border-radius:2px;color:var(--pale);font-family:'Cinzel',serif;font-size:.8rem;outline:none;transition:border-color .15s; }
+.field-group input:focus { border-color:rgba(200,113,42,.6); }
+.field-group input::placeholder { color:var(--dim); }
+
+/* Lista de campanhas */
+.campaign-list { display:flex;flex-direction:column;gap:7px;margin-bottom:14px; }
+.campaign-card { display:flex;align-items:center;gap:11px;padding:11px 13px;background:rgba(200,113,42,.06);border:1px solid rgba(200,113,42,.18);border-radius:2px;cursor:pointer;transition:all .18s; }
+.campaign-card:hover { background:rgba(200,113,42,.13);border-color:rgba(200,113,42,.4);box-shadow:0 0 12px rgba(200,113,42,.1); }
+.campaign-card.active-camp { border-color:rgba(212,168,67,.45);background:rgba(212,168,67,.08); }
+.campaign-icon { font-size:1.3rem;opacity:.8;flex-shrink:0; }
+.campaign-info { flex:1;min-width:0; }
+.campaign-name { font-size:.88rem;letter-spacing:.08em;color:var(--pale);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.campaign-meta { font-size:.58rem;letter-spacing:.12em;color:var(--dim);margin-top:3px; }
+.campaign-arrow { color:var(--ember);font-size:.9rem;opacity:.7;flex-shrink:0; }
+
+/* Lobby */
+.lobby-header { text-align:center;margin-bottom:16px; }
+.lobby-camp-name { font-size:1.05rem;letter-spacing:.1em;color:var(--gold); }
+.lobby-code { font-size:.58rem;letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-top:3px; }
+.player-slots { display:flex;flex-direction:column;gap:6px;margin-bottom:12px; }
+.player-slot { display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid rgba(255,255,255,.08);border-radius:2px;background:rgba(255,255,255,.03);transition:all .18s; }
+.player-slot.clickable { cursor:pointer; }
+.player-slot.clickable:hover { background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.18); }
+.slot-color { width:9px;height:34px;border-radius:1px;flex-shrink:0; }
+.slot-name { flex:1;font-size:.8rem;letter-spacing:.08em;color:var(--pale); }
+.slot-badge { font-size:.52rem;letter-spacing:.12em;padding:3px 7px;border-radius:1px;text-transform:uppercase; }
+.slot-badge.locked { background:rgba(139,26,26,.25);color:#c87070;border:1px solid rgba(139,26,26,.3); }
+.slot-badge.open   { background:rgba(80,184,80,.15);color:#90c090;border:1px solid rgba(80,184,80,.25); }
+.slot-badge.active { background:rgba(212,168,67,.18);color:var(--gold);border:1px solid rgba(212,168,67,.3); }
+.slot-actions { display:flex;gap:5px;flex-shrink:0; }
+
+/* Cores */
+.color-row { display:flex;gap:7px;flex-wrap:wrap;margin-top:7px; }
+.color-opt { width:23px;height:23px;border-radius:2px;cursor:pointer;border:2px solid transparent;transition:all .15s; }
+.color-opt.sel,.color-opt:hover { border-color:var(--gold);transform:scale(1.15); }
+
+/* Share */
+.share-block { margin-bottom:10px; }
+.share-label { font-size:.6rem;letter-spacing:.15em;color:var(--dim);text-transform:uppercase;margin-bottom:4px; }
+.share-badge { font-size:.48rem;padding:2px 5px;border-radius:1px;margin-left:5px; }
+.share-badge-opt { background:rgba(200,113,42,.2);color:var(--ember);border:1px solid rgba(200,113,42,.25); }
+.share-row { display:flex;gap:7px;align-items:center; }
+.share-url { flex:1;font-family:monospace;font-size:.68rem;color:var(--pale);background:rgba(255,255,255,.04);border:1px solid rgba(200,113,42,.18);border-radius:2px;padding:5px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.share-copy-btn { padding:5px 10px;font-size:.58rem;letter-spacing:.1em;background:rgba(200,113,42,.15);border:1px solid rgba(200,113,42,.3);color:var(--ember);border-radius:2px;cursor:pointer;font-family:'Cinzel',serif;text-transform:uppercase;transition:all .15s;white-space:nowrap; }
+.share-copy-btn:hover:not(:disabled){ background:rgba(200,113,42,.3); }
+.share-copy-btn:disabled { opacity:.4;cursor:not-allowed; }
+.share-hint { font-size:.6rem;color:var(--dim);margin-top:4px;line-height:1.5; }
+
+/* Modais */
+.modal-overlay { display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:linear-gradient(160deg,rgba(28,23,18,.99),rgba(17,14,10,.99));border:1px solid rgba(200,113,42,.4);border-radius:2px;padding:26px 30px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.85);animation:fadeIn .22s ease; }
+.modal-title { font-size:1rem;letter-spacing:.1em;color:var(--gold);text-align:center;margin-bottom:4px; }
+.modal-sub   { font-size:.56rem;letter-spacing:.2em;color:var(--dim);text-align:center;margin-bottom:18px;text-transform:uppercase; }
+.modal-error { color:#e05555;font-size:.7rem;min-height:17px;margin-bottom:9px;text-align:center; }
+
+/* Misc */
+.version { position:fixed;bottom:10px;right:14px;font-size:.5rem;letter-spacing:.15em;color:rgba(112,96,80,.4);z-index:5; }
+.toast { position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:rgba(200,113,42,.92);color:#fff;padding:7px 18px;border-radius:2px;font-size:.7rem;letter-spacing:.1em;opacity:0;transition:opacity .3s;z-index:99999;pointer-events:none;white-space:nowrap; }
+.toast.show { opacity:1; }
+.empty-state { text-align:center;color:var(--dim);font-size:.7rem;letter-spacing:.14em;padding:22px 0; }
+.sec-header { font-size:.58rem;letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-bottom:9px; }
+.scrollable { max-height:52vh;overflow-y:auto;padding-right:3px; }
+.scrollable::-webkit-scrollbar { width:3px; }
+.scrollable::-webkit-scrollbar-thumb { background:rgba(200,113,42,.3);border-radius:2px; }
+.loading-dots::after { content:'...';animation:dots 1.2s infinite; }
+@keyframes dots{0%,100%{content:'.'}33%{content:'..'}66%{content:'...'}}
+</style>
+</head>
+<body>
+
+<div id="particles"></div>
+
+<div class="stage-wrap" id="app">
+  <div class="logo-wrap">
+    <div class="logo-title">⚔ Tartantis VTT</div>
+    <div class="logo-sub">Mesa Virtual</div>
+  </div>
+
+  <!-- ══ LOADING ══ -->
+  <div id="s-loading" class="panel" style="text-align:center;padding:30px 20px;">
+    <div style="font-size:.78rem;color:var(--dim);letter-spacing:.2em;">CARREGANDO<span class="loading-dots"></span></div>
+  </div>
+
+  <!-- ══ GM SETUP — primeiro uso ══ -->
+  <div id="s-gm-setup" class="panel" style="display:none;">
+    <div class="panel-title">⚔ Configurar Acesso</div>
+    <div class="panel-sub">Primeiro uso — defina sua senha de Mestre</div>
+    <p style="font-size:.74rem;color:var(--dim);margin-bottom:16px;text-align:center;line-height:1.6;">
+      Esta senha protege o painel do Mestre.<br>Pode ser redefinida em <span style="color:var(--gold);font-family:monospace;font-size:.7rem;">data/gm-password.txt</span>
+    </p>
+    <div class="field-group">
+      <label>Nova Senha</label>
+      <input type="password" id="setup-p1" placeholder="Mínimo 4 caracteres"
+             onkeydown="if(event.key==='Enter')document.getElementById('setup-p2').focus()">
+    </div>
+    <div class="field-group">
+      <label>Confirmar Senha</label>
+      <input type="password" id="setup-p2" placeholder="Repita a senha"
+             onkeydown="if(event.key==='Enter')doSetup()">
+    </div>
+    <div class="modal-error" id="setup-err"></div>
+    <button class="btn btn-gm" onclick="doSetup()">⚔ Criar Senha e Entrar</button>
+  </div>
+
+  <!-- ══ GM LOGIN ══ -->
+  <div id="s-gm-login" class="panel" style="display:none;">
+    <div class="panel-title">⚔ Acesso do Mestre</div>
+    <div class="panel-sub">Digite a senha para continuar</div>
+    <div class="field-group">
+      <label>Senha</label>
+      <input type="password" id="login-pass" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="modal-error" id="login-err"></div>
+    <button class="btn btn-gm" id="login-btn" onclick="doLogin()">⚔ Entrar como Mestre</button>
+  </div>
+
+  <!-- ══ CAMPANHAS ══ -->
+  <div id="s-campaigns" class="panel" style="display:none;max-width:520px;">
+    <div class="panel-title">⚔ Campanhas</div>
+    <div class="panel-sub">Selecione ou crie uma campanha</div>
+    <div class="scrollable">
+      <div class="campaign-list" id="campaign-list">
+        <div class="empty-state">✦ Nenhuma campanha ainda</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <button class="btn btn-gm" onclick="show('s-create')">＋ Nova Campanha</button>
+    <button class="btn btn-ghost" onclick="doLogout()" style="margin-top:3px;">Sair / Trocar Conta</button>
+  </div>
+
+  <!-- ══ CRIAR CAMPANHA ══ -->
+  <div id="s-create" class="panel" style="display:none;">
+    <div class="panel-title">＋ Nova Campanha</div>
+    <div class="panel-sub">Nomeie sua aventura</div>
+    <div class="field-group">
+      <label>Nome da Campanha</label>
+      <input type="text" id="create-name" placeholder="Ex: A Lâmina Perdida"
+             onkeydown="if(event.key==='Enter')doCreate()">
+    </div>
+    <div class="modal-error" id="create-err"></div>
+    <button class="btn btn-gm" onclick="doCreate()">⚔ Criar Campanha</button>
+    <button class="btn btn-ghost" onclick="show('s-campaigns')">Cancelar</button>
+  </div>
+
+  <!-- ══ LOBBY ══ -->
+  <div id="s-lobby" class="panel" style="display:none;max-width:600px;">
+    <div class="lobby-header">
+      <div class="lobby-camp-name" id="lobby-camp-name">—</div>
+      <div class="lobby-code">Código · <strong id="lobby-camp-code" style="color:var(--ember);">——</strong></div>
+    </div>
+
+    <!-- Slot Mestre -->
+    <div class="player-slot" id="gm-slot" style="border-color:rgba(212,168,67,.35);background:rgba(212,168,67,.06);margin-bottom:9px;cursor:pointer;" onclick="enterAsGM()">
+      <div class="slot-color" style="background:var(--gold);"></div>
+      <div class="slot-name" style="color:var(--gold);">⚔ Mestre</div>
+      <span class="slot-badge active">Entrar</span>
+    </div>
+
+    <!-- Jogadores -->
+    <div class="sec-header">Aventureiros</div>
+    <div class="player-slots scrollable" id="player-slots" style="max-height:36vh;"></div>
+
+    <!-- Controles GM -->
+    <div id="lobby-gm-ctrl">
+      <hr class="divider">
+      <button class="btn btn-ghost" onclick="openAddPlayer()">＋ Adicionar Aventureiro</button>
+
+      <div class="sec-header" style="margin-top:14px;">🔗 Compartilhar com Jogadores</div>
+      <div class="share-block">
+        <div class="share-label">🏠 Rede Local (LAN)</div>
+        <div class="share-row">
+          <div class="share-url" id="sh-lan">—</div>
+          <button class="share-copy-btn" onclick="copyLink('lan')">Copiar</button>
+        </div>
+      </div>
+      <div class="share-block">
+        <div class="share-label">🌐 Link Público <span class="share-badge share-badge-opt">port-forward</span></div>
+        <div class="share-row">
+          <div class="share-url" id="sh-pub">—</div>
+          <button class="share-copy-btn" id="sh-pub-btn" disabled onclick="copyLink('pub')">Copiar</button>
+        </div>
+        <div class="share-hint">No roteador: encaminhe a porta TCP 3000 para este PC.</div>
+      </div>
+      <div class="share-block">
+        <div class="share-label">⚡ Túnel Cloudflare <span class="share-badge share-badge-opt">opcional</span></div>
+        <div class="share-row">
+          <div class="share-url" id="sh-tun">—</div>
+          <button class="share-copy-btn" id="sh-tun-btn" disabled onclick="copyLink('tun')">Copiar</button>
+        </div>
+        <div class="share-hint" id="sh-tun-hint"></div>
+      </div>
+
+      <hr class="divider">
+      <button class="btn btn-ghost" onclick="loadCampaigns()">← Voltar às Campanhas</button>
+      <button class="btn btn-danger" onclick="confirmDeleteCampaign()" style="margin-top:3px;">Apagar esta Campanha</button>
+    </div>
+
+    <!-- Info jogador -->
+    <div id="lobby-player-ctrl" style="display:none;">
+      <hr class="divider">
+      <div style="text-align:center;font-size:.68rem;color:var(--dim);letter-spacing:.14em;">Clique no seu personagem para entrar.</div>
+    </div>
+  </div>
+
+  <!-- ══ JOIN (código manual) ══ -->
+  <div id="s-join" class="panel" style="display:none;">
+    <div class="panel-title">🎲 Entrar na Mesa</div>
+    <div class="panel-sub">Digite o código recebido do Mestre</div>
+    <div class="field-group">
+      <input type="text" id="join-code" placeholder="Ex: MB7K2P" maxlength="10"
+             style="text-transform:uppercase;letter-spacing:.2em;font-size:1.1rem;text-align:center;"
+             onkeydown="if(event.key==='Enter')doJoin()">
+    </div>
+    <div class="modal-error" id="join-err"></div>
+    <button class="btn btn-player" onclick="doJoin()">🎲 Buscar Sala</button>
+  </div>
+</div><!-- /app -->
+
+<!-- ═══════ MODAIS ═══════ -->
+
+<!-- Adicionar Jogador -->
+<div class="modal-overlay" id="m-add">
+  <div class="modal-box">
+    <div class="modal-title">＋ Novo Aventureiro</div>
+    <div class="modal-sub">Nome e cor do personagem</div>
+    <div class="field-group">
+      <label>Nome</label>
+      <input type="text" id="add-name" placeholder="Ex: Aragorn" onkeydown="if(event.key==='Enter')confirmAdd()">
+    </div>
+    <div class="field-group">
+      <label>Cor</label>
+      <div class="color-row" id="add-colors"></div>
+    </div>
+    <div class="modal-error" id="add-err"></div>
+    <button class="btn btn-green" onclick="confirmAdd()">✓ Adicionar</button>
+    <button class="btn btn-ghost" onclick="closeModal('m-add')" style="margin-top:3px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Definir senha do jogador -->
+<div class="modal-overlay" id="m-setpwd">
+  <div class="modal-box">
+    <div class="modal-title" id="setpwd-title">🔑 Definir Senha</div>
+    <div class="modal-sub">Deixe vazio para remover a proteção</div>
+    <div class="field-group">
+      <label>Nova Senha</label>
+      <input type="password" id="setpwd-val" placeholder="••••••" onkeydown="if(event.key==='Enter')confirmSetPwd()">
+    </div>
+    <div class="modal-error" id="setpwd-err"></div>
+    <button class="btn btn-gm" onclick="confirmSetPwd()">🔑 Salvar</button>
+    <button class="btn btn-ghost" onclick="closeModal('m-setpwd')" style="margin-top:3px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Login do jogador -->
+<div class="modal-overlay" id="m-plogin">
+  <div class="modal-box">
+    <div class="modal-title" id="plogin-name">Entrar</div>
+    <div class="modal-sub" id="plogin-sub">Digite sua senha</div>
+    <div class="field-group" id="plogin-pwd-field">
+      <label>Senha</label>
+      <input type="password" id="plogin-pwd" placeholder="••••••" onkeydown="if(event.key==='Enter')confirmPlayerLogin()">
+    </div>
+    <div class="modal-error" id="plogin-err"></div>
+    <button class="btn btn-player" id="plogin-btn" onclick="confirmPlayerLogin()">🎲 Entrar na Mesa</button>
+    <button class="btn btn-ghost" onclick="closeModal('m-plogin')" style="margin-top:3px;">Cancelar</button>
+  </div>
+</div>
+
+<div class="version">MIGHTY BLADE VTT · v0.3</div>
+<div class="toast" id="toast"></div>
+
+<script src="../core/tvtt-state.js"></script>
+<script>
+'use strict';
+
+/* ════════════════════════════════════════
+   ESTADO
+════════════════════════════════════════ */
+let _gmTok   = sessionStorage.getItem('tvtt_gm_tok')  || '';
+let _plrTok  = sessionStorage.getItem('tvtt_plr_tok') || '';
+let _plrId   = sessionStorage.getItem('tvtt_plr_id')  || '';
+let _camp    = null;   // campanha atual
+let _isGM    = false;
+let _sinfo   = null;   // info do servidor
+
+// modal state
+const COLORS = ['#C8712A','#D4A843','#4A90C8','#6B8F3A','#9B59B6','#E74C3C','#1ABC9C','#E67E22','#A0A0A0','#C0B090'];
+let _addColor    = COLORS[0];
+let _setpwdPid   = '';
+let _ploginPid   = '';
+let _ploginCode  = '';
+
+/* ════════════════════════════════════════
+   UTILS
+════════════════════════════════════════ */
+function show(id) {
+  document.querySelectorAll('#app .panel').forEach(p => p.style.display = 'none');
+  const el = document.getElementById(id);
+  if (el) { el.style.display = ''; }
+}
+function openModal(id)  { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(_toastT); _toastT = setTimeout(() => el.classList.remove('show'), 2700);
+}
+
+const gmH = () => ({'Content-Type':'application/json','X-GM-Token':_gmTok});
+
+function saveGM(tok)  { _gmTok = tok; sessionStorage.setItem('tvtt_gm_tok', tok); }
+function clearGM()    { _gmTok = '';  sessionStorage.removeItem('tvtt_gm_tok'); }
+function savePLR(pid,tok) { _plrId=pid;_plrTok=tok; sessionStorage.setItem('tvtt_plr_id',pid); sessionStorage.setItem('tvtt_plr_tok',tok); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+/* ════════════════════════════════════════
+   PARTÍCULAS
+════════════════════════════════════════ */
+(()=>{
+  const el=document.getElementById('particles');
+  for(let i=0;i<26;i++){
+    const p=document.createElement('div');
+    p.className='pt';
+    p.style.cssText=`left:${Math.random()*100}%;bottom:${Math.random()*30}%;width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;animation-duration:${6+Math.random()*10}s;animation-delay:${Math.random()*8}s;`;
+    el.appendChild(p);
+  }
+})();
+
+/* ════════════════════════════════════════
+   BOOT
+════════════════════════════════════════ */
+const _joinCode = new URLSearchParams(location.search).get('join');
+
+if (_joinCode) {
+  bootPlayer(_joinCode.toUpperCase());
+} else {
+  bootGM();
+}
+
+async function bootGM() {
+  try {
+    const r = await fetch('/api/gm/status', {headers:{'X-GM-Token':_gmTok}});
+    const s = await r.json();
+    if (!s.hasPassword) {
+      show('s-gm-setup');
+      setTimeout(()=>document.getElementById('setup-p1').focus(),120);
+    } else if (s.authenticated) {
+      await loadCampaigns();
+    } else {
+      show('s-gm-login');
+      setTimeout(()=>document.getElementById('login-pass').focus(),120);
+    }
+  } catch(e) { show('s-loading'); }
+}
+
+async function bootPlayer(code) {
+  show('s-loading');
+  try {
+    const r = await fetch(`/api/lobby/${code}`);
+    if (r.ok) { const d=await r.json(); showLobbyPlayer(d, code); }
+    else       { show('s-join'); document.getElementById('join-code').value=code; }
+  } catch(e)   { show('s-join'); }
+}
+
+/* ════════════════════════════════════════
+   GM AUTH
+════════════════════════════════════════ */
+async function doSetup() {
+  const p1=document.getElementById('setup-p1').value;
+  const p2=document.getElementById('setup-p2').value;
+  const err=document.getElementById('setup-err');
+  if(p1.length<4){err.textContent='Mínimo 4 caracteres.';return;}
+  if(p1!==p2){err.textContent='As senhas não coincidem.';return;}
+  err.textContent='';
+  try {
+    const r=await fetch('/api/gm/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p1})});
+    const d=await r.json();
+    if(d.ok){saveGM(d.token);document.getElementById('setup-p1').value='';document.getElementById('setup-p2').value='';await loadCampaigns();}
+    else err.textContent=d.error||'Erro.';
+  }catch(e){err.textContent='Servidor indisponível.';}
+}
+
+async function doLogin() {
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  const btn=document.getElementById('login-btn');
+  if(!pass){err.textContent='Digite a senha.';return;}
+  btn.disabled=true;btn.textContent='Verificando…';
+  try {
+    const r=await fetch('/api/gm/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass})});
+    const d=await r.json();
+    btn.disabled=false;btn.textContent='⚔ Entrar como Mestre';
+    if(d.ok){saveGM(d.token);document.getElementById('login-pass').value='';err.textContent='';await loadCampaigns();}
+    else{err.textContent=d.error||'Senha incorreta.';document.getElementById('login-pass').value='';document.getElementById('login-pass').focus();}
+  }catch(e){btn.disabled=false;btn.textContent='⚔ Entrar como Mestre';err.textContent='Servidor indisponível.';}
+}
+
+async function doLogout() {
+  await fetch('/api/gm/logout',{method:'POST',headers:gmH()});
+  clearGM(); show('s-gm-login');
+  setTimeout(()=>document.getElementById('login-pass').focus(),120);
+}
+
+/* ════════════════════════════════════════
+   CAMPANHAS
+════════════════════════════════════════ */
+async function loadCampaigns() {
+  _isGM=true; show('s-campaigns');
+  try {
+    const r=await fetch('/api/campaigns',{headers:gmH()});
+    const d=await r.json();
+    if(d.ok) renderCampList(d.campaigns||[]);
+    else toast('✦ Erro ao carregar campanhas.');
+  }catch(e){toast('✦ Servidor indisponível.');}
+}
+
+function renderCampList(camps) {
+  const el=document.getElementById('campaign-list');
+  if(!camps.length){el.innerHTML='<div class="empty-state">✦ Nenhuma campanha ainda.<br>Crie sua primeira aventura!</div>';return;}
+  el.innerHTML='';
+  camps.forEach(c=>{
+    const div=document.createElement('div');
+    div.className='campaign-card'+(c.active?' active-camp':'');
+    const n=(c.players||[]).length;
+    div.innerHTML=`<div class="campaign-icon">⚔</div><div class="campaign-info"><div class="campaign-name">${esc(c.name)}</div><div class="campaign-meta">Código: ${c.code} · ${n} aventureiro${n!==1?'s':''}</div></div><div class="campaign-arrow">›</div>`;
+    div.onclick=()=>openCampaign(c.id);
+    el.appendChild(div);
+  });
+}
+
+async function doCreate() {
+  const name=document.getElementById('create-name').value.trim();
+  const err=document.getElementById('create-err');
+  if(!name){err.textContent='Digite um nome.';return;}
+  err.textContent='';
+  try {
+    const r=await fetch('/api/campaigns',{method:'POST',headers:gmH(),body:JSON.stringify({name})});
+    const d=await r.json();
+    if(d.ok){document.getElementById('create-name').value='';toast('✦ Campanha criada!');await openCampaign(d.campaign.id);}
+    else err.textContent=d.error||'Erro.';
+  }catch(e){err.textContent='Servidor indisponível.';}
+}
+
+async function openCampaign(cid) {
+  await fetch(`/api/campaigns/${cid}/activate`,{method:'POST',headers:gmH()});
+  const r=await fetch('/api/campaigns',{headers:gmH()});
+  const d=await r.json();
+  const c=(d.campaigns||[]).find(x=>x.id===cid);
+  if(!c){toast('✦ Campanha não encontrada.');return;}
+  _camp=c;
+  showLobbyGM(c);
+}
+
+async function confirmDeleteCampaign() {
+  if(!_camp)return;
+  if(!confirm(`Apagar "${_camp.name}"? Todos os dados serão perdidos.`))return;
+  const r=await fetch(`/api/campaigns/${_camp.id}/delete`,{method:'POST',headers:gmH()});
+  const d=await r.json();
+  if(d.ok){toast('✦ Campanha apagada.');_camp=null;await loadCampaigns();}
+}
+
+/* ════════════════════════════════════════
+   LOBBY — GM
+════════════════════════════════════════ */
+function showLobbyGM(c) {
+  _isGM=true; _camp=c;
+  document.getElementById('lobby-gm-ctrl').style.display='';
+  document.getElementById('lobby-player-ctrl').style.display='none';
+  document.getElementById('gm-slot').style.display='';
+  document.getElementById('lobby-camp-name').textContent=c.name;
+  document.getElementById('lobby-camp-code').textContent=c.code;
+  renderSlots(c,true);
+  loadShareInfo(c);
+  show('s-lobby');
+}
+
+function renderSlots(c,isGM) {
+  const el=document.getElementById('player-slots');
+  const players=c.players||[];
+  if(!players.length){el.innerHTML='<div class="empty-state">Nenhum aventureiro ainda.</div>';return;}
+  el.innerHTML='';
+  players.forEach(p=>{
+    const locked=p.hasPassword;
+    const div=document.createElement('div');
+    div.className='player-slot'+(isGM?'':' clickable');
+    div.innerHTML=`
+      <div class="slot-color" style="background:${p.color};"></div>
+      <div class="slot-name">${esc(p.name)}</div>
+      <span class="slot-badge ${locked?'locked':'open'}">${locked?'🔒 Protegido':'Livre'}</span>
+      ${isGM?`<div class="slot-actions">
+        <button class="btn-sm key" onclick="openSetPwd('${p.id}','${esc(p.name)}')">🔑</button>
+        <button class="btn-sm rm"  onclick="removePLR('${p.id}')">✕</button>
+      </div>`:''}`;
+    if(!isGM) div.onclick=()=>openPlayerLogin(p.id,p.name,p.hasPassword,c.code);
+    el.appendChild(div);
+  });
+}
+
+async function enterAsGM() {
+  if(!_camp)return;
+  const r=await fetch('/api/gm/status',{headers:{'X-GM-Token':_gmTok}});
+  const s=await r.json();
+  if(!s.authenticated){toast('✦ Sessão expirada. Faça login novamente.');clearGM();show('s-gm-login');return;}
+  location.href=`mesa.html?role=gm&sala=${_camp.code}&name=Mestre&tok=${_gmTok}`;
+}
+
+/* ── Adicionar aventureiro ── */
+function openAddPlayer() {
+  document.getElementById('add-name').value='';
+  document.getElementById('add-err').textContent='';
+  _addColor=COLORS[0];
+  buildColorPicker('add-colors',()=>_addColor,(c)=>{_addColor=c;});
+  openModal('m-add');
+  setTimeout(()=>document.getElementById('add-name').focus(),80);
+}
+
+function buildColorPicker(containerId,getter,setter) {
+  const el=document.getElementById(containerId);
+  el.innerHTML='';
+  COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color-opt'+(c===getter()?' sel':'');
+    d.style.background=c;
+    d.onclick=()=>{setter(c);el.querySelectorAll('.color-opt').forEach(o=>o.classList.remove('sel'));d.classList.add('sel');};
+    el.appendChild(d);
+  });
+}
+
+async function confirmAdd() {
+  const name=document.getElementById('add-name').value.trim();
+  const err=document.getElementById('add-err');
+  if(!name){err.textContent='Digite um nome.';return;}
+  err.textContent='';
+  try {
+    const r=await fetch(`/api/campaigns/${_camp.id}/player/add`,{method:'POST',headers:gmH(),body:JSON.stringify({name,color:_addColor})});
+    const d=await r.json();
+    if(d.ok){
+      closeModal('m-add');
+      _camp.players=_camp.players||[];
+      _camp.players.push({...d.player,hasPassword:false});
+      renderSlots(_camp,true);
+      toast(`✦ ${name} adicionado!`);
+    }else err.textContent=d.error||'Erro.';
+  }catch(e){err.textContent='Servidor indisponível.';}
+}
+
+async function removePLR(pid) {
+  if(!confirm('Remover este aventureiro?'))return;
+  const r=await fetch(`/api/campaigns/${_camp.id}/player/remove`,{method:'POST',headers:gmH(),body:JSON.stringify({playerId:pid})});
+  const d=await r.json();
+  if(d.ok){_camp.players=_camp.players.filter(p=>p.id!==pid);renderSlots(_camp,true);toast('✦ Aventureiro removido.');}
+}
+
+/* ── Senha do aventureiro ── */
+function openSetPwd(pid,name) {
+  _setpwdPid=pid;
+  document.getElementById('setpwd-title').textContent=`🔑 Senha de ${name}`;
+  document.getElementById('setpwd-val').value='';
+  document.getElementById('setpwd-err').textContent='';
+  openModal('m-setpwd');
+  setTimeout(()=>document.getElementById('setpwd-val').focus(),80);
+}
+
+async function confirmSetPwd() {
+  const pwd=document.getElementById('setpwd-val').value;
+  const err=document.getElementById('setpwd-err');
+  err.textContent='';
+  try {
+    const r=await fetch(`/api/campaigns/${_camp.id}/player/password`,{method:'POST',headers:gmH(),body:JSON.stringify({playerId:_setpwdPid,password:pwd})});
+    const d=await r.json();
+    if(d.ok){
+      closeModal('m-setpwd');
+      const p=_camp.players.find(x=>x.id===_setpwdPid);
+      if(p) p.hasPassword=d.hasPassword;
+      renderSlots(_camp,true);
+      toast(pwd?'🔑 Senha definida.':'🔓 Proteção removida.');
+    }else err.textContent=d.error||'Erro.';
+  }catch(e){err.textContent='Servidor indisponível.';}
+}
+
+/* ── Share links ── */
+let _shareTimer;
+async function loadShareInfo(c) {
+  clearTimeout(_shareTimer);
+  try {
+    const r=await fetch('/api/info');
+    _sinfo=await r.json();
+    const sfx=`?join=${c.code}`;
+    document.getElementById('sh-lan').textContent=_sinfo.localUrl+sfx;
+    if(_sinfo.publicIpReady&&_sinfo.publicUrl){
+      document.getElementById('sh-pub').textContent=_sinfo.publicUrl+sfx;
+      document.getElementById('sh-pub-btn').disabled=false;
+    }else{
+      document.getElementById('sh-pub').textContent='Detectando IP…';
+      _shareTimer=setTimeout(()=>loadShareInfo(c),3000);
+    }
+    const tunEl=document.getElementById('sh-tun');
+    const tunBtn=document.getElementById('sh-tun-btn');
+    const tunHint=document.getElementById('sh-tun-hint');
+    if(_sinfo.hasTunnel&&_sinfo.tunnelUrl){tunEl.textContent=_sinfo.tunnelUrl+sfx;tunBtn.disabled=false;}
+    else if(_sinfo.cloudflaredAvailable){tunEl.textContent='Conectando…';_shareTimer=setTimeout(()=>loadShareInfo(c),4000);}
+    else{
+      tunEl.textContent='não instalado';
+      if(_sinfo.platform==='win32') tunHint.innerHTML='<b>Windows:</b> <span style="color:var(--pale)">winget install cloudflare.cloudflared</span>';
+      else tunHint.innerHTML='<b>Linux:</b> <span style="color:var(--pale)">sudo apt install cloudflared</span> (Debian/Ubuntu) · <span style="color:var(--pale)">sudo pacman -S cloudflared</span> (Arch)';
+    }
+  }catch(e){document.getElementById('sh-lan').textContent='Servidor offline';}
+}
+
+function copyLink(t) {
+  if(!_camp||!_sinfo)return;
+  const sfx=`?join=${_camp.code}`;
+  const m={lan:_sinfo.localUrl,pub:_sinfo.publicUrl,tun:_sinfo.tunnelUrl};
+  const url=(m[t]||'')+sfx;
+  if(!m[t]){toast('✦ Link não disponível.');return;}
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(()=>toast('✓ Link copiado!')).catch(()=>prompt('Link:',url));
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=url;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');toast('✓ Link copiado!');}
+    catch(e){prompt('Link:',url);}
+    document.body.removeChild(ta);
+  }
+}
+
+/* ════════════════════════════════════════
+   LOBBY — JOGADOR
+════════════════════════════════════════ */
+function showLobbyPlayer(lobby,code) {
+  _isGM=false;
+  _camp={...lobby,code:lobby.code||code};
+  document.getElementById('lobby-gm-ctrl').style.display='none';
+  document.getElementById('lobby-player-ctrl').style.display='';
+  document.getElementById('gm-slot').style.display='none';
+  document.getElementById('lobby-camp-name').textContent=lobby.name;
+  document.getElementById('lobby-camp-code').textContent=lobby.code||code;
+  renderSlots({players:lobby.players},false);
+  show('s-lobby');
+}
+
+function openPlayerLogin(pid,name,hasPwd,code) {
+  _ploginPid=pid;
+  _ploginCode=code||(_camp&&_camp.code)||'';
+  document.getElementById('plogin-name').textContent=`🎲 ${name}`;
+  const field=document.getElementById('plogin-pwd-field');
+  if(!hasPwd){
+    field.style.display='none';
+    document.getElementById('plogin-sub').textContent='Slot livre — clique para entrar na mesa';
+  }else{
+    field.style.display='';
+    document.getElementById('plogin-sub').textContent='Digite sua senha para entrar';
+    document.getElementById('plogin-pwd').value='';
+  }
+  document.getElementById('plogin-err').textContent='';
+  document.getElementById('plogin-btn').disabled=false;
+  document.getElementById('plogin-btn').textContent='🎲 Entrar na Mesa';
+  openModal('m-plogin');
+  if(hasPwd) setTimeout(()=>document.getElementById('plogin-pwd').focus(),80);
+}
+
+async function confirmPlayerLogin() {
+  const pwd=document.getElementById('plogin-pwd').value;
+  const err=document.getElementById('plogin-err');
+  const btn=document.getElementById('plogin-btn');
+  err.textContent=''; btn.disabled=true; btn.textContent='Verificando…';
+  try {
+    const r=await fetch('/api/player/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:_ploginCode,playerId:_ploginPid,password:pwd})});
+    const d=await r.json();
+    btn.disabled=false; btn.textContent='🎲 Entrar na Mesa';
+    if(d.ok){
+      savePLR(_ploginPid,d.token);
+      closeModal('m-plogin');
+      const p=(_camp.players||[]).find(x=>x.id===_ploginPid);
+      const name=p?p.name:'Jogador';
+      const col=p?p.color:'#C8712A';
+      location.href=`mesa.html?role=player&sala=${_ploginCode}&name=${encodeURIComponent(name)}&color=${encodeURIComponent(col)}&pid=${_ploginPid}&tok=${d.token}`;
+    }else{
+      err.textContent=d.error||'Senha incorreta.';
+      document.getElementById('plogin-pwd').value='';
+      document.getElementById('plogin-pwd').focus();
+    }
+  }catch(e){btn.disabled=false;btn.textContent='🎲 Entrar na Mesa';err.textContent='Servidor indisponível.';}
+}
+
+/* ════════════════════════════════════════
+   CÓDIGO MANUAL
+════════════════════════════════════════ */
+async function doJoin() {
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  const err=document.getElementById('join-err');
+  if(!code){err.textContent='Digite o código.';return;}
+  err.textContent='';
+  try {
+    const r=await fetch(`/api/lobby/${code}`);
+    if(r.ok){const d=await r.json();showLobbyPlayer(d,code);}
+    else err.textContent='Sala não encontrada. Verifique o código.';
+  }catch(e){err.textContent='Servidor indisponível.';}
+}
+
+/* ════════════════════════════════════════
+   TECLADO
+════════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') ['m-add','m-setpwd','m-plogin'].forEach(closeModal);
+});
+
+/* ════════════════════════════════════════
+   SEGURANÇA
+════════════════════════════════════════ */
+(()=>{
+  'use strict';
+  document.addEventListener('contextmenu',e=>e.preventDefault(),true);
+  document.addEventListener('keydown',e=>{
+    const c=e.ctrlKey||e.metaKey;
+    if(e.key==='F12'){e.preventDefault();return false;}
+    if(c&&e.key==='u'){e.preventDefault();return false;}
+    if(c&&e.shiftKey&&['I','J','C'].includes(e.key)){e.preventDefault();return false;}
+  },true);
+})();
+</script>
+</body>
+</html>

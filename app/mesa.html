@@ -1,0 +1,4008 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesa Virtual — Mesa</title>
+<link rel="stylesheet" href="../core/tvtt-shared.css">
+<style>
+/* ═══════════════════════════════════════════════
+   LAYOUT DA MESA
+═══════════════════════════════════════════════ */
+body { overflow: hidden; user-select: none; }
+
+/* ── Header ── */
+.mesa-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 46px; z-index: 200;
+  background: rgba(8,6,4,0.97);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
+.header-logo {
+  font-family: 'Cinzel Decorative', cursive; font-size: 0.85rem;
+  color: var(--gold); letter-spacing: 0.1em;
+  white-space: nowrap; margin-right: 6px;
+}
+.header-logo span { color: var(--ember); }
+.camp-name {
+  font-family: 'Cinzel', serif; font-size: 0.7rem;
+  color: var(--dim); letter-spacing: 0.12em;
+  border-left: 1px solid var(--border); padding-left: 10px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;
+}
+.tool-sep { width: 1px; height: 24px; background: var(--border); margin: 0 4px; }
+.header-tools { display: flex; align-items: center; gap: 3px; margin: 0 8px; }
+.tool-btn {
+  width: 34px; height: 30px;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 2px; color: var(--dim); cursor: pointer;
+  font-size: 0.95rem; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+}
+.tool-btn:hover { color: var(--pale); border-color: var(--border); background: rgba(200,113,42,0.08); }
+.tool-btn.active { color: var(--gold); border-color: var(--ember); background: rgba(200,113,42,0.15); }
+.tool-btn.on { color: var(--gold); }
+.header-right {
+  margin-left: auto; display: flex; align-items: center; gap: 10px;
+}
+.room-badge {
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.2em;
+  color: var(--dim); padding: 3px 8px;
+  border: 1px solid var(--border); border-radius: 2px;
+}
+.role-badge {
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.2em;
+  padding: 3px 10px; border-radius: 2px;
+  background: rgba(139,26,26,0.25); border: 1px solid rgba(139,26,26,0.5);
+  color: #e87070;
+}
+.role-badge.player {
+  background: rgba(58,122,170,0.2); border-color: rgba(58,122,170,0.5);
+  color: #7ab4d4;
+}
+.btn-lobby {
+  padding: 4px 10px; background: transparent;
+  border: 1px solid var(--border); border-radius: 2px;
+  color: var(--dim); font-family: 'Cinzel', serif;
+  font-size: 0.58rem; letter-spacing: 0.15em; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-lobby:hover { color: var(--pale); border-color: var(--border-h); }
+
+/* ── Corpo da mesa ── */
+.mesa-body {
+  position: fixed; top: 46px; bottom: 0; left: 0; right: 0;
+  display: flex; overflow: hidden;
+}
+
+/* ── Painel Esquerdo — Ficha ── */
+.panel-left {
+  width: 320px; min-width: 320px;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width 0.25s, min-width 0.25s;
+  overflow: hidden; z-index: 10;
+}
+.panel-left.collapsed { width: 0; min-width: 0; }
+.panel-left .inner { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+
+/* ── Mapa central ── */
+.map-container {
+  flex: 1; position: relative; overflow: hidden;
+  background: #1a1408;
+}
+.map-stage {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  transform-origin: 0 0;
+  cursor: crosshair;
+}
+#grid-canvas {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+}
+#token-layer {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  pointer-events: none;
+}
+.fog-overlay {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  background: rgba(0,0,0,0.82);
+  pointer-events: none; z-index: 5;
+  display: none;
+}
+
+/* ── Painel Direito — Chat / Dados / Iniciativa ── */
+.panel-right {
+  width: 275px; min-width: 275px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: width 0.25s, min-width 0.25s;
+  overflow: hidden; z-index: 10;
+}
+.panel-right.collapsed { width: 0; min-width: 0; }
+
+/* ── Abas direitas ── */
+.right-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3); flex-shrink: 0;
+}
+.rtab {
+  flex: 1; padding: 9px 4px;
+  background: transparent; border: none;
+  color: var(--dim); font-family: 'Cinzel', serif;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.2s;
+  border-bottom: 2px solid transparent;
+}
+.rtab:hover { color: var(--pale); }
+.rtab.active { color: var(--gold); border-bottom-color: var(--ember); }
+
+.rtab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.rtab-content.active { display: flex; }
+
+/* ── Chat ── */
+.chat-log {
+  flex: 1; overflow-y: auto; padding: 10px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.chat-msg {
+  padding: 6px 9px; border-radius: 2px;
+  font-size: 0.88rem; line-height: 1.4;
+  border-left: 2px solid transparent;
+}
+.chat-msg.gm { border-left-color: var(--blood); background: rgba(139,26,26,0.08); }
+.chat-msg.player { border-left-color: var(--info); background: rgba(58,122,170,0.06); }
+.chat-msg.roll { border-left-color: var(--gold); background: rgba(212,168,67,0.06); }
+.chat-msg.system { border-left-color: var(--dim); color: var(--dim); font-style: italic; font-size: 0.82rem; }
+.chat-author { font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.12em; color: var(--dim); display: block; margin-bottom: 2px; }
+.roll-result { font-family: 'Cinzel', serif; font-size: 0.95rem; color: var(--gold); letter-spacing: 0.08em; }
+.roll-detail { font-size: 0.78rem; color: var(--dim); }
+.chat-input-row {
+  display: flex; gap: 4px; padding: 8px;
+  border-top: 1px solid var(--border); flex-shrink: 0;
+}
+.chat-input-row input {
+  flex: 1;
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+  border-radius: 2px; padding: 7px 10px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s;
+}
+.chat-input-row input:focus { border-color: var(--border-h); }
+.chat-input-row input::placeholder { color: rgba(138,122,101,0.4); font-style: italic; font-size: 0.82rem; }
+.send-btn {
+  padding: 0 10px; background: rgba(200,113,42,0.15);
+  border: 1px solid var(--border); border-radius: 2px;
+  color: var(--ember); cursor: pointer; font-size: 1rem;
+  transition: all 0.2s;
+}
+.send-btn:hover { background: rgba(200,113,42,0.3); }
+
+/* ── Dados ── */
+.dice-panel { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.dice-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;
+}
+.die-btn {
+  padding: 10px 4px;
+  background: linear-gradient(135deg, rgba(28,23,18,0.9), rgba(17,14,10,0.95));
+  border: 1px solid var(--border); border-radius: 2px;
+  color: var(--gold); font-family: 'Cinzel', serif;
+  font-size: 0.75rem; letter-spacing: 0.08em;
+  cursor: pointer; transition: all 0.15s; text-align: center;
+}
+.die-btn:hover { border-color: var(--ember); background: rgba(200,113,42,0.15); transform: translateY(-1px); }
+.die-btn:active { transform: translateY(0); }
+.die-btn.special { color: var(--ember); }
+
+.custom-roll-row {
+  display: flex; align-items: center; gap: 4px;
+  padding: 10px; background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border); border-radius: 2px;
+}
+.custom-roll-row input {
+  width: 44px; text-align: center;
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+  border-radius: 2px; padding: 5px 4px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.9rem;
+  outline: none;
+}
+.custom-roll-row input:focus { border-color: var(--border-h); }
+.custom-roll-row span { color: var(--dim); font-size: 0.85rem; }
+.custom-roll-row .roll-custom-btn {
+  flex: 1; padding: 6px;
+  background: rgba(200,113,42,0.15); border: 1px solid var(--border-h);
+  border-radius: 2px; color: var(--gold);
+  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em;
+  cursor: pointer; transition: all 0.15s;
+}
+.custom-roll-row .roll-custom-btn:hover { background: rgba(200,113,42,0.3); }
+
+.dice-result-box {
+  padding: 10px; background: rgba(0,0,0,0.3);
+  border: 1px solid var(--border); border-radius: 2px;
+  min-height: 60px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+}
+.dice-result-total {
+  font-family: 'Cinzel Decorative', cursive; font-size: 2rem;
+  color: var(--gold); text-shadow: 0 0 20px rgba(212,168,67,0.5);
+  line-height: 1;
+}
+.dice-result-detail { font-size: 0.8rem; color: var(--dim); }
+
+/* ── Iniciativa ── */
+.init-panel {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1fr auto;
+}
+.init-list {
+  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 12px 4px;
+}
+.init-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-bg);
+}
+
+/* ── Carrossel de Turno ── */
+#init-carousel {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 400;
+  display: none; align-items: center; gap: 4px;
+  background: linear-gradient(180deg, rgba(8,6,3,0.94) 70%, transparent 100%);
+  padding: 8px 6px 18px;
+  pointer-events: none;
+}
+#init-carousel.visible { display: flex; }
+.carousel-nav {
+  flex-shrink: 0; width: 26px; height: 70px;
+  background: rgba(0,0,0,0.5); border: 1px solid var(--border);
+  border-radius: 2px; color: var(--dim); font-size: 1.1rem;
+  cursor: pointer; pointer-events: auto; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.carousel-nav:hover { color: var(--gold); border-color: var(--border-h); }
+#carousel-track {
+  flex: 1; display: flex; gap: 6px; overflow: hidden;
+  justify-content: center; align-items: center;
+}
+.carousel-card {
+  flex-shrink: 0; width: 68px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  pointer-events: auto; cursor: default;
+  transition: transform 0.2s;
+}
+.carousel-card.current { transform: scale(1.12); }
+.carousel-img-wrap {
+  width: 60px; height: 60px; border-radius: 4px; overflow: hidden;
+  border: 2px solid var(--border);
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.carousel-card.current .carousel-img-wrap {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(212,168,67,0.55);
+}
+.carousel-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+.carousel-initial {
+  font-family: 'Cinzel Decorative', cursive; font-size: 1.3rem;
+  color: var(--gold); opacity: 0.7;
+}
+.carousel-name {
+  font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.08em;
+  color: var(--pale); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  width: 68px;
+}
+.carousel-card.current .carousel-name { color: var(--gold); }
+.carousel-init {
+  font-size: 0.52rem; color: var(--dim); font-family: 'Cinzel', serif;
+}
+.init-entry {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px; border-radius: 2px;
+  background: rgba(0,0,0,0.2); border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.init-entry.active-turn {
+  background: rgba(200,113,42,0.12); border-color: var(--ember);
+  box-shadow: 0 0 12px rgba(200,113,42,0.1);
+}
+.init-avatar {
+  width: 28px; height: 28px; border-radius: 50%; overflow: hidden;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel Decorative', cursive; font-size: 0.75rem; font-weight: 700;
+  color: #fff; background: #40a0c8; border: 1px solid var(--border);
+}
+.init-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.init-num {
+  font-family: 'Cinzel', serif; font-size: 0.9rem; font-weight: 600;
+  color: var(--gold); width: 28px; text-align: right; flex-shrink: 0;
+}
+.init-name { flex: 1; font-size: 0.9rem; color: var(--pale); }
+.init-turn-marker { color: var(--ember); font-size: 0.8rem; }
+.init-del { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 0.9rem; opacity: 0.5; transition: opacity 0.2s; }
+.init-del:hover { opacity: 1; color: var(--danger); }
+
+.init-add-row {
+  display: flex; gap: 6px;
+}
+.init-add-row input {
+  background: rgba(0,0,0,0.4); border: 1px solid var(--border);
+  border-radius: 2px; padding: 6px 8px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.88rem;
+  outline: none; min-width: 0;
+}
+.init-add-row input:focus { border-color: var(--border-h); }
+.init-add-row .init-name-in { flex: 1; min-width: 0; }
+.init-add-row .init-num-in {
+  flex: none; width: 52px; text-align: center;
+  -moz-appearance: textfield;
+}
+.init-add-row .init-num-in::-webkit-inner-spin-button,
+.init-add-row .init-num-in::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+.init-actions {
+  display: flex; gap: 4px;
+}
+.init-btn {
+  flex: 1; padding: 6px 4px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; color: var(--dim);
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.05em;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.init-btn:hover { color: var(--pale); border-color: var(--border-h); }
+.init-btn.next { color: var(--gold); border-color: rgba(200,113,42,0.35); }
+.init-btn.next:hover { background: rgba(200,113,42,0.15); }
+
+/* ── Botão Rolagem às Cegas (cegas) ── */
+.btn-blind-roll {
+  width: 100%; padding: 6px 8px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; color: var(--dim);
+  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.12em;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.btn-blind-roll:hover { color: var(--pale); border-color: var(--border-h); }
+.btn-blind-roll.active {
+  background: rgba(124,58,237,0.18);
+  border-color: rgba(124,58,237,0.6);
+  color: #c4a4f7;
+  text-shadow: 0 0 8px rgba(124,58,237,0.5);
+}
+
+/* ── Botão Carrossel (classe própria, não interfere no cegas) ── */
+.btn-carousel {
+  width: 100%; padding: 6px 8px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; color: var(--dim);
+  font-family: 'Cinzel', serif; font-size: 0.6rem; letter-spacing: 0.12em;
+  cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.btn-carousel:hover { color: var(--pale); border-color: var(--border-h); }
+.btn-carousel.active {
+  background: rgba(200,113,42,0.18);
+  border-color: rgba(200,113,42,0.5);
+  color: var(--gold);
+  text-shadow: 0 0 8px rgba(212,168,67,0.4);
+}
+
+/* ── Ficha de Personagem ── */
+.ficha-section {
+  margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 2px;
+  overflow: hidden;
+}
+.ficha-section-header {
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.3);
+  font-family: 'Cinzel', serif; font-size: 0.6rem;
+  letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim);
+  cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  transition: color 0.2s;
+}
+.ficha-section-header:hover { color: var(--pale); }
+.ficha-section-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+.ficha-section-body.collapsed { display: none; }
+
+.attr-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+}
+.attr-cell {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 4px; background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border); border-radius: 2px;
+}
+.attr-name { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.15em; color: var(--dim); margin-bottom: 3px; }
+.attr-val {
+  width: 38px; text-align: center;
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  color: var(--gold); font-family: 'Cinzel', serif; font-size: 1.1rem;
+  outline: none; padding: 1px 0;
+}
+.attr-val:focus { border-bottom-color: var(--ember); }
+.attr-mod { font-size: 0.7rem; color: var(--dim); margin-top: 2px; }
+
+.resource-row {
+  display: flex; align-items: center; gap: 5px;
+}
+.resource-label { font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.08em; color: var(--dim); width: 28px; flex-shrink: 0; }
+.resource-cur, .resource-max {
+  width: 46px; text-align: center;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; padding: 4px 4px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s;
+}
+.resource-cur:focus, .resource-max:focus { border-color: var(--border-h); }
+.resource-sep { color: var(--dim); font-size: 0.85rem; }
+.resource-bar { flex: 1; height: 5px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden; }
+.resource-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+.fill-pv { background: linear-gradient(90deg, #5a1010, #c84040); }
+.fill-pm { background: linear-gradient(90deg, #1a3a5a, #4080c0); }
+
+.ficha-text {
+  width: 100%; min-height: 60px; resize: vertical;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; padding: 6px 8px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.88rem;
+  line-height: 1.45; outline: none; transition: border-color 0.2s;
+}
+.ficha-text:focus { border-color: var(--border-h); }
+
+.ficha-field { display: flex; flex-direction: column; gap: 4px; }
+.ficha-field label { font-family: 'Cinzel', serif; font-size: 0.55rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.ficha-field input {
+  width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; padding: 5px 8px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.9rem;
+  outline: none; transition: border-color 0.2s;
+}
+.ficha-field input:focus { border-color: var(--border-h); }
+.ficha-row { display: flex; gap: 6px; }
+.ficha-row .ficha-field { flex: 1; }
+
+.combat-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+}
+.combat-cell { display: flex; flex-direction: column; gap: 3px; }
+.combat-cell label { font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.combat-cell input {
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 2px;
+  padding: 4px 6px; color: var(--pale); font-family: 'EB Garamond', serif;
+  font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+}
+.combat-cell input:focus { border-color: var(--border-h); }
+
+.save-indicator {
+  font-family: 'Cinzel', serif; font-size: 0.52rem; letter-spacing: 0.12em;
+  color: var(--dim); text-align: right; padding: 4px 0;
+  transition: color 0.3s;
+}
+.save-indicator.saved { color: var(--success); }
+
+/* ── Tokens ── */
+.token {
+  position: absolute; pointer-events: all; cursor: pointer; z-index: 10;
+  /* O translate centra o CÍRCULO (token-body) no ponto x,y do mapa.
+     Label e hp-bar ficam absolutamente posicionados abaixo, fora do fluxo. */
+  transform: translate(-50%, -50%);
+}
+.token-body {
+  border-radius: 50%; border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; transition: box-shadow 0.15s, border-color 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  overflow: hidden; /* necessário para imagens circulares */
+  position: relative;
+}
+.token-body img {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+  display: block; pointer-events: none;
+}
+.token.selected .token-body {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212,168,67,0.5), 0 2px 12px rgba(0,0,0,0.8);
+}
+.token-label {
+  position: absolute;
+  top: calc(100% + 3px); left: 50%; transform: translateX(-50%);
+  font-family: 'Cinzel', serif; font-size: 0.58rem; letter-spacing: 0.06em;
+  color: #fff; text-shadow: 0 0 4px rgba(0,0,0,1), 0 1px 3px rgba(0,0,0,1);
+  white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+.token-hp-bar {
+  position: absolute;
+  top: calc(100% + 15px); left: 50%; transform: translateX(-50%);
+  width: 80%; min-width: 28px; max-width: 44px; height: 4px;
+  background: rgba(0,0,0,0.5); border-radius: 2px; overflow: hidden;
+}
+.token-hp-fill { height: 100%; background: #c84040; border-radius: 2px; transition: width 0.3s; }
+.token:hover .token-body { border-color: rgba(255,255,255,0.8); }
+/* ── Token morto (hp = 0) ── */
+.token-dead-overlay {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.52);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; z-index: 2;
+  font-size: 1.6rem; font-weight: 900; color: #d94040;
+  text-shadow: 0 0 8px rgba(200,0,0,0.8), 0 1px 4px rgba(0,0,0,1);
+  line-height: 1;
+}
+.token.dead .token-body { border-color: #8b1a1a !important; box-shadow: 0 0 14px rgba(180,0,0,0.6), 0 2px 8px rgba(0,0,0,0.7) !important; }
+.token.dead .token-hp-fill { background: #8b1a1a !important; }
+
+/* ── Menu de contexto ── */
+.ctx-menu {
+  position: fixed; z-index: 500;
+  background: rgba(14,11,8,0.98); border: 1px solid var(--border-h);
+  border-radius: 2px; padding: 4px 0; min-width: 160px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  animation: scaleIn 0.12s ease;
+}
+.ctx-item {
+  padding: 8px 14px; cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.1em;
+  color: var(--dim); transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+}
+.ctx-item:hover { color: var(--pale); background: rgba(200,113,42,0.1); }
+.ctx-item.danger:hover { color: #e87070; background: rgba(139,26,26,0.15); }
+.ctx-sep { height: 1px; background: var(--border); margin: 3px 0; }
+
+/* ── Modal Adicionar Token ── */
+.color-picker-row {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px;
+}
+.color-dot {
+  width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; transition: border-color 0.15s, transform 0.15s;
+}
+.color-dot:hover { transform: scale(1.1); }
+.color-dot.selected { border-color: var(--gold); }
+
+/* ── Painel collapse button ── */
+.collapse-tab {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 50px;
+  background: rgba(200,113,42,0.1); border: 1px solid var(--border);
+  cursor: pointer; color: var(--dim); font-size: 0.6rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; z-index: 20; border-radius: 0 2px 2px 0;
+}
+.collapse-tab:hover { background: rgba(200,113,42,0.2); color: var(--pale); }
+.collapse-tab-right {
+  border-radius: 2px 0 0 2px;
+  left: -14px;
+}
+
+/* ── File Explorer (Tokens & Backgrounds) ── */
+.fex-breadcrumb {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Cinzel', serif; font-size: 0.58rem;
+  letter-spacing: 0.1em; color: var(--dim); min-height: 26px;
+}
+.fex-breadcrumb .fex-crumb {
+  cursor: pointer; color: var(--dim); background: none; border: none;
+  font-family: inherit; font-size: inherit; letter-spacing: inherit;
+  padding: 1px 4px; border-radius: 2px; transition: color 0.15s;
+}
+.fex-breadcrumb .fex-crumb:hover { color: var(--gold); }
+.fex-breadcrumb .fex-crumb.current { color: var(--pale); cursor: default; }
+.fex-breadcrumb .fex-sep { opacity: 0.4; }
+
+.fex-grid {
+  flex: 1; overflow-y: auto; padding: 6px 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  align-content: start;
+}
+.fex-card {
+  cursor: pointer; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--border); background: rgba(0,0,0,0.3);
+  transition: border-color 0.15s, transform 0.12s;
+  position: relative;
+}
+.fex-card:hover { border-color: var(--ember); transform: scale(1.04); }
+.fex-card.fex-folder-card { border-style: dashed; }
+.fex-card.fex-folder-card:hover { border-style: solid; background: rgba(200,113,42,0.08); }
+.fex-folder-icon {
+  aspect-ratio: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  font-size: 1.8rem; padding: 4px;
+}
+.fex-folder-count {
+  font-family: 'Cinzel', serif; font-size: 0.5rem;
+  color: var(--dim); letter-spacing: 0.05em;
+}
+.fex-name {
+  font-size: 0.6rem; color: var(--dim); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  padding: 2px 4px 4px;
+}
+.fex-card img {
+  width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+}
+.fex-del {
+  position: absolute; top: 2px; right: 2px;
+  width: 18px; height: 18px; border-radius: 3px;
+  background: rgba(0,0,0,0.75); border: none; cursor: pointer;
+  color: var(--dim); font-size: 0.65rem; line-height: 18px; text-align: center;
+  opacity: 0; transition: opacity 0.15s; z-index: 2; padding: 0;
+}
+.fex-card:hover .fex-del { opacity: 1; }
+.fex-del:hover { color: var(--danger); }
+
+/* ── Ficha Tabs (esquerda) ── */
+.ficha-tabs {
+  display: flex; border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.4); flex-shrink: 0;
+}
+.ftab {
+  flex: 1; padding: 8px 3px;
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--dim); font-family: 'Cinzel', serif;
+  font-size: 0.65rem; letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.2s;
+}
+.ftab:hover { color: var(--pale); }
+.ftab.active { color: var(--gold); border-bottom-color: var(--ember); }
+.ftab-content { display: none; overflow-y: auto; flex: 1; padding: 10px 10px 24px; min-height: 0; }
+.ftab-content.active { display: block; }
+
+/* ── Atributo MB (total + 6 sub-valores) ── */
+.mb-attr-block {
+  border: 1px solid var(--border); border-radius: 2px;
+  margin-bottom: 6px; overflow: hidden;
+}
+.mb-attr-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; background: rgba(0,0,0,0.3);
+}
+.mb-attr-total {
+  width: 30px; height: 30px; flex-shrink: 0;
+  background: rgba(200,113,42,0.12); border: 2px solid var(--ember);
+  border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 600; color: var(--gold);
+  cursor: default;
+}
+.mb-attr-name {
+  font-family: 'Cinzel', serif; font-size: 0.75rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--pale); flex: 1;
+}
+.mb-attr-subs {
+  display: grid; grid-template-columns: repeat(6, 1fr);
+  border-top: 1px solid var(--border);
+}
+.mb-sub {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 3px 2px 4px; border-right: 1px solid var(--border);
+}
+.mb-sub:last-child { border-right: none; }
+.mb-sub-label {
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.56rem; letter-spacing: 0em; color: var(--dim);
+  text-transform: uppercase; margin-bottom: 2px; white-space: nowrap;
+}
+.mb-sub input {
+  width: 100%; text-align: center;
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  color: var(--pale); font-family: 'Cinzel', serif; font-size: 0.82rem;
+  outline: none; padding: 1px 0;
+}
+.mb-sub input:focus { border-bottom-color: var(--ember); }
+
+/* ── Seção label ── */
+.mb-sec-label {
+  font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--dim);
+  padding: 7px 0 4px; border-bottom: 1px solid var(--border); margin-bottom: 7px;
+}
+
+/* ── Layout helpers ── */
+.two-cell { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.one-cell { display: flex; flex-direction: column; gap: 2px; }
+.one-cell label {
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dim);
+}
+.one-cell input {
+  width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; padding: 4px 7px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.88rem;
+  outline: none; transition: border-color 0.2s;
+}
+.one-cell input:focus { border-color: var(--border-h); }
+.one-cell textarea {
+  width: 100%; background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  border-radius: 2px; padding: 4px 7px;
+  color: var(--pale); font-family: 'EB Garamond', serif; font-size: 0.85rem;
+  outline: none; resize: vertical; min-height: 44px; transition: border-color 0.2s;
+}
+.one-cell textarea:focus { border-color: var(--border-h); }
+
+/* ── Defesa ── */
+.defesa-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.defesa-cell {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 5px 3px; background: rgba(0,0,0,0.25);
+  border: 1px solid var(--border); border-radius: 2px;
+}
+.defesa-cell label {
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.6rem; letter-spacing: 0.04em; color: var(--dim);
+  margin-bottom: 3px; text-align: center;
+}
+.defesa-cell input {
+  width: 42px; text-align: center;
+  background: transparent; border: none; border-bottom: 1px solid var(--border);
+  color: var(--gold); font-family: 'Cinzel', serif; font-size: 1rem;
+  outline: none; padding: 1px 0;
+}
+.defesa-cell input:focus { border-bottom-color: var(--ember); }
+
+/* ── Tabelas MB ── */
+.mb-table-wrap { border: 1px solid var(--border); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.mb-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.mb-table th {
+  font-family: system-ui, 'Segoe UI', sans-serif; font-size: 0.58rem; letter-spacing: 0.04em;
+  color: var(--dim); text-transform: uppercase;
+  padding: 4px 5px; text-align: left; border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.2);
+}
+.mb-table td { padding: 1px 2px; border-bottom: 1px solid rgba(200,113,42,0.06); }
+.mb-table input {
+  width: 100%; background: transparent; border: none;
+  color: var(--pale); font-family: 'EB Garamond', serif;
+  font-size: 0.82rem; outline: none; padding: 2px 3px;
+  border-bottom: 1px solid transparent; transition: border-color 0.15s;
+}
+.mb-table input:focus { border-bottom-color: var(--ember); }
+.mb-table input[type="number"] { text-align: center; }
+
+/* ── XP Dots ── */
+.xp-wrap { display: flex; gap: 3px; flex-wrap: wrap; }
+.xp-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--ember); background: transparent;
+  cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+}
+.xp-dot.filled { background: var(--ember); }
+
+/* ── Dynamic tables (Habilidades / Magias / Equip.) ── */
+.mb-dyn-wrap { border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+.mb-dyn-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.mb-dyn-table th {
+  font-family: system-ui, 'Segoe UI', sans-serif; font-size: 0.58rem; letter-spacing: 0.03em;
+  color: var(--dim); text-transform: uppercase;
+  padding: 4px 5px; text-align: left; border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.2); white-space: nowrap;
+}
+.mb-dyn-table td { padding: 1px 2px; border-bottom: 1px solid rgba(200,113,42,0.05); vertical-align: middle; }
+.mb-dyn-table input {
+  width: 100%; background: transparent; border: none;
+  color: var(--pale); font-family: 'EB Garamond', serif;
+  font-size: 0.82rem; outline: none; padding: 2px 3px;
+  border-bottom: 1px solid transparent; transition: border-color 0.15s;
+}
+.mb-dyn-table input:focus { border-bottom-color: var(--ember); }
+.mb-row-del {
+  background: none; border: none; color: var(--dim); cursor: pointer;
+  font-size: 0.75rem; opacity: 0.45; padding: 0 3px; line-height: 1;
+}
+.mb-row-del:hover { opacity: 1; color: var(--danger); }
+.mb-add-btn {
+  margin-top: 6px; padding: 5px 10px; width: 100%;
+  background: rgba(200,113,42,0.07); border: 1px dashed rgba(200,113,42,0.28);
+  border-radius: 2px; color: var(--dim); font-family: 'Cinzel', serif;
+  font-size: 0.54rem; letter-spacing: 0.12em; cursor: pointer; transition: all 0.2s;
+}
+.mb-add-btn:hover { color: var(--pale); background: rgba(200,113,42,0.15); }
+
+/* ── Grid size info (oculto) ── */
+.map-info { display: none; }
+
+/* ── Popup Vantagem / Desvantagem ── */
+.roll-mode-popup {
+  position: fixed; z-index: 600;
+  background: rgba(12,9,6,0.99); border: 1px solid var(--border-h);
+  border-radius: 3px; padding: 6px 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+  animation: scaleIn 0.1s ease; min-width: 195px;
+}
+.roll-mode-title {
+  font-family: 'Cinzel', serif; font-size: 0.54rem; letter-spacing: 0.18em;
+  color: var(--ember); text-transform: uppercase;
+  padding: 3px 14px 6px; border-bottom: 1px solid var(--border); margin-bottom: 3px;
+}
+.roll-mode-opt {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px; cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.08em;
+  color: var(--dim); background: transparent; border: none; width: 100%;
+  text-align: left; transition: all 0.12s;
+}
+.roll-mode-opt:hover { background: rgba(200,113,42,0.08); }
+.roll-mode-opt .rmo-dice { font-size: 0.9rem; width: 20px; flex-shrink: 0; }
+.roll-mode-opt .rmo-label { flex: 1; }
+.roll-mode-opt .rmo-tag {
+  font-size: 0.48rem; letter-spacing: 0.12em; padding: 1px 5px;
+  border-radius: 2px; border: 1px solid currentColor; opacity: 0.55;
+  white-space: nowrap;
+}
+.roll-mode-opt.desv { color: #e87070; }
+.roll-mode-opt.norm { color: var(--gold); }
+.roll-mode-opt.vant { color: var(--success, #5cb85c); }
+
+/* ── Fichas Switcher (múltiplas fichas / companions) ── */
+.fichas-switcher {
+  display: none;
+  align-items: center; gap: 3px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.55);
+  flex-shrink: 0; min-height: 32px;
+  padding: 2px 4px;
+}
+.fichas-tabs-row {
+  display: flex; flex: 1; overflow-x: auto; gap: 2px;
+  scrollbar-width: none; align-items: center;
+}
+.fichas-tabs-row::-webkit-scrollbar { display: none; }
+.ftab-ficha {
+  padding: 3px 9px; flex-shrink: 0;
+  background: transparent; border: 1px solid transparent;
+  border-radius: 2px; color: var(--dim);
+  font-family: 'Cinzel', serif; font-size: 0.55rem;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; transition: all 0.15s;
+  max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ftab-ficha:hover { color: var(--pale); border-color: var(--border); }
+.ftab-ficha.active { color: var(--gold); border-color: var(--ember); background: rgba(200,113,42,0.12); }
+.ftab-add-ficha {
+  width: 22px; height: 22px; flex-shrink: 0;
+  background: rgba(200,113,42,0.06); border: 1px dashed rgba(200,113,42,0.3);
+  border-radius: 2px; color: var(--dim); font-size: 0.9rem; line-height: 1;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.ftab-add-ficha:hover { color: var(--gold); border-color: var(--ember); background: rgba(200,113,42,0.15); }
+
+/* Botão avatar do player no switcher */
+.ftab-avatar-btn {
+  width: 26px; height: 26px; flex-shrink: 0;
+  border-radius: 50%; border: 1px solid var(--border);
+  background: rgba(0,0,0,0.5); cursor: pointer;
+  font-size: 0.85rem; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, transform 0.15s;
+  overflow: hidden; padding: 0;
+}
+.ftab-avatar-btn:hover { border-color: var(--ember); transform: scale(1.08); }
+
+/* Wrapper para ficha tab + botão de deletar */
+.ftab-ficha-wrap {
+  display: flex; align-items: center; position: relative; flex-shrink: 0;
+}
+/* Botão ✕ para deletar fichas extras */
+.ftab-del {
+  width: 14px; height: 14px;
+  background: rgba(139,26,26,0.0); border: none;
+  border-radius: 2px; color: var(--dim);
+  font-size: 0.55rem; line-height: 1;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  margin-left: -3px; padding: 0; flex-shrink: 0; opacity: 0.5;
+}
+.ftab-ficha-wrap:hover .ftab-del { opacity: 1; }
+.ftab-del:hover { color: #e87070; background: rgba(139,26,26,0.25); opacity: 1; }
+/* Botão 🗺️ para colocar token no mapa */
+.ftab-map-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 0.7rem; line-height: 1; padding: 1px 2px;
+  opacity: 0.45; transition: opacity 0.15s, filter 0.15s;
+  flex-shrink: 0;
+}
+.ftab-map-btn:hover { opacity: 1; }
+.ftab-map-btn.on-map { opacity: 0.85; filter: drop-shadow(0 0 3px #d4a843); }
+
+/* ── Galeria de Imagens de Fundo ── */
+/* bg-gallery usa o fex-grid mas dentro do modal */
+.bg-fex-wrap {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+  max-height: 340px; margin-bottom: 12px;
+}
+.bg-fex-wrap .fex-breadcrumb { background: rgba(0,0,0,0.3); }
+.bg-fex-wrap .fex-grid {
+  max-height: 310px; grid-template-columns: repeat(auto-fill, minmax(90px,1fr));
+}
+/* Thumbs de bg têm aspect-ratio 16/9 */
+.bg-fex-wrap .fex-card img { aspect-ratio: 16/9; }
+.bg-fex-wrap .fex-card.active-bg { border-color: var(--ember); border-width: 2px; }
+.bg-upload-progress {
+  height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px;
+  margin: 8px 0 14px; overflow: hidden; display: none;
+}
+.bg-upload-progress .bar {
+  height: 100%; background: var(--ember); border-radius: 3px;
+  transition: width 0.2s; width: 0%;
+}
+.bg-empty-msg { color: var(--dim); font-size: 0.82rem; text-align: center; padding: 20px 0; }
+/* Restrições para jogadores */
+body.is-player .gm-only { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- Fundo e bordas decorativas -->
+<div class="rune-top"></div>
+<div class="rune-bottom"></div>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<header class="mesa-header">
+  <span class="header-logo">⚔ <span>Tartantis</span> VTT</span>
+  <span class="camp-name" id="camp-name">Carregando…</span>
+
+  <div class="tool-sep"></div>
+
+  <!-- Ferramentas de mapa -->
+  <div class="header-tools">
+    <button class="tool-btn active" id="tool-select" onclick="setTool('select')" title="Selecionar (S)">↖</button>
+    <button class="tool-btn" id="tool-move" onclick="setTool('move')" title="Mover Mapa (M)">✋</button>
+    <button class="tool-btn gm-only" id="tool-addtoken" onclick="openAddToken(null, null)" title="Adicionar Token (T)">👤</button>
+    <div class="tool-sep gm-only"></div>
+    <button class="tool-btn on gm-only" id="btn-grid" onclick="toggleGrid()" title="Grade (G)">▦</button>
+    <button class="tool-btn gm-only" id="btn-fog" onclick="toggleFog()" title="Névoa de Guerra (F)">🌫</button>
+    <button class="tool-btn gm-only" id="btn-bg-img" onclick="openBgImageModal()" title="Imagem de Fundo do Mapa">🖼</button>
+    <div class="tool-sep gm-only"></div>
+    <button class="tool-btn gm-only" id="btn-settings" onclick="openGridSettings()" title="Tamanho da Grade">⚙</button>
+  </div>
+
+  <!-- Direita -->
+  <div class="header-right">
+    <span class="room-badge" id="room-badge">SALA: —</span>
+    <span class="role-badge" id="role-badge">GM</span>
+    <button class="btn-lobby" onclick="goLobby()">← Lobby</button>
+  </div>
+</header>
+
+<!-- ═══════════════ CORPO ═══════════════ -->
+<div class="mesa-body">
+
+  <!-- ── PAINEL ESQUERDO — Ficha ── -->
+  <aside class="panel-left" id="panel-left">
+    <!-- Collapse tab -->
+    <div class="collapse-tab" onclick="togglePanel('left')" id="collapse-left" title="Recolher ficha">◀</div>
+
+    <!-- ── Fichas Switcher (companions, animal, etc.) ── -->
+    <div class="fichas-switcher" id="fichas-switcher">
+      <!-- Botão avatar do token (visível só para jogadores) -->
+      <button class="ftab-avatar-btn" id="ftab-avatar-btn" onclick="openAvatarModal()" title="Foto do token — clique para alterar">
+        <img id="ftab-avatar-img" src="" alt="" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;">
+        <span id="ftab-avatar-ico">👤</span>
+      </button>
+      <div class="fichas-tabs-row" id="fichas-tabs-row"></div>
+      <button class="ftab-add-ficha" onclick="addNewFicha()" title="Nova Ficha (Companion / Animal)">＋</button>
+    </div>
+
+    <!-- Ficha Tabs -->
+    <div class="ficha-tabs">
+      <button class="ftab active" onclick="switchFichaTab('principal')">Principal</button>
+      <button class="ftab" onclick="switchFichaTab('hab')">Hab.</button>
+      <button class="ftab" onclick="switchFichaTab('magias')">Magias</button>
+      <button class="ftab" onclick="switchFichaTab('equip')">Equip.</button>
+    </div>
+
+    <!-- ficha-inner: autosave listener + tab contents -->
+    <div class="inner" id="ficha-inner">
+
+      <!-- ════ TAB: PRINCIPAL ════ -->
+      <div class="ftab-content active" id="ftab-principal">
+
+        <!-- Identidade -->
+        <div class="mb-sec-label">⚔ Identidade</div>
+        <div class="one-cell"><label>Personagem</label><input type="text" id="f-nome" placeholder="Nome do personagem"></div>
+        <div class="one-cell" style="margin-top:5px"><label>Jogador</label><input type="text" id="f-jogador" placeholder="Nome do jogador"></div>
+        <div class="two-cell" style="margin-top:5px">
+          <div class="one-cell"><label>Raça</label><input type="text" id="f-raca" placeholder="Raça"></div>
+          <div class="one-cell"><label>Classe</label><input type="text" id="f-classe" placeholder="Classe"></div>
+        </div>
+        <div class="two-cell" style="margin-top:5px">
+          <div class="one-cell"><label>Caminho</label><input type="text" id="f-caminho" placeholder="Caminho"></div>
+          <div class="one-cell"><label>Nível</label><input type="number" id="f-nivel" value="1" min="1" max="20"></div>
+        </div>
+        <div class="two-cell" style="margin-top:5px">
+          <div class="one-cell"><label>Antecedente</label><input type="text" id="f-antecedente" placeholder="Antecedente"></div>
+          <div class="one-cell"><label>Idade</label><input type="number" id="f-idade" value="18" min="1"></div>
+        </div>
+        <div style="margin-top:6px">
+          <div class="mb-sec-label" style="margin-bottom:5px">Experiência</div>
+          <div class="xp-wrap" id="xp-dots"></div>
+        </div>
+        <div class="one-cell" style="margin-top:5px"><label>Motivação</label><input type="text" id="f-motivacao" placeholder="Motivação do personagem"></div>
+
+        <!-- ═══ VIDA & MANA (logo abaixo da Identidade) ═══ -->
+        <div class="mb-sec-label" style="margin-top:10px">❤ Vida &amp; Mana</div>
+        <div class="resource-row">
+          <span class="resource-label" style="color:#c84040;width:38px;font-size:0.72rem">Vida</span>
+          <input class="resource-cur" type="number" id="f-pv" value="20" min="0" oninput="updateBar('pv')">
+          <span class="resource-sep">/</span>
+          <input class="resource-max" type="number" id="f-pvMax" value="20" min="1" oninput="updateBar('pv')">
+          <div class="resource-bar"><div class="resource-fill fill-pv" id="bar-pv" style="width:100%"></div></div>
+        </div>
+        <div class="resource-row" style="margin-top:5px">
+          <span class="resource-label" style="color:#4080c0;width:38px;font-size:0.72rem">Mana</span>
+          <input class="resource-cur" type="number" id="f-pm" value="10" min="0" oninput="updateBar('pm')">
+          <span class="resource-sep">/</span>
+          <input class="resource-max" type="number" id="f-pmMax" value="10" min="1" oninput="updateBar('pm')">
+          <div class="resource-bar"><div class="resource-fill fill-pm" id="bar-pm" style="width:100%"></div></div>
+        </div>
+
+        <!-- Atributos -->
+        <div class="mb-sec-label" style="margin-top:10px">◈ Atributos</div>
+
+        <!-- Força -->
+        <div class="mb-attr-block">
+          <div class="mb-attr-header">
+            <div class="mb-attr-total" id="total-forca">0</div>
+            <span class="mb-attr-name">Força</span>
+          </div>
+          <div class="mb-attr-subs">
+            <div class="mb-sub"><span class="mb-sub-label">Raça</span><input type="number" id="f-forca-raca" value="0" min="0" oninput="calcAttr('forca')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Cls</span><input type="number" id="f-forca-cls" value="0" min="0" oninput="calcAttr('forca')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Aprim</span><input type="number" id="f-forca-aprim" value="0" min="0" oninput="calcAttr('forca')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Hab</span><input type="number" id="f-forca-hab" value="0" min="0" oninput="calcAttr('forca')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Mag</span><input type="number" id="f-forca-mag" value="0" min="0" oninput="calcAttr('forca')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Extra</span><input type="number" id="f-forca-extra" value="0" min="0" oninput="calcAttr('forca')"></div>
+          </div>
+        </div>
+
+        <!-- Agilidade -->
+        <div class="mb-attr-block">
+          <div class="mb-attr-header">
+            <div class="mb-attr-total" id="total-agi">0</div>
+            <span class="mb-attr-name">Agilidade</span>
+          </div>
+          <div class="mb-attr-subs">
+            <div class="mb-sub"><span class="mb-sub-label">Raça</span><input type="number" id="f-agi-raca" value="0" min="0" oninput="calcAttr('agi')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Cls</span><input type="number" id="f-agi-cls" value="0" min="0" oninput="calcAttr('agi')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Aprim</span><input type="number" id="f-agi-aprim" value="0" min="0" oninput="calcAttr('agi')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Hab</span><input type="number" id="f-agi-hab" value="0" min="0" oninput="calcAttr('agi')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Mag</span><input type="number" id="f-agi-mag" value="0" min="0" oninput="calcAttr('agi')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Extra</span><input type="number" id="f-agi-extra" value="0" min="0" oninput="calcAttr('agi')"></div>
+          </div>
+        </div>
+
+        <!-- Inteligência -->
+        <div class="mb-attr-block">
+          <div class="mb-attr-header">
+            <div class="mb-attr-total" id="total-intel">0</div>
+            <span class="mb-attr-name">Inteligência</span>
+          </div>
+          <div class="mb-attr-subs">
+            <div class="mb-sub"><span class="mb-sub-label">Raça</span><input type="number" id="f-intel-raca" value="0" min="0" oninput="calcAttr('intel')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Cls</span><input type="number" id="f-intel-cls" value="0" min="0" oninput="calcAttr('intel')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Aprim</span><input type="number" id="f-intel-aprim" value="0" min="0" oninput="calcAttr('intel')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Hab</span><input type="number" id="f-intel-hab" value="0" min="0" oninput="calcAttr('intel')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Mag</span><input type="number" id="f-intel-mag" value="0" min="0" oninput="calcAttr('intel')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Extra</span><input type="number" id="f-intel-extra" value="0" min="0" oninput="calcAttr('intel')"></div>
+          </div>
+        </div>
+
+        <!-- Vontade -->
+        <div class="mb-attr-block">
+          <div class="mb-attr-header">
+            <div class="mb-attr-total" id="total-von">0</div>
+            <span class="mb-attr-name">Vontade</span>
+          </div>
+          <div class="mb-attr-subs">
+            <div class="mb-sub"><span class="mb-sub-label">Raça</span><input type="number" id="f-von-raca" value="0" min="0" oninput="calcAttr('von')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Cls</span><input type="number" id="f-von-cls" value="0" min="0" oninput="calcAttr('von')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Aprim</span><input type="number" id="f-von-aprim" value="0" min="0" oninput="calcAttr('von')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Hab</span><input type="number" id="f-von-hab" value="0" min="0" oninput="calcAttr('von')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Mag</span><input type="number" id="f-von-mag" value="0" min="0" oninput="calcAttr('von')"></div>
+            <div class="mb-sub"><span class="mb-sub-label">Extra</span><input type="number" id="f-von-extra" value="0" min="0" oninput="calcAttr('von')"></div>
+          </div>
+        </div>
+
+        <!-- Defesa -->
+        <div class="mb-sec-label" style="margin-top:8px">🛡 Defesa</div>
+        <div class="defesa-row">
+          <div class="defesa-cell"><label>Bloqueio</label><input type="number" id="f-bloqueio" value="5"></div>
+          <div class="defesa-cell"><label>Esquiva</label><input type="number" id="f-esquiva" value="5"></div>
+          <div class="defesa-cell"><label>Determinação</label><input type="number" id="f-determinacao" value="8"></div>
+        </div>
+
+        <!-- Proteção -->
+        <div class="mb-sec-label" style="margin-top:8px">🔰 Proteção</div>
+        <div class="mb-table-wrap">
+          <table class="mb-table">
+            <thead><tr>
+              <th style="width:48%">Item de Proteção</th>
+              <th style="width:30%">Tipo</th>
+              <th style="width:22%">Def</th>
+            </tr></thead>
+            <tbody>
+              <tr><td><input type="text" id="prot-0-item" placeholder="Armadura…"></td><td><input type="text" id="prot-0-tipo" placeholder="Armadura"></td><td><input type="number" id="prot-0-def" value="0"></td></tr>
+              <tr><td><input type="text" id="prot-1-item"></td><td><input type="text" id="prot-1-tipo" placeholder="Armadura"></td><td><input type="number" id="prot-1-def" value="0"></td></tr>
+              <tr><td><input type="text" id="prot-2-item"></td><td><input type="text" id="prot-2-tipo" placeholder="Escudo"></td><td><input type="number" id="prot-2-def" value="0"></td></tr>
+              <tr><td><input type="text" id="prot-3-item"></td><td><input type="text" id="prot-3-tipo" placeholder="Bloqueio"></td><td><input type="number" id="prot-3-def" value="0"></td></tr>
+              <tr><td><input type="text" id="prot-4-item"></td><td><input type="text" id="prot-4-tipo" placeholder="Esquiva"></td><td><input type="number" id="prot-4-def" value="0"></td></tr>
+              <tr><td><input type="text" id="prot-5-item"></td><td><input type="text" id="prot-5-tipo" placeholder="Determinação"></td><td><input type="number" id="prot-5-def" value="0"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Deslocamento / Corrida -->
+        <div class="mb-sec-label" style="margin-top:8px">🏃 Movimento</div>
+        <div class="two-cell">
+          <div class="one-cell"><label>Deslocamento</label><input type="number" id="f-desl" value="9"></div>
+          <div class="one-cell"><label>Corrida</label><input type="number" id="f-corrida" value="0"></div>
+        </div>
+
+        <!-- Ataque -->
+        <div class="mb-sec-label" style="margin-top:8px">⚔ Ataque</div>
+        <div class="mb-table-wrap">
+          <table class="mb-table">
+            <thead><tr>
+              <th style="width:44%">Arma</th>
+              <th style="width:28%">Dano</th>
+              <th style="width:28%">Tipo</th>
+            </tr></thead>
+            <tbody>
+              <tr><td><input type="text" id="atk-0-arma"></td><td><input type="text" id="atk-0-dano" placeholder="1d6"></td><td><input type="text" id="atk-0-tipo"></td></tr>
+              <tr><td><input type="text" id="atk-1-arma"></td><td><input type="text" id="atk-1-dano"></td><td><input type="text" id="atk-1-tipo"></td></tr>
+              <tr><td><input type="text" id="atk-2-arma"></td><td><input type="text" id="atk-2-dano"></td><td><input type="text" id="atk-2-tipo"></td></tr>
+              <tr><td><input type="text" id="atk-3-arma"></td><td><input type="text" id="atk-3-dano"></td><td><input type="text" id="atk-3-tipo"></td></tr>
+              <tr><td><input type="text" id="atk-4-arma"></td><td><input type="text" id="atk-4-dano"></td><td><input type="text" id="atk-4-tipo"></td></tr>
+              <tr><td><input type="text" id="atk-5-arma"></td><td><input type="text" id="atk-5-dano"></td><td><input type="text" id="atk-5-tipo"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Idiomas -->
+        <div class="mb-sec-label" style="margin-top:8px">🗣 Idiomas</div>
+        <div class="one-cell"><textarea id="f-idiomas" placeholder="Idiomas conhecidos…" rows="2"></textarea></div>
+
+        <!-- Recursos -->
+        <div class="mb-sec-label" style="margin-top:8px">💰 Recursos</div>
+        <div class="one-cell"><textarea id="f-recursos" placeholder="Ouro, prata, itens valiosos…" rows="3"></textarea></div>
+
+        <div class="save-indicator" id="save-indicator" style="margin-top:8px">Auto-salvo</div>
+
+      </div><!-- /ftab-principal -->
+
+      <!-- ════ TAB: HABILIDADES ════ -->
+      <div class="ftab-content" id="ftab-hab">
+        <div class="mb-sec-label">✦ Habilidades</div>
+        <div class="mb-dyn-wrap">
+          <table class="mb-dyn-table">
+            <thead><tr>
+              <th style="width:34%">Nome</th>
+              <th style="width:11%">Dif.</th>
+              <th style="width:11%">Mana</th>
+              <th>Descrição</th>
+              <th style="width:18px"></th>
+            </tr></thead>
+            <tbody id="hab-tbody"></tbody>
+          </table>
+        </div>
+        <button class="mb-add-btn" onclick="addHabRow()">+ Adicionar Habilidade</button>
+      </div>
+
+      <!-- ════ TAB: MAGIAS ════ -->
+      <div class="ftab-content" id="ftab-magias">
+        <div class="mb-sec-label">✨ Magias</div>
+        <div class="mb-dyn-wrap">
+          <table class="mb-dyn-table">
+            <thead><tr>
+              <th style="width:28%">Nome</th>
+              <th style="width:10%">Dif.</th>
+              <th style="width:10%">Mana</th>
+              <th style="width:12%">Custo</th>
+              <th>Descrição</th>
+              <th style="width:18px"></th>
+            </tr></thead>
+            <tbody id="mag-tbody"></tbody>
+          </table>
+        </div>
+        <button class="mb-add-btn" onclick="addMagRow()">+ Adicionar Magia</button>
+      </div>
+
+      <!-- ════ TAB: EQUIPAMENTO ════ -->
+      <div class="ftab-content" id="ftab-equip">
+        <div class="mb-sec-label">🎒 Equipamento</div>
+        <div class="mb-dyn-wrap">
+          <table class="mb-dyn-table">
+            <thead><tr>
+              <th style="width:50%">Item</th>
+              <th style="width:22%">Peso</th>
+              <th style="width:22%">Custo</th>
+              <th style="width:18px"></th>
+            </tr></thead>
+            <tbody id="equip-tbody"></tbody>
+          </table>
+        </div>
+        <button class="mb-add-btn" onclick="addEquipRow()">+ Adicionar Item</button>
+        <div class="mb-sec-label" style="margin-top:10px">⚖ Carga</div>
+        <div class="one-cell"><input type="text" id="f-carga" placeholder="Carga atual / máxima"></div>
+        <div class="mb-sec-label" style="margin-top:10px">📝 Anotações</div>
+        <div class="one-cell"><textarea id="f-anotacoes" placeholder="Notas livres, histórico, conexões…" rows="6"></textarea></div>
+      </div>
+
+    </div><!-- /ficha-inner -->
+  </aside>
+
+  <!-- ── MAPA CENTRAL ── -->
+  <main class="map-container" id="map-container"
+        ondblclick="mapContextMenu(event)"
+        onmousedown="mapMouseDown(event)"
+        onmousemove="mapMouseMove(event)"
+        onmouseup="mapMouseUp(event)"
+        onwheel="mapWheel(event)">
+    <div class="map-stage" id="map-stage">
+      <canvas id="grid-canvas" width="3000" height="3000"></canvas>
+      <div id="token-layer"></div>
+      <div class="fog-overlay" id="fog-overlay"></div>
+    </div>
+    <!-- Carrossel de Turno — overlay no topo do mapa -->
+    <div id="init-carousel">
+      <button class="carousel-nav" onclick="_carouselPrev()" title="Turno anterior">‹</button>
+      <div id="carousel-track"></div>
+      <button class="carousel-nav" onclick="_carouselNext()" title="Próximo turno">›</button>
+    </div>
+    <div class="map-info" id="map-info">Grade: 50px · Zoom: 100%</div>
+  </main>
+
+  <!-- ── PAINEL DIREITO — Chat / Dados / Iniciativa ── -->
+  <aside class="panel-right" id="panel-right">
+    <div class="collapse-tab collapse-tab-right" onclick="togglePanel('right')" id="collapse-right" title="Recolher painel">▶</div>
+
+    <!-- Abas -->
+    <div class="right-tabs">
+      <button class="rtab active" onclick="switchRTab('chat')">💬 Chat</button>
+      <button class="rtab" onclick="switchRTab('dice')">🎲 Dados</button>
+      <button class="rtab" onclick="switchRTab('init')">🗡 Turno</button>
+      <button class="rtab gm-only" onclick="switchRTab('toklib')" id="tab-toklib" style="display:none">🗃 Tokens</button>
+    </div>
+
+    <!-- Chat -->
+    <div class="rtab-content active" id="rtab-chat">
+      <div class="chat-log" id="chat-log"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="/r 2d6+3 · /me ação · /lc limpar · mensagem…"
+               onkeydown="if(event.key==='Enter') sendChat()">
+        <button class="send-btn" onclick="sendChat()" title="Enviar">↵</button>
+      </div>
+      <!-- Botão de rolagem às cegas — visível apenas para o Mestre -->
+      <button class="btn-blind-roll" id="blind-roll-btn-chat"
+              onclick="toggleBlindRoll()"
+              style="display:none; margin-top:4px;">
+        🙈 Rolagem às Cegas
+      </button>
+    </div>
+
+    <!-- Dados -->
+    <div class="rtab-content" id="rtab-dice">
+      <div class="dice-panel">
+        <!-- Botão de rolagem às cegas — visível apenas para o Mestre -->
+        <button class="btn-blind-roll" id="blind-roll-btn-dice"
+                onclick="toggleBlindRoll()"
+                style="display:none; margin-bottom:2px;">
+          🙈 Rolagem às Cegas
+        </button>
+        <div class="dice-grid">
+          <button class="die-btn" onclick="quickRoll(4)">d4</button>
+          <button class="die-btn" onclick="quickRoll(6)">d6</button>
+          <button class="die-btn" onclick="quickRoll(8)">d8</button>
+          <button class="die-btn" onclick="quickRoll(10)">d10</button>
+          <button class="die-btn" onclick="quickRoll(12)">d12</button>
+          <button class="die-btn" onclick="quickRoll(20)">d20</button>
+          <button class="die-btn" onclick="quickRoll(100)" style="grid-column:span 2">d100 (percentual)</button>
+        </div>
+
+        <div class="custom-roll-row">
+          <input type="number" id="dice-qty" value="2" min="1" max="20" style="width:36px">
+          <span>d</span>
+          <input type="number" id="dice-type" value="6" min="2" max="100" style="width:36px">
+          <span>+</span>
+          <input type="number" id="dice-mod" value="0" style="width:36px">
+          <button class="roll-custom-btn" onclick="rollCustom()">Rolar</button>
+        </div>
+
+        <div class="dice-result-box" id="dice-result-box">
+          <div class="dice-result-total" id="dice-result-total">—</div>
+          <div class="dice-result-detail" id="dice-result-detail">Clique em um dado para rolar</div>
+        </div>
+
+        <!-- Rolagens rápidas de atributo MB (2d6 · clique para escolher modo) -->
+        <div style="padding:6px 0 2px; font-family:'Cinzel',serif; font-size:0.58rem; letter-spacing:0.2em; color:var(--dim); text-transform:uppercase;">Teste de Atributo <span style="opacity:0.5">(2d6 + total)</span></div>
+        <div class="dice-grid" style="grid-template-columns:repeat(2,1fr)">
+          <button class="die-btn" onclick="askRollMode('forca','Força',event)">Força</button>
+          <button class="die-btn" onclick="askRollMode('agi','Agilidade',event)">Agilidade</button>
+          <button class="die-btn" onclick="askRollMode('intel','Inteligência',event)">Inteligência</button>
+          <button class="die-btn" onclick="askRollMode('von','Vontade',event)">Vontade</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Iniciativa / Turno -->
+    <div class="rtab-content" id="rtab-init">
+      <div class="init-panel">
+        <!-- lista rolável ocupa todo espaço restante -->
+        <div class="init-list" id="init-list"></div>
+        <!-- footer fixo: sempre visível, nunca cortado -->
+        <div class="init-footer">
+          <!-- Linha 1: campos de entrada (sem botão, sem overflow) -->
+          <div class="init-add-row">
+            <input type="text" class="init-name-in" id="init-name-in" placeholder="Nome">
+            <input type="number" class="init-num-in" id="init-val-in" placeholder="Ini" min="-10" max="99">
+          </div>
+          <!-- Linha 2: todos os botões dividem espaço igualmente -->
+          <div class="init-actions">
+            <button class="init-btn" onclick="addInitEntry()" title="Adicionar à iniciativa">+ Add</button>
+            <button class="init-btn" onclick="sortInit()" title="Ordenar">↓</button>
+            <button class="init-btn next" onclick="nextTurn()">▶ Próx</button>
+            <button class="init-btn" onclick="clearInit()" title="Limpar">✕</button>
+          </div>
+          <button class="btn-carousel" id="btn-carousel-toggle" onclick="toggleCarousel()">
+            🎠 Mostrar Carrossel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Biblioteca de Tokens (só GM) -->
+    <div class="rtab-content gm-only" id="rtab-toklib">
+      <div style="padding:6px 10px 4px; display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--border); flex-shrink:0">
+        <span style="font-family:'Cinzel',serif;font-size:0.62rem;letter-spacing:0.15em;color:var(--dim);flex:1">BIBLIOTECA DE TOKENS</span>
+        <button class="tool-btn" onclick="loadTokenLibrary()" title="Recarregar">↺</button>
+      </div>
+      <!-- Breadcrumb de navegação -->
+      <div class="fex-breadcrumb" id="tok-breadcrumb"></div>
+      <!-- Grid file explorer -->
+      <div class="fex-grid" id="tok-lib-grid"></div>
+    </div>
+
+  </aside>
+</div><!-- /mesa-body -->
+
+<!-- ═══════════════ MENU DE CONTEXTO ═══════════════ -->
+<div class="ctx-menu" id="ctx-menu" style="display:none"></div>
+
+<!-- ═══════════════ MODAL — Adicionar Token ═══════════════ -->
+<div class="modal-overlay" id="modal-token" style="display:none" onclick="if(event.target===this) closeModal('modal-token')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-token')">✕</button>
+    <div class="modal-title">⚔ Adicionar Token</div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>Nome do Token</label>
+      <input type="text" id="tok-name" class="mb-input" placeholder="Ex: Goblin, Herói, Chefe…">
+    </div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>Emoji / Ícone</label>
+      <input type="text" id="tok-icon" class="mb-input" placeholder="🧙 👹 🐉 🗡 🛡" maxlength="4">
+    </div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>HP Atual / Máximo</label>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="tok-hp" class="mb-input" value="10" min="0">
+        <span style="color:var(--dim);display:flex;align-items:center">/</span>
+        <input type="number" id="tok-hpmax" class="mb-input" value="10" min="1">
+      </div>
+    </div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>Cor do Token</label>
+      <div class="color-picker-row" id="color-picker"></div>
+    </div>
+    <div class="ficha-field" style="margin-bottom:16px">
+      <label>Foto do Token <span style="color:var(--dim);font-size:0.75rem">(opcional)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.5);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">
+          <img id="add-tok-img-prev" style="display:none;width:100%;height:100%;object-fit:cover" src="">
+          <span id="add-tok-img-ico">📷</span>
+        </div>
+        <label class="cta-btn sm" style="cursor:pointer;margin:0">
+          📷 Enviar imagem
+          <input type="file" id="add-tok-file" accept="image/*" style="display:none" onchange="handleAddTokenFile(this)">
+        </label>
+        <button class="cta-btn sm danger" id="add-tok-clear" onclick="clearAddTokenImg()" style="display:none">✕</button>
+      </div>
+    </div>
+    <button class="cta-btn" onclick="confirmAddToken()">✦ Adicionar ao Mapa</button>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL — Editar Token ═══════════════ -->
+<div class="modal-overlay" id="modal-edit-token" style="display:none" onclick="if(event.target===this) closeModal('modal-edit-token')">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-edit-token')">✕</button>
+    <div class="modal-title">✏ Editar Token</div>
+    <input type="hidden" id="edit-tok-id">
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>Nome</label>
+      <input type="text" id="edit-tok-name" class="mb-input">
+    </div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>HP Atual / Máximo</label>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="edit-tok-hp" class="mb-input" min="0">
+        <span style="color:var(--dim);display:flex;align-items:center">/</span>
+        <input type="number" id="edit-tok-hpmax" class="mb-input" min="1">
+      </div>
+    </div>
+    <div class="ficha-field" style="margin-bottom:16px">
+      <label>Foto do Token <span style="color:var(--dim);font-size:0.75rem">(opcional)</span></label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,0,0,0.5);border:1px solid var(--border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">
+          <img id="edit-tok-img-prev" style="display:none;width:100%;height:100%;object-fit:cover" src="">
+          <span id="edit-tok-img-ico">📷</span>
+        </div>
+        <label class="cta-btn sm" style="cursor:pointer;margin:0">
+          📷 Enviar imagem
+          <input type="file" id="edit-tok-file" accept="image/*" style="display:none" onchange="handleEditTokenFile(this)">
+        </label>
+        <button class="cta-btn sm danger" id="edit-tok-clear" onclick="clearEditTokenImg()" style="display:none">✕</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="cta-btn" onclick="confirmEditToken()">✦ Salvar</button>
+      <button class="cta-btn danger sm" onclick="removeToken(document.getElementById('edit-tok-id').value); closeModal('modal-edit-token')">🗑 Remover</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL — Fundo do Mapa ═══════════════ -->
+<div class="modal-overlay" id="modal-bg-image" style="display:none" onclick="if(event.target===this) closeModal('modal-bg-image')">
+  <div class="modal-box" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('modal-bg-image')">✕</button>
+    <div class="modal-title">🖼 Imagens de Fundo do Mapa</div>
+    <div style="margin-bottom:6px; color:var(--dim); font-size:0.8rem">
+      Qualquer formato e resolução — salva em qualidade máxima no computador do Mestre.
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
+      <label class="cta-btn sm" style="cursor:pointer;margin:0">
+        ⬆ Enviar nova imagem
+        <input type="file" id="bg-img-file" accept="image/*" style="display:none" onchange="uploadBgImage(this)">
+      </label>
+      <button class="cta-btn sm danger" onclick="removeBgImage()" id="btn-remove-bg" style="display:none">✕ Remover fundo</button>
+    </div>
+    <div class="bg-upload-progress" id="bg-upload-progress"><div class="bar" id="bg-progress-bar"></div></div>
+    <div id="bg-upload-status" style="font-size:0.78rem;color:var(--dim);margin-bottom:8px;display:none"></div>
+    <div class="bg-fex-wrap">
+      <div class="fex-breadcrumb" id="bg-breadcrumb"></div>
+      <div class="fex-grid" id="bg-gallery"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL — Avatar do Token ═══════════════ -->
+<div class="modal-overlay" id="modal-avatar" style="display:none" onclick="if(event.target===this) closeModal('modal-avatar')">
+  <div class="modal-box" style="max-width:320px">
+    <button class="modal-close" onclick="closeModal('modal-avatar')">✕</button>
+    <div class="modal-title">📷 Foto do Token</div>
+    <div style="text-align:center; margin-bottom:14px; color:var(--dim); font-size:0.82rem; line-height:1.5">
+      Carregue qualquer imagem — o site vai cortar<br>em quadrado e ajustar ao tamanho do token.
+    </div>
+    <!-- Preview circular -->
+    <div style="display:flex;justify-content:center;margin-bottom:16px">
+      <div id="avatar-preview-wrap" style="
+        width:96px;height:96px;border-radius:50%;
+        border:2px solid var(--border-h);overflow:hidden;
+        display:flex;align-items:center;justify-content:center;
+        background:rgba(0,0,0,0.4);font-size:2.5rem;cursor:pointer;"
+        onclick="document.getElementById('avatar-file-input').click()"
+        title="Clique para escolher imagem">
+        <img id="avatar-preview-img" src="" style="display:none;width:100%;height:100%;object-fit:cover;">
+        <span id="avatar-preview-ico">👤</span>
+      </div>
+    </div>
+    <!-- Input file oculto -->
+    <input type="file" id="avatar-file-input" accept="image/*" style="display:none" onchange="handleAvatarFile(this)">
+    <button class="cta-btn" onclick="document.getElementById('avatar-file-input').click()" style="margin-bottom:8px">
+      📷 Escolher Imagem
+    </button>
+    <button class="cta-btn" id="avatar-save-btn" onclick="saveAvatar()" style="display:none">
+      ✦ Usar esta imagem
+    </button>
+    <button class="cta-btn danger sm" id="avatar-remove-btn" onclick="removeAvatar()" style="display:none;margin-top:6px">
+      🗑 Remover foto
+    </button>
+    <!-- Canvas oculto para processamento -->
+    <canvas id="avatar-canvas" style="display:none"></canvas>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<!-- Scripts principais -->
+<script src="../core/tvtt-state.js"></script>
+<!-- Animação 3D de dados -->
+<script src="../core/tvtt-dice.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ESTADO DA MESA
+══════════════════════════════════════════════════════════════ */
+let SESSION    = {};
+let MAP_DATA   = {};
+let CHAR_DATA  = {};
+let CHAR_ID    = 'char_default';
+let INIT_LIST  = [];
+let INIT_TURN  = 0;
+let ACTIVE_TOOL = 'select';
+let SELECTED_TOKEN = null;
+
+// Pan, zoom e drag
+let isPanning       = false, panStartX = 0, panStartY = 0, panOfsX = 0, panOfsY = 0;
+let isRightPanning  = false; // pan com botão direito segurado
+let rightDragDist   = 0;     // distância percorrida no right-drag (para distinguir click de drag)
+let rightDragStartX = 0, rightDragStartY = 0;
+let mapScale        = 1.0;   // zoom atual (0.15 – 3.0)
+let isDraggingToken = false, dragToken = null, dragOffX = 0, dragOffY = 0;
+let _placementMode  = null; // { fichaIndex } — aguardando clique no mapa para posicionar token
+
+// Context menu state
+let ctxMapX = 0, ctxMapY = 0, ctxTokenId = null;
+
+// Blind roll state
+let _blindRoll = false;
+
+// Token sendo adicionado
+let pendingTokenPos = null;
+
+// Ficha de personagem
+const MB_ATTRS = ['forca','agi','intel','von'];
+const MB_SUBS  = ['raca','cls','aprim','hab','mag','extra'];
+let XP_VAL = 0;
+let saveTimer = null;
+
+// Múltiplas fichas (companion, animal, etc.)
+let ALL_FICHAS  = []; // [ { id: string, label: string }, ... ]
+let FICHA_INDEX = 0;  // índice da ficha ativa
+
+// Cores disponíveis para tokens
+const TOKEN_COLORS = [
+  '#c84040','#40a0c8','#50b850','#c8a040','#9040c8',
+  '#c87040','#40c8b8','#c84090','#8090a0','#d4a843'
+];
+
+/* ══════════════════════════════════════════════════════════════
+   BOOT — Inicialização completa
+══════════════════════════════════════════════════════════════ */
+(function bootMesa() {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('sala') || 'LOCAL';
+  const role   = params.get('role') || 'gm';
+  const name   = params.get('name') || (role === 'gm' ? 'Mestre' : 'Jogador');
+  const color  = params.get('color') || (role === 'gm' ? '#d4a843' : '#40a0c8');
+  const pid    = params.get('pid') || (role === 'gm' ? 'gm' : name.replace(/\s/g, '_'));
+
+  SESSION = { code, role, name, color, pid, campaign: 'Campanha' };
+  MBState.session.set(SESSION);
+
+  if (role !== 'gm') { document.body.classList.add('is-player'); }
+
+  document.getElementById('camp-name').textContent = SESSION.campaign || code;
+  document.getElementById('room-badge').textContent = 'SALA: ' + SESSION.code;
+  const rb = document.getElementById('role-badge');
+  rb.textContent = role === 'gm' ? 'GM' : name;
+  if (role !== 'gm') rb.classList.add('player');
+
+  MAP_DATA = MBState.map.default(); INIT_LIST = [];
+  MBState.startSync(code,{
+    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();document.getElementById('fog-overlay').style.display=MAP_DATA.fogActive?'block':'none';document.getElementById('btn-fog').classList.toggle('on',MAP_DATA.fogActive);document.getElementById('btn-grid').classList.toggle('on',MAP_DATA.showGrid);},
+    onTokenSet(token){if(!token||!token.id)return;if(!MAP_DATA.tokens)MAP_DATA.tokens=[];const idx=MAP_DATA.tokens.findIndex(t=>t.id===token.id);if(idx>=0)MAP_DATA.tokens[idx]=token;else MAP_DATA.tokens.push(token);renderTokens();},
+    onTokenRemove(id){if(!id)return;MAP_DATA.tokens=(MAP_DATA.tokens||[]).filter(t=>t.id!==id);renderTokens();},
+    onChatNew(entry){if(entry.blind&&SESSION.role!=='gm'){renderChatMsg(entry,true);return;}if(entry.type==='roll'&&entry.ok&&entry.rolls&&entry.rolls.length>0&&typeof DiceAnimator!=='undefined'){try{DiceAnimator.roll(entry.rolls,entry.sides||6,entry.author,()=>renderChatMsg(entry,true));}catch(e){renderChatMsg(entry,true);}}else{renderChatMsg(entry,true);}},
+    onInitUpdate(list){INIT_LIST=list;renderInitList();renderInitCarousel();},
+    onInitTurnUpdate(n){if(typeof n==='number'&&n!==INIT_TURN){INIT_TURN=n;renderInitList();renderInitCarousel();}},
+    onBlindRollUpdate(val){_blindRoll=!!val;_updateBlindRollUI();},
+    onCharUpdate(charData){
+      // Atualiza ficha em memória se for a ficha ativa (p.ex. GM vê edição do player)
+      if(charData&&charData.id===CHAR_ID){CHAR_DATA={...CHAR_DATA,...charData};loadFicha();}
+    }
+  },function onStateLoaded(state){
+    if(state.map&&Object.keys(state.map).length)MAP_DATA={...MAP_DATA,...state.map};
+    if(Array.isArray(state.tokens))MAP_DATA.tokens=state.tokens;
+    if(Array.isArray(state.init))INIT_LIST=state.init;
+    if(typeof state.init_turn==='number')INIT_TURN=state.init_turn;
+    if(typeof state.blind_roll==='boolean')_blindRoll=state.blind_roll;
+    _loadCharsAndFinalize();
+  });
+  // Para LOCAL: startSync já chama onStateLoaded({}) internamente — sem double-call
+
+  function _loadCharsAndFinalize(){
+    const pid = SESSION.pid;
+    CHAR_ID=role==='gm'?'char_gm':'char_'+pid;
+    MBState.charList.load(code,pid,fichasList=>{
+      if(fichasList.length===0){
+        ALL_FICHAS=[{id:CHAR_ID,label:role==='gm'?'Mestre':(name||'Principal')}];
+        MBState.charList.save(code,pid,ALL_FICHAS);
+      } else {
+        ALL_FICHAS=fichasList; CHAR_ID=ALL_FICHAS[0].id;
+      }
+      MBState.char.load(CHAR_ID,charData=>{
+        CHAR_DATA=charData;
+        finalizarInit(role!=='gm');
+      });
+    });
+  }
+
+  function finalizarInit(isPlayer) {
+    loadFicha();
+    renderGrid();
+    renderTokens();
+    renderInitList();
+    loadChatHistory();
+
+    // Switcher de fichas: disponível para TODOS (GM e players)
+    renderFichasSwitcher();
+    if (isPlayer) {
+      // Player: atualiza token se já existir (não cria automaticamente)
+      syncPlayerToken(SESSION.pid);
+    }
+
+    // Botões e conteúdo exclusivos do mestre — oculta completamente para players
+    if (role !== 'gm') {
+      const gmOnly = ['tool-addtoken', 'btn-bg-img', 'btn-fog', 'btn-grid'];
+      gmOnly.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      // Oculta separadores da toolbar
+      document.querySelectorAll('.tool-sep').forEach(sep => sep.style.display = 'none');
+      // Garante que a aba e o conteúdo da biblioteca de tokens não existam para players
+      const tabTl = document.getElementById('tab-toklib');
+      if (tabTl) tabTl.remove();
+      const tokContent = document.getElementById('rtab-toklib');
+      if (tokContent) tokContent.remove();
+    }
+
+    setupFichaAutosave();
+    setupColorPicker();
+
+    document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
+    document.getElementById('btn-fog').classList.toggle('on', MAP_DATA.fogActive);
+    document.getElementById('btn-grid').classList.toggle('on', MAP_DATA.showGrid);
+
+    centerMapOnBg();
+    updateMapInfo();
+    // Mostra aba Biblioteca de Tokens apenas para o GM
+    if (role === 'gm') {
+      const tabTl = document.getElementById('tab-toklib');
+      if (tabTl) tabTl.style.display = '';
+      // Mostra botões de rolagem às cegas para o Mestre
+      document.querySelectorAll('.btn-blind-roll').forEach(function(btn) {
+        btn.style.display = '';
+      });
+      // blindRoll via WS onBlindRollUpdate
+    }
+    addSysMsg('⚔ Mesa carregada. Bem-vindo, ' + (role === 'gm' ? 'Mestre' : name) + '!');
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════ */
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FERRAMENTAS
+══════════════════════════════════════════════════════════════ */
+function setTool(tool) {
+  ACTIVE_TOOL = tool;
+  document.querySelectorAll('#tool-select, #tool-move, #tool-addtoken').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById('tool-' + tool);
+  if (el) el.classList.add('active');
+  document.getElementById('map-stage').style.cursor =
+    tool === 'move' ? 'grab' : tool === 'addtoken' ? 'cell' : 'crosshair';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GRADE (CANVAS)
+══════════════════════════════════════════════════════════════ */
+let _bgImageCache = null; // { url, img } — imagem de fundo em cache
+let _bgImgBounds  = null; // { dx, dy, dw, dh } — área da imagem no canvas
+
+function renderGrid() {
+  const canvas = document.getElementById('grid-canvas');
+  const ctx    = canvas.getContext('2d');
+  const gs     = MAP_DATA.gridSize || 50;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ── Fundo: imagem ou cor sólida ──
+  if (MAP_DATA.bgImageURL) {
+    if (!_bgImageCache || _bgImageCache.url !== MAP_DATA.bgImageURL) {
+      // Carrega imagem e re-renderiza quando pronta
+      _bgImageCache = { url: MAP_DATA.bgImageURL, img: null };
+      const imgEl = new Image();
+      imgEl.crossOrigin = 'anonymous';
+      imgEl.onload = () => { _bgImageCache.img = imgEl; renderGrid(); };
+      imgEl.onerror = () => { _bgImageCache = null; _bgImgBounds = null; renderGrid(); };
+      imgEl.src = MAP_DATA.bgImageURL;
+    }
+    if (_bgImageCache && _bgImageCache.img) {
+      const img = _bgImageCache.img;
+      const cw = canvas.width, ch = canvas.height;
+      const iw = img.naturalWidth  || img.width;
+      const ih = img.naturalHeight || img.height;
+      // "contain": escala uniforme para caber inteira sem distorcer
+      const scale = Math.min(cw / iw, ch / ih);
+      const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
+      const dx = Math.floor((cw - dw) / 2), dy = Math.floor((ch - dh) / 2);
+      _bgImgBounds = { dx, dy, dw, dh };
+      // Cor sólida nas bordas que sobram
+      ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.drawImage(img, dx, dy, dw, dh);
+    } else {
+      _bgImgBounds = null;
+      ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  } else {
+    _bgImgBounds = null;
+    ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (!MAP_DATA.showGrid) return;
+
+  // ── Grade alinhada à imagem (ou ao canvas inteiro se sem imagem) ──
+  const gridOpacity = MAP_DATA.bgImageURL ? 0.35 : 0.18;
+  ctx.strokeStyle = `rgba(200,113,42,${gridOpacity})`;
+  ctx.lineWidth = 0.8;
+
+  // Grade só aparece dentro dos limites da imagem de fundo
+  if (!_bgImgBounds) return;
+
+  const { dx, dy, dw, dh } = _bgImgBounds;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(dx, dy, dw, dh);
+  ctx.clip();
+  // Linhas verticais alinhadas à borda esquerda da imagem
+  for (let x = dx; x <= dx + dw; x += gs) {
+    ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
+  }
+  // Linhas horizontais alinhadas à borda superior da imagem
+  for (let y = dy; y <= dy + dh; y += gs) {
+    ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function toggleGrid() {
+  MAP_DATA.showGrid = !MAP_DATA.showGrid;
+  document.getElementById('btn-grid').classList.toggle('on', MAP_DATA.showGrid);
+  renderGrid();
+  saveMap();
+  updateMapInfo();
+}
+
+function toggleFog() {
+  MAP_DATA.fogActive = !MAP_DATA.fogActive;
+  document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
+  document.getElementById('btn-fog').classList.toggle('on', MAP_DATA.fogActive);
+  saveMap();
+  showToast(MAP_DATA.fogActive ? '🌫 Névoa ativada' : '☀ Névoa desativada');
+}
+
+function openGridSettings() {
+  const val = prompt('Tamanho da célula da grade (px):', MAP_DATA.gridSize || 50);
+  if (val && !isNaN(val)) {
+    MAP_DATA.gridSize = Math.max(20, Math.min(200, parseInt(val)));
+    renderGrid();
+    renderTokens();
+    saveMap();
+    updateMapInfo();
+    showToast(`Grade: ${MAP_DATA.gridSize}px`);
+  }
+}
+
+function updateMapInfo() { /* info de grade removida */ }
+
+/* ══════════════════════════════════════════════════════════════
+   IMAGEM DE FUNDO DO MAPA
+   A imagem é comprimida no browser para ~1280px, JPEG 78%,
+   ficando entre 80-180 KB como base64.
+══════════════════════════════════════════════════════════════ */
+
+function openBgImageModal() {
+  if (SESSION.role !== 'gm') return;
+  document.getElementById('btn-remove-bg').style.display = MAP_DATA.bgImageURL ? '' : 'none';
+  document.getElementById('bg-img-file').value = '';
+  document.getElementById('bg-upload-progress').style.display = 'none';
+  document.getElementById('bg-upload-status').style.display = 'none';
+  loadBgGallery();
+  openModal('modal-bg-image');
+}
+
+// loadBgGallery → implementado no bloco "File Explorer" abaixo
+
+/* Upload de fundo em qualidade máxima para o servidor local */
+async function uploadBgImage(input) {
+  if (SESSION.role !== 'gm') return;
+  const file = input.files[0];
+  if (!file) return;
+
+  const progressWrap = document.getElementById('bg-upload-progress');
+  const progressBar  = document.getElementById('bg-progress-bar');
+  const statusEl     = document.getElementById('bg-upload-status');
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '15%';
+  statusEl.style.display = 'block';
+  const sizeKB = Math.round(file.size / 1024);
+  statusEl.textContent = `Enviando ${sizeKB} KB em qualidade máxima…`;
+
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  try {
+    progressBar.style.width = '50%';
+    const resp = await fetch(
+      '/api/images/upload?type=bg&name=' + encodeURIComponent(file.name),
+      { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-GM-Token': tok }, body: file }
+    );
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Erro no upload');
+    progressBar.style.width = '100%';
+    statusEl.textContent = `✦ Salvo! (${data.sizeKB} KB — qualidade máxima)`;
+    setTimeout(() => { progressWrap.style.display = 'none'; statusEl.style.display = 'none'; }, 2500);
+    input.value = '';
+    loadBgGallery();
+    setBgImage(data.url);
+  } catch (err) {
+    statusEl.textContent = '⚠ Erro: ' + err.message;
+    progressWrap.style.display = 'none';
+  }
+}
+
+function setBgImage(url) {
+  MAP_DATA.bgImageURL = url;
+  _bgImageCache = null;
+  _bgImgBounds  = null;
+  saveMap();
+  renderGrid();
+  centerMapOnBg(); // recentra a visão no novo fundo
+  document.getElementById('btn-remove-bg').style.display = '';
+  _renderBgExplorer(); // atualiza destaque do ativo
+  showToast('🖼 Fundo aplicado!');
+}
+
+function removeBgImage() {
+  MAP_DATA.bgImageURL = '';
+  _bgImageCache = null;
+  _bgImgBounds  = null;
+  saveMap();
+  renderGrid();
+  document.getElementById('btn-remove-bg').style.display = 'none';
+  _renderBgExplorer();
+  showToast('✦ Fundo removido.');
+}
+
+function deleteBgImageServer(filename, url) {
+  if (!confirm('Deletar esta imagem do disco?\nEssa ação não pode ser desfeita.')) return;
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  fetch('/api/images/delete?type=bg&name=' + encodeURIComponent(filename), {
+    method: 'POST', headers: { 'X-GM-Token': tok }
+  }).then(() => {
+    if (MAP_DATA.bgImageURL === url) removeBgImage();
+    showToast('🗑 Imagem deletada.');
+    loadBgGallery();
+  }).catch(() => showToast('⚠ Erro ao deletar.'));
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAN DO MAPA
+══════════════════════════════════════════════════════════════ */
+function applyPan() {
+  document.getElementById('map-stage').style.transform =
+    `translate(${panOfsX}px, ${panOfsY}px) scale(${mapScale})`;
+}
+
+/* Centraliza a visão no centro do canvas (onde o fundo sempre é desenhado) */
+function centerMapOnBg() {
+  const container = document.querySelector('.map-container');
+  if (!container) return;
+  const rect = container.getBoundingClientRect();
+  // O canvas é 3000×3000; o fundo é sempre desenhado centralizado nele.
+  // Então o centro do fundo está sempre em (1500, 1500) no espaço do canvas.
+  panOfsX = rect.width  / 2 - 1500 * mapScale;
+  panOfsY = rect.height / 2 - 1500 * mapScale;
+  applyPan();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MOUSE EVENTS NO MAPA
+══════════════════════════════════════════════════════════════ */
+function mapContextMenu(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  // Se o evento veio de um token, ele já se registrou — não abre o menu do mapa
+  if (e.target.closest('.token')) return;
+  const [mx, my] = clientToMap(e.clientX, e.clientY);
+  ctxMapX = mx; ctxMapY = my; ctxTokenId = null;
+  showCtxMenu(e.clientX, e.clientY, 'map');
+}
+
+function mapMouseDown(e) {
+  closeCtxMenu();
+
+  // Modo de posicionamento de token: próximo clique esquerdo coloca o token
+  if (_placementMode !== null && e.button === 0) {
+    e.stopPropagation();
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const gs = MAP_DATA.gridSize || 50;
+    const px = Math.floor(mx / gs) * gs + gs / 2;
+    const py = Math.floor(my / gs) * gs + gs / 2;
+    const fi = _placementMode.fichaIndex;
+    _cancelPlacementMode();
+    _doPlaceToken(fi, px, py);
+    return;
+  }
+
+  // Clique do meio = pan sempre
+  if (e.button === 1) {
+    isPanning = true;
+    panStartX = e.clientX - panOfsX;
+    panStartY = e.clientY - panOfsY;
+    document.getElementById('map-stage').style.cursor = 'grabbing';
+    e.preventDefault(); return;
+  }
+
+  // Botão direito: inicia pan (drag) — contextmenu cuida do click sem arrastar
+  if (e.button === 2) {
+    isRightPanning  = true;
+    panStartX       = e.clientX - panOfsX;
+    panStartY       = e.clientY - panOfsY;
+    rightDragStartX = e.clientX;
+    rightDragStartY = e.clientY;
+    rightDragDist   = 0;
+    document.getElementById('map-stage').style.cursor = 'grabbing';
+    e.preventDefault();
+    return;
+  }
+
+  // Move tool = pan com botão esquerdo
+  if (ACTIVE_TOOL === 'move') {
+    isPanning = true;
+    panStartX = e.clientX - panOfsX;
+    panStartY = e.clientY - panOfsY;
+    document.getElementById('map-stage').style.cursor = 'grabbing';
+    return;
+  }
+
+  // Add token tool
+  if (ACTIVE_TOOL === 'addtoken') {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    openAddToken(mx, my);
+    return;
+  }
+
+  // Select: click no vazio desseleciona
+  if (ACTIVE_TOOL === 'select') {
+    deselectToken();
+  }
+}
+
+function mapMouseMove(e) {
+  if (isPanning || isRightPanning) {
+    panOfsX = e.clientX - panStartX;
+    panOfsY = e.clientY - panStartY;
+    applyPan();
+    if (isRightPanning) {
+      const dx = e.clientX - rightDragStartX;
+      const dy = e.clientY - rightDragStartY;
+      rightDragDist = Math.sqrt(dx * dx + dy * dy);
+    }
+    return;
+  }
+  if (isDraggingToken && dragToken) {
+    const gs = MAP_DATA.gridSize || 50;
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    let nx = mx + dragOffX;
+    let ny = my + dragOffY;
+    // Snap suave durante drag
+    dragToken.style.left = nx + 'px';
+    dragToken.style.top  = ny + 'px';
+    dragToken.style.transform = 'translate(-50%,-50%) scale(1.1)';
+  }
+}
+
+function mapMouseUp(e) {
+  if (isPanning) {
+    isPanning = false;
+    document.getElementById('map-stage').style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
+  }
+  if (isRightPanning) {
+    isRightPanning = false;
+    document.getElementById('map-stage').style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
+  }
+  if (isDraggingToken && dragToken) {
+    const gs = MAP_DATA.gridSize || 50;
+    const tid = dragToken.dataset.id;
+    const token = (MAP_DATA.tokens || []).find(t => t.id === tid);
+    if (token) {
+      // Snap para grade (Math.floor = célula correta, não a adjacente)
+      token.x = Math.floor(parseFloat(dragToken.style.left) / gs) * gs + gs / 2;
+      token.y = Math.floor(parseFloat(dragToken.style.top)  / gs) * gs + gs / 2;
+      dragToken.style.left = token.x + 'px';
+      dragToken.style.top  = token.y + 'px';
+      dragToken.style.transform = 'translate(-50%,-50%) scale(1)';
+      saveToken(token); // salva só este token (posição)
+    }
+    isDraggingToken = false; dragToken = null;
+  }
+}
+
+function mapWheel(e) {
+  e.preventDefault();
+  const MIN_SCALE = 0.15, MAX_SCALE = 3.0;
+  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1; // scroll up = zoom in
+  const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, mapScale * factor));
+  if (newScale === mapScale) return;
+
+  // Mantém o ponto sob o cursor fixo no mapa após o zoom
+  const rect = document.getElementById('map-container').getBoundingClientRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  panOfsX = cx - (cx - panOfsX) * (newScale / mapScale);
+  panOfsY = cy - (cy - panOfsY) * (newScale / mapScale);
+
+  mapScale = newScale;
+  applyPan();
+  updateMapInfo();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CONVERSÃO DE COORDENADAS
+══════════════════════════════════════════════════════════════ */
+function clientToMap(cx, cy) {
+  const rect = document.getElementById('map-container').getBoundingClientRect();
+  return [
+    (cx - rect.left - panOfsX) / mapScale,
+    (cy - rect.top  - panOfsY) / mapScale
+  ];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════════════════════ */
+
+function setupColorPicker() {
+  const cp = document.getElementById('color-picker');
+  TOKEN_COLORS.forEach((col, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot' + (i === 0 ? ' selected' : '');
+    dot.style.background = col;
+    dot.dataset.color = col;
+    dot.onclick = () => {
+      cp.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+      dot.classList.add('selected');
+    };
+    cp.appendChild(dot);
+  });
+}
+
+function openAddToken(mapX, mapY) {
+  if (SESSION.role !== 'gm') return;
+  pendingTokenPos = (mapX !== null) ? { x: mapX, y: mapY } : null;
+  _pendingAddTokenImg = undefined;
+  document.getElementById('tok-name').value = '';
+  document.getElementById('tok-icon').value = '👤';
+  document.getElementById('tok-hp').value = '10';
+  document.getElementById('tok-hpmax').value = '10';
+  // Reset cor
+  document.querySelectorAll('#color-picker .color-dot').forEach((d, i) => d.classList.toggle('selected', i === 0));
+  // Reset preview de foto
+  document.getElementById('add-tok-img-prev').style.display = 'none';
+  document.getElementById('add-tok-img-ico').style.display = '';
+  document.getElementById('add-tok-clear').style.display = 'none';
+  document.getElementById('add-tok-file').value = '';
+  openModal('modal-token');
+  setTimeout(() => document.getElementById('tok-name').focus(), 100);
+}
+
+function confirmAddToken() {
+  const name = document.getElementById('tok-name').value.trim() || 'Token';
+  const icon = document.getElementById('tok-icon').value.trim() || '👤';
+  const hp   = parseInt(document.getElementById('tok-hp').value) || 10;
+  const hpMax = parseInt(document.getElementById('tok-hpmax').value) || 10;
+  const colEl = document.querySelector('#color-picker .color-dot.selected');
+  const color = colEl ? colEl.dataset.color : TOKEN_COLORS[0];
+
+  const gs = MAP_DATA.gridSize || 50;
+  let px, py;
+  if (pendingTokenPos) {
+    px = Math.floor(pendingTokenPos.x / gs) * gs + gs / 2;
+    py = Math.floor(pendingTokenPos.y / gs) * gs + gs / 2;
+  } else {
+    // Centro do mapa visível
+    const cont = document.getElementById('map-container').getBoundingClientRect();
+    const [mx, my] = clientToMap(cont.left + cont.width / 2, cont.top + cont.height / 2);
+    px = Math.floor(mx / gs) * gs + gs / 2;
+    py = Math.floor(my / gs) * gs + gs / 2;
+  }
+
+  const imgSrc = _pendingAddTokenImg || null;
+  const token = { id: 'tok_' + Date.now(), name, icon, color, hp, hpMax, x: px, y: py, size: gs, imgSrc };
+  if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
+  MAP_DATA.tokens.push(token);
+  createTokenEl(token);
+  saveToken(token); // salva só este token (atômico)
+  closeModal('modal-token');
+  showToast(`✦ Token "${name}" adicionado`);
+}
+
+function renderTokens() {
+  const layer = document.getElementById('token-layer');
+  layer.innerHTML = '';
+  (MAP_DATA.tokens || []).forEach(t => t && createTokenEl(t));
+}
+
+function createTokenEl(token) {
+  const gs = MAP_DATA.gridSize || 50;
+  const size = Math.round(gs * 0.85);
+
+  const el = document.createElement('div');
+  el.className = 'token';
+  el.dataset.id = token.id;
+  // O token div tem exatamente o tamanho do círculo.
+  // translate(-50%,-50%) vai centralizar o CÍRCULO no ponto (x,y) do mapa.
+  el.style.width  = size + 'px';
+  el.style.height = size + 'px';
+  el.style.left = token.x + 'px';
+  el.style.top  = token.y + 'px';
+
+  const body = document.createElement('div');
+  body.className = 'token-body';
+  body.style.width  = size + 'px';
+  body.style.height = size + 'px';
+  body.style.background = token.imgSrc ? 'transparent' : token.color + '33';
+  body.style.borderColor = token.color;
+  body.style.boxShadow = `0 0 12px ${token.color}44, 0 2px 8px rgba(0,0,0,0.6)`;
+
+  // Mostra imagem ou emoji
+  if (token.imgSrc) {
+    const img = document.createElement('img');
+    img.src = token.imgSrc;
+    img.draggable = false;
+    body.appendChild(img);
+  } else {
+    body.textContent = token.icon || '👤';
+  }
+
+  // Overlay de morte (hp = 0)
+  const isDead = token.hp <= 0 && token.hpMax > 0;
+  if (isDead) el.classList.add('dead');
+  const deadOverlay = document.createElement('div');
+  deadOverlay.className = 'token-dead-overlay';
+  deadOverlay.textContent = '✕';
+  deadOverlay.style.display = isDead ? 'flex' : 'none';
+  body.appendChild(deadOverlay);
+
+  const label = document.createElement('div');
+  label.className = 'token-label';
+  label.textContent = token.name;
+
+  const hpBar = document.createElement('div');
+  hpBar.className = 'token-hp-bar';
+  const hpFill = document.createElement('div');
+  hpFill.className = 'token-hp-fill';
+  hpFill.style.width = Math.max(0, Math.min(100, (token.hp / token.hpMax) * 100)) + '%';
+  hpFill.style.background = token.color;
+  hpBar.appendChild(hpFill);
+
+  el.appendChild(body);
+  el.appendChild(label);
+  el.appendChild(hpBar);
+
+  // Eventos
+  // dblclick esquerdo = abre menu do token (substituiu o clique direito)
+  el.addEventListener('dblclick', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    ctxTokenId = token.id;
+    showCtxMenu(e.clientX, e.clientY, 'token');
+  });
+  el.addEventListener('mousedown', e => {
+    if (e.button === 2) return; // botão direito reservado para pan do mapa
+    e.stopPropagation();
+    // Somente GM ou dono do token pode arrastar
+    const canDrag = SESSION.role === 'gm' || token.playerId === SESSION.pid;
+    if (!canDrag) return;
+    selectToken(el, token.id);
+    if (ACTIVE_TOOL === 'select' || ACTIVE_TOOL === 'addtoken') {
+      // Drag start
+      isDraggingToken = true; dragToken = el;
+      const [mx, my] = clientToMap(e.clientX, e.clientY);
+      dragOffX = token.x - mx;
+      dragOffY = token.y - my;
+    }
+  });
+
+  document.getElementById('token-layer').appendChild(el);
+}
+
+function selectToken(el, id) {
+  deselectToken();
+  if (el) {
+    el.classList.add('selected');
+    SELECTED_TOKEN = id;
+  }
+}
+
+function deselectToken() {
+  document.querySelectorAll('.token.selected').forEach(t => t.classList.remove('selected'));
+  SELECTED_TOKEN = null;
+}
+
+function removeToken(id) {
+  if (SESSION.role !== 'gm') return;
+  MAP_DATA.tokens = (MAP_DATA.tokens || []).filter(t => t.id !== id);
+  const el = document.querySelector(`.token[data-id="${id}"]`);
+  if (el) el.remove();
+  if (SELECTED_TOKEN === id) SELECTED_TOKEN = null;
+  deleteToken(id);
+  showToast('🗑 Token removido');
+}
+
+function openEditToken(id) {
+  const token = (MAP_DATA.tokens || []).find(t => t.id === id);
+  if (!token) return;
+  _pendingEditTokenImg = undefined; // undefined = sem mudança
+  document.getElementById('edit-tok-id').value    = token.id;
+  document.getElementById('edit-tok-name').value  = token.name;
+  document.getElementById('edit-tok-hp').value    = token.hp;
+  document.getElementById('edit-tok-hpmax').value = token.hpMax;
+  // Popula preview de foto
+  const prevImg = document.getElementById('edit-tok-img-prev');
+  const prevIco = document.getElementById('edit-tok-img-ico');
+  const clearBtn = document.getElementById('edit-tok-clear');
+  if (token.imgSrc) {
+    prevImg.src = token.imgSrc; prevImg.style.display = 'block';
+    prevIco.style.display = 'none'; clearBtn.style.display = '';
+  } else {
+    prevImg.style.display = 'none'; prevIco.style.display = '';
+    clearBtn.style.display = 'none';
+  }
+  document.getElementById('edit-tok-file').value = '';
+  openModal('modal-edit-token');
+}
+
+function confirmEditToken() {
+  const id = document.getElementById('edit-tok-id').value;
+  const token = MAP_DATA.tokens.find(t => t.id === id);
+  if (!token) return;
+  token.name  = document.getElementById('edit-tok-name').value.trim() || token.name;
+  token.hp    = parseInt(document.getElementById('edit-tok-hp').value) || 0;
+  token.hpMax = parseInt(document.getElementById('edit-tok-hpmax').value) || token.hpMax;
+  if (_pendingEditTokenImg !== undefined) token.imgSrc = _pendingEditTokenImg; // null = remover, string = nova foto
+  renderTokens();
+  saveToken(token);
+  closeModal('modal-edit-token');
+  showToast('✦ Token atualizado');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MENU DE CONTEXTO
+══════════════════════════════════════════════════════════════ */
+function showCtxMenu(cx, cy, type) {
+  const menu = document.getElementById('ctx-menu');
+  menu.innerHTML = '';
+  const isGM = SESSION.role === 'gm';
+
+  if (type === 'map') {
+    if (isGM) {
+      addCtxItem('👤 Adicionar Token aqui', () => openAddToken(ctxMapX, ctxMapY));
+      addCtxItem('▦ Alternar Grade', toggleGrid);
+      addCtxItem('🌫 Alternar Névoa', toggleFog);
+    }
+  }
+
+  if (type === 'token') {
+    const tok = (MAP_DATA.tokens || []).find(t => t.id === ctxTokenId);
+    if (tok) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'padding:5px 14px 2px; font-family:Cinzel,serif; font-size:0.58rem; letter-spacing:0.12em; color:var(--ember);';
+      sep.textContent = tok.name.toUpperCase();
+      menu.appendChild(sep);
+    }
+    if (isGM) {
+      // Verifica se já está no turno
+      const jaNoTurno = INIT_LIST.some(e => e.tokenId === ctxTokenId || e.name === tok?.name);
+      addCtxItem(jaNoTurno ? '⚔ Já no turno de combate' : '⚔ Adicionar ao turno de combate',
+        () => addTokenToInit(ctxTokenId), false);
+      const sep2 = document.createElement('hr');
+      sep2.style.cssText = 'border:none;border-top:1px solid #3a2e1e;margin:3px 0;';
+      menu.appendChild(sep2);
+      addCtxItem('✏ Editar Token', () => openEditToken(ctxTokenId));
+      addCtxItem('🗑 Remover Token', () => removeToken(ctxTokenId), true);
+    }
+  }
+
+  // Se não tem nenhum item, não mostra o menu
+  if (menu.innerHTML === '' || menu.children.length === 0) return;
+
+  // Posicionar
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let x = cx, y = cy;
+  menu.style.display = 'block';
+  if (x + 180 > vw) x = vw - 185;
+  if (y + menu.offsetHeight > vh) y = vh - menu.offsetHeight - 5;
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+}
+
+function addCtxItem(label, fn, danger = false) {
+  const menu = document.getElementById('ctx-menu');
+  const item = document.createElement('div');
+  item.className = 'ctx-item' + (danger ? ' danger' : '');
+  item.textContent = label;
+  item.onclick = () => { fn(); closeCtxMenu(); };
+  menu.appendChild(item);
+}
+
+function closeCtxMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SALVAMENTO
+══════════════════════════════════════════════════════════════ */
+// Salva configurações do mapa (grade, névoa, fundo, pan) — sem tokens
+function saveMap() {
+  MAP_DATA.panX = panOfsX;
+  MAP_DATA.panY = panOfsY;
+  MBState.map.save(SESSION.code, MAP_DATA); // map.save já strip tokens internamente
+}
+
+// Salva UM token de forma atômica (não sobrescreve tokens de outros clientes)
+function saveToken(token) {
+  MBState.tokens.saveOne(SESSION.code, token);
+}
+
+// Remove UM token
+function deleteToken(tokenId) {
+  MBState.tokens.removeOne(SESSION.code, tokenId);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CHAT
+══════════════════════════════════════════════════════════════ */
+function loadChatHistory() {
+  MBState.chat.get(SESSION.code, log => {
+    (log||[]).forEach(entry => renderChatMsg(entry, false));
+    scrollChat();
+  });
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const raw   = input.value.trim();
+  if (!raw) return;
+  input.value = '';
+
+  const author = SESSION.role === 'gm' ? 'Mestre' : SESSION.name;
+
+  // Comando de dado: /r <expr>
+  if (raw.match(/^\/r\s+/i)) {
+    const expr   = raw.replace(/^\/r\s+/i, '');
+    const result = Dice.parse(expr);
+    if (!result.ok) {
+      showToast('⚠ ' + (result.error || 'Expressão inválida'));
+      return;
+    }
+    // Rolagem às cegas?
+    if (_blindRoll) { _sendBlindRoll(expr, result); return; }
+    const entry  = {
+      type: 'roll', author,
+      expr, rolls: result.rolls, total: result.total, ok: result.ok,
+      error: result.error, role: SESSION.role, sides: result.sides
+    };
+    MBState.chat.add(SESSION.code, entry);
+    showDiceResult(result, expr);  // atualiza caixa de resultado imediatamente
+    _playRollAndChat(entry, result);
+    return;
+  }
+
+  // Apagar chat local: /apagarchat ou /lc
+  if (raw.match(/^\/(apagarchat|lc)$/i)) {
+    document.getElementById('chat-log').innerHTML = '';
+    showToast('🗑 Chat limpo');
+    return;
+  }
+
+  // Ação: /me <texto>
+  if (raw.match(/^\/me\s+/i)) {
+    const text = raw.replace(/^\/me\s+/i, '');
+    const entry = { type: 'action', author, text, role: SESSION.role };
+    MBState.chat.add(SESSION.code, entry);
+    renderChatMsg(entry, true);
+    return;
+  }
+
+  // Mensagem normal
+  const entry = { type: 'msg', author, text: raw, role: SESSION.role };
+  MBState.chat.add(SESSION.code, entry);
+  renderChatMsg(entry, true);
+}
+
+function renderChatMsg(entry, scroll = true) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  const roleClass = entry.role === 'gm' ? 'gm' : 'player';
+
+  if (entry.type === 'roll') {
+    div.className = 'chat-msg roll';
+    // Rolagem às cegas: jogadores veem apenas placeholder
+    if (entry.blind && SESSION.role !== 'gm') {
+      div.innerHTML = `
+        <span class="chat-author">${escHtml(entry.author)} rolou às cegas</span>
+        <div class="roll-result" style="opacity:.5;font-size:1rem">🙈 &nbsp;<em>resultado oculto</em></div>
+      `;
+    } else {
+      const rollsStr = entry.rolls && entry.rolls.length ? `[${entry.rolls.join(', ')}]` : '';
+      const blindTag = entry.blind ? ' <span style="font-size:.72rem;opacity:.55;letter-spacing:.06em">[às cegas]</span>' : '';
+      div.innerHTML = `
+        <span class="chat-author">${escHtml(entry.author)} rolou ${escHtml(entry.expr)}${blindTag}</span>
+        <div class="roll-result">${entry.ok ? entry.total : '❌ ' + escHtml(entry.error || '')}</div>
+        ${rollsStr ? `<div class="roll-detail">${rollsStr}</div>` : ''}
+      `;
+    }
+  } else if (entry.type === 'action') {
+    div.className = 'chat-msg system';
+    div.innerHTML = `<em>★ ${entry.author} ${entry.text}</em>`;
+  } else if (entry.type === 'system') {
+    div.className = 'chat-msg system';
+    div.innerHTML = `<em>${entry.text}</em>`;
+  } else {
+    div.className = `chat-msg ${roleClass}`;
+    div.innerHTML = `<span class="chat-author">${entry.author}</span>${escHtml(entry.text)}`;
+  }
+
+  log.appendChild(div);
+  if (scroll) scrollChat();
+}
+
+function addSysMsg(text) {
+  const entry = { type: 'system', text };
+  renderChatMsg(entry, true);
+}
+
+function scrollChat() {
+  const log = document.getElementById('chat-log');
+  log.scrollTop = log.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DADOS
+══════════════════════════════════════════════════════════════ */
+function quickRoll(sides) {
+  const expr   = '1d' + sides;
+  const result = Dice.parse(expr);
+  if (_blindRoll) { _sendBlindRoll(expr, result); return; }
+  showDiceResult(result, expr);
+  sendRollToChat(expr, result);
+}
+
+function rollCustom() {
+  const qty  = document.getElementById('dice-qty').value  || '1';
+  const type = document.getElementById('dice-type').value || '6';
+  const mod  = document.getElementById('dice-mod').value  || '0';
+  const modInt = parseInt(mod);
+  const expr = qty + 'd' + type + (modInt > 0 ? '+' + modInt : modInt < 0 ? String(modInt) : '');
+  const result = Dice.parse(expr);
+  if (_blindRoll) { _sendBlindRoll(expr, result); return; }
+  showDiceResult(result, expr);
+  sendRollToChat(expr, result);
+}
+
+/* ── Popup Vantagem / Desvantagem ── */
+function askRollMode(attr, label, evt) {
+  closeRollModePopup();
+
+  const popup = document.createElement('div');
+  popup.className = 'roll-mode-popup';
+  popup.id = 'roll-mode-popup';
+  popup.innerHTML =
+    '<div class="roll-mode-title">Teste de ' + label + '</div>' +
+    '<button class="roll-mode-opt desv" onclick="doRollAttr(\'' + attr + '\',\'' + label + '\',\'desv\');closeRollModePopup()">' +
+      '<span class="rmo-dice">🎲</span><span class="rmo-label">Desvantagem</span><span class="rmo-tag">1d6</span>' +
+    '</button>' +
+    '<button class="roll-mode-opt norm" onclick="doRollAttr(\'' + attr + '\',\'' + label + '\',\'norm\');closeRollModePopup()">' +
+      '<span class="rmo-dice">🎲🎲</span><span class="rmo-label">Normal</span><span class="rmo-tag">2d6</span>' +
+    '</button>' +
+    '<button class="roll-mode-opt vant" onclick="doRollAttr(\'' + attr + '\',\'' + label + '\',\'vant\');closeRollModePopup()">' +
+      '<span class="rmo-dice">🎲🎲🎲</span><span class="rmo-label">Vantagem</span><span class="rmo-tag">3d6</span>' +
+    '</button>';
+
+  document.body.appendChild(popup);
+
+  // Posiciona próximo ao botão clicado
+  const btn = evt.currentTarget || evt.target;
+  const rect = btn.getBoundingClientRect();
+  let x = rect.left;
+  let y = rect.bottom + 6;
+  const pw = popup.offsetWidth  || 200;
+  const ph = popup.offsetHeight || 110;
+  if (x + pw > window.innerWidth)  x = window.innerWidth  - pw - 8;
+  if (y + ph > window.innerHeight) y = rect.top - ph - 6;
+  popup.style.left = Math.max(4, x) + 'px';
+  popup.style.top  = Math.max(4, y) + 'px';
+
+  // Fecha ao clicar fora
+  setTimeout(() => {
+    document.addEventListener('mousedown', _closePopupOutside);
+  }, 80);
+}
+
+function _closePopupOutside(e) {
+  const p = document.getElementById('roll-mode-popup');
+  if (p && !p.contains(e.target)) {
+    closeRollModePopup();
+    document.removeEventListener('mousedown', _closePopupOutside);
+  }
+}
+
+function closeRollModePopup() {
+  const p = document.getElementById('roll-mode-popup');
+  if (p) p.remove();
+  document.removeEventListener('mousedown', _closePopupOutside);
+}
+
+/* ── Executa rolagem MB (2d6 base) ── */
+function doRollAttr(attr, label, mode) {
+  const totalEl = document.getElementById('total-' + attr);
+  const val = totalEl ? (parseInt(totalEl.textContent) || 0) : 0;
+
+  let baseDice, modeSuffix;
+  switch (mode) {
+    case 'vant': baseDice = '3d6'; modeSuffix = ' ⬆ Vantagem';    break;
+    case 'desv': baseDice = '1d6'; modeSuffix = ' ⬇ Desvantagem'; break;
+    default:     baseDice = '2d6'; modeSuffix = '';                break;
+  }
+
+  const expr   = baseDice + (val > 0 ? '+' + val : val < 0 ? String(val) : '');
+  const result = Dice.parse(expr);
+  if (_blindRoll) {
+    _sendBlindRoll('Teste ' + label + modeSuffix + ' — ' + expr, result);
+    return;
+  }
+  showDiceResult(result, 'Teste ' + label + modeSuffix + ' (' + expr + ')');
+  sendRollToChat('Teste ' + label + modeSuffix + ' — ' + expr, result);
+}
+
+/* ── Compatibilidade (chamada direta sem popup) ── */
+function rollAttr(attr, label) {
+  doRollAttr(attr, label, 'norm');
+}
+
+function showDiceResult(result, label) {
+  document.getElementById('dice-result-total').textContent = result.ok ? result.total : '❌';
+  const detail = result.rolls && result.rolls.length
+    ? `${label}: [${result.rolls.join(', ')}]`
+    : label;
+  document.getElementById('dice-result-detail').textContent = detail;
+
+  // Animação de brilho
+  const box = document.getElementById('dice-result-box');
+  box.style.borderColor = 'var(--ember)';
+  box.style.boxShadow   = '0 0 20px rgba(200,113,42,0.3)';
+  setTimeout(() => { box.style.borderColor = ''; box.style.boxShadow = ''; }, 600);
+}
+
+/* ── Helper: toca animação e depois adiciona ao chat ── */
+function _playRollAndChat(entry, result) {
+  if (result.ok && result.rolls && result.rolls.length > 0 && typeof DiceAnimator !== 'undefined') {
+    try {
+      DiceAnimator.roll(result.rolls, result.sides, entry.author,
+        function() { renderChatMsg(entry, true); });
+    } catch(e) {
+      console.warn('[MB] DiceAnimator erro:', e);
+      renderChatMsg(entry, true);
+    }
+  } else {
+    renderChatMsg(entry, true);
+  }
+}
+
+function sendRollToChat(expr, result) {
+  const author = SESSION.role === 'gm' ? 'Mestre' : SESSION.name;
+  const entry  = {
+    type: 'roll', author, expr,
+    rolls: result.rolls, total: result.total, ok: result.ok,
+    role: SESSION.role, sides: result.sides
+  };
+  MBState.chat.add(SESSION.code, entry);
+  _playRollAndChat(entry, result);
+}
+
+/* ── Rolagem às cegas: salva com flag blind=true ── */
+function _sendBlindRoll(expr, result) {
+  const author = SESSION.role === 'gm' ? 'Mestre' : SESSION.name;
+  const entry  = {
+    type: 'roll', author, expr,
+    rolls: result.rolls, total: result.total, ok: result.ok,
+    role: SESSION.role, sides: result.sides,
+    blind: true
+  };
+  MBState.chat.add(SESSION.code, entry);
+  // GM vê sempre; jogadores recebem apenas toast
+  if (SESSION.role === 'gm') {
+    showDiceResult(result, expr + ' 🙈');
+    _playRollAndChat(entry, result);
+  } else {
+    // Jogador: sem animação, sem resultado — apenas confirmação
+    showToast('🙈 Rolagem enviada ao Mestre');
+    // Atualiza caixa com pontos para não parecer travado
+    document.getElementById('dice-result-total').textContent = '···';
+    document.getElementById('dice-result-detail').textContent = '🙈 Rolagem às cegas';
+  }
+}
+
+/* ── Rolagem às cegas: toggle e UI ── */
+function toggleBlindRoll() {
+  _blindRoll = !_blindRoll;
+  if(SESSION.code&&SESSION.code!=='LOCAL')_wsSend({type:'blind_roll',room:SESSION.code,data:_blindRoll});
+  _updateBlindRollUI();
+}
+
+function _updateBlindRollUI() {
+  const btns = document.querySelectorAll('.btn-blind-roll');
+  btns.forEach(function(btn) {
+    if (_blindRoll) {
+      btn.textContent = '🙈 Cegas: ON';
+      btn.classList.add('active');
+    } else {
+      btn.textContent = '🙈 Rolagem às Cegas';
+      btn.classList.remove('active');
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   INICIATIVA
+══════════════════════════════════════════════════════════════ */
+function addInitEntry() {
+  const name = document.getElementById('init-name-in').value.trim();
+  const val  = parseInt(document.getElementById('init-val-in').value);
+  if (!name) { showToast('Insira o nome.'); return; }
+  if (isNaN(val)) { showToast('Insira a iniciativa.'); return; }
+  INIT_LIST.push({ id: 'init_' + Date.now(), name, val });
+  document.getElementById('init-name-in').value = '';
+  document.getElementById('init-val-in').value  = '';
+  renderInitList();
+  renderInitCarousel();
+  MBState.initiative.save(SESSION.code, INIT_LIST);
+}
+
+function addTokenToInit(tokenId) {
+  const tok = (MAP_DATA.tokens || []).find(t => t.id === tokenId);
+  if (!tok) return;
+  const already = INIT_LIST.find(e => e.tokenId === tokenId);
+  if (already) { showToast(`"${tok.name}" já está no turno!`); return; }
+  const valStr = prompt(`Iniciativa de ${tok.name}:`, '10');
+  if (valStr === null) return;
+  const val = parseInt(valStr);
+  if (isNaN(val)) { showToast('Iniciativa inválida.'); return; }
+  INIT_LIST.push({
+    id: 'init_' + Date.now(),
+    name: tok.name,
+    val,
+    imgSrc: tok.imgSrc || null,
+    color: tok.color || '#40a0c8',
+    tokenId
+  });
+  renderInitList();
+  renderInitCarousel();
+  MBState.initiative.save(SESSION.code, INIT_LIST);
+  showToast(`⚔ ${tok.name} adicionado ao turno (ini: ${val})`);
+}
+
+function sortInit() {
+  INIT_LIST.sort((a, b) => b.val - a.val);
+  INIT_TURN = 0;
+  renderInitList();
+  renderInitCarousel();
+  MBState.initiative.save(SESSION.code, INIT_LIST);
+  _saveTurn();
+}
+
+function nextTurn() {
+  if (!INIT_LIST.length) return;
+  INIT_TURN = (INIT_TURN + 1) % INIT_LIST.length;
+  renderInitList();
+  renderInitCarousel();
+  const cur = INIT_LIST[INIT_TURN];
+  addSysMsg(`⚔ Turno de: ${cur.name}`);
+  _saveTurn();
+}
+
+function _carouselPrev() {
+  if (!INIT_LIST.length) return;
+  INIT_TURN = (INIT_TURN - 1 + INIT_LIST.length) % INIT_LIST.length;
+  renderInitList();
+  renderInitCarousel();
+  const cur = INIT_LIST[INIT_TURN];
+  addSysMsg(`⚔ Turno de: ${cur.name}`);
+  _saveTurn();
+}
+
+function _carouselNext() { nextTurn(); }
+
+function _saveTurn() {
+  if (SESSION.code && SESSION.code !== 'LOCAL') {
+    _wsSend({type:'init_turn',room:SESSION.code,data:INIT_TURN});
+  }
+}
+
+function clearInit() {
+  INIT_LIST = []; INIT_TURN = 0;
+  renderInitList();
+  renderInitCarousel();
+  MBState.initiative.clear(SESSION.code);
+  _saveTurn();
+}
+
+function removeInitEntry(id) {
+  const idx = INIT_LIST.findIndex(e => e.id === id);
+  if (idx === -1) return;
+  INIT_LIST.splice(idx, 1);
+  if (INIT_TURN >= INIT_LIST.length) INIT_TURN = 0;
+  renderInitList();
+  renderInitCarousel();
+  MBState.initiative.save(SESSION.code, INIT_LIST);
+  _saveTurn();
+}
+
+function renderInitList() {
+  const list = document.getElementById('init-list');
+  if (!list) return;
+  list.innerHTML = '';
+  INIT_LIST.forEach((entry, idx) => {
+    const tokens = MAP_DATA.tokens || [];
+    const tok = tokens.find(t => t.name && t.name.trim().toLowerCase() === entry.name.trim().toLowerCase());
+    const imgUrl = entry.imgSrc || (tok ? (tok.imgSrc || null) : null);
+    const color  = entry.color || (tok ? tok.color : null) || '#40a0c8';
+
+    const div = document.createElement('div');
+    div.className = 'init-entry' + (idx === INIT_TURN ? ' active-turn' : '');
+
+    // Avatar mini
+    const avatar = document.createElement('div');
+    avatar.className = 'init-avatar';
+    if (imgUrl) {
+      const img = document.createElement('img');
+      img.src = imgUrl; img.alt = entry.name;
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = entry.name.charAt(0).toUpperCase();
+      avatar.style.background = color;
+    }
+
+    const numSpan  = document.createElement('span');
+    numSpan.className = 'init-num';
+    numSpan.textContent = entry.val;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'init-name';
+    nameSpan.textContent = entry.name;
+
+    const marker = idx === INIT_TURN ? (() => {
+      const s = document.createElement('span');
+      s.className = 'init-turn-marker'; s.textContent = '▶'; return s;
+    })() : null;
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'init-del';
+    delBtn.title = 'Remover';
+    delBtn.textContent = '✕';
+    delBtn.onclick = () => removeInitEntry(entry.id);
+
+    div.appendChild(avatar);
+    div.appendChild(numSpan);
+    div.appendChild(nameSpan);
+    if (marker) div.appendChild(marker);
+    div.appendChild(delBtn);
+    list.appendChild(div);
+  });
+}
+
+/* ── Carrossel de Turno ── */
+let _carouselVisible = false;
+
+function toggleCarousel() {
+  _carouselVisible = !_carouselVisible;
+  const el  = document.getElementById('init-carousel');
+  const btn = document.getElementById('btn-carousel-toggle');
+  if (_carouselVisible) {
+    el.classList.add('visible');
+    if (btn) { btn.textContent = '🎠 Ocultar Carrossel'; btn.classList.add('active'); }
+    renderInitCarousel();
+  } else {
+    el.classList.remove('visible');
+    if (btn) { btn.textContent = '🎠 Mostrar Carrossel'; btn.classList.remove('active'); }
+  }
+}
+
+function renderInitCarousel() {
+  if (!_carouselVisible) return;
+  const track = document.getElementById('carousel-track');
+  if (!track) return;
+  track.innerHTML = '';
+  if (!INIT_LIST.length) return;
+
+  // Janela de visibilidade: atual ± alguns ao redor (para centrar o ativo)
+  const total   = INIT_LIST.length;
+  const maxShow = 9; // máximo de cards visíveis
+  const half    = Math.floor(maxShow / 2);
+
+  // Índices a mostrar (circular)
+  const indices = [];
+  for (let i = -half; i <= half; i++) {
+    indices.push((INIT_TURN + i + total) % total);
+  }
+  // Se a lista for menor que maxShow, mostra todos
+  const showIndices = total <= maxShow
+    ? Array.from({ length: total }, (_, i) => i)
+    : indices;
+
+  showIndices.forEach(idx => {
+    const entry = INIT_LIST[idx];
+    const isCurrent = idx === INIT_TURN;
+
+    // Usa imgSrc da entrada (salva quando adicionado via token), senão busca token pelo nome
+    const tokens = MAP_DATA.tokens || [];
+    const tok = tokens.find(t => t.name && t.name.trim().toLowerCase() === entry.name.trim().toLowerCase());
+    const imgUrl = entry.imgSrc || (tok ? (tok.imgSrc || null) : null);
+
+    const card = document.createElement('div');
+    card.className = 'carousel-card' + (isCurrent ? ' current' : '');
+    card.title = entry.name + ' (ini: ' + entry.val + ')';
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'carousel-img-wrap';
+    if (imgUrl) {
+      const img = document.createElement('img');
+      img.src = imgUrl; img.alt = entry.name; img.loading = 'lazy';
+      imgWrap.appendChild(img);
+    } else {
+      const initial = document.createElement('div');
+      initial.className = 'carousel-initial';
+      initial.textContent = entry.name.charAt(0).toUpperCase();
+      imgWrap.appendChild(initial);
+    }
+    card.appendChild(imgWrap);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'carousel-name';
+    nameEl.textContent = entry.name;
+    card.appendChild(nameEl);
+
+    track.appendChild(card);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FICHA DE PERSONAGEM — MESA VIRTUAL
+══════════════════════════════════════════════════════════════ */
+
+/* ── XP Dots ── */
+function initXPDots() {
+  const wrap = document.getElementById('xp-dots');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'xp-dot' + (i < XP_VAL ? ' filled' : '');
+    dot.title = (i + 1) + ' XP';
+    dot.onclick = () => { XP_VAL = (XP_VAL === i + 1) ? i : i + 1; initXPDots(); saveFicha(); };
+    wrap.appendChild(dot);
+  }
+}
+
+/* ── Calcula total de atributo MB ── */
+function calcAttr(attr) {
+  let total = 0;
+  MB_SUBS.forEach(sub => {
+    const el = document.getElementById('f-' + attr + '-' + sub);
+    if (el) total += parseInt(el.value) || 0;
+  });
+  const tot = document.getElementById('total-' + attr);
+  if (tot) tot.textContent = total;
+  return total;
+}
+
+/* ── Troca aba da ficha ── */
+function switchFichaTab(tab) {
+  document.querySelectorAll('.ftab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.ftab-content').forEach(c => c.classList.remove('active'));
+  const tabs = ['principal','hab','magias','equip'];
+  const idx  = tabs.indexOf(tab);
+  if (idx >= 0) document.querySelectorAll('.ftab')[idx].classList.add('active');
+  const panel = document.getElementById('ftab-' + tab);
+  if (panel) panel.classList.add('active');
+}
+
+/* ── Habilidades (linhas dinâmicas) ── */
+function addHabRow(data) {
+  data = data || {};
+  const tbody = document.getElementById('hab-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" value="' + _esc(data.nome||'') + '" placeholder="Nome"></td>' +
+    '<td><input type="text" value="' + _esc(data.dif||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.mana||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.desc||'') + '" placeholder="Descrição…"></td>' +
+    '<td><button class="mb-row-del" onclick="this.closest(\'tr\').remove();saveFicha()" title="Remover">✕</button></td>';
+  tbody.appendChild(tr);
+}
+
+/* ── Magias (linhas dinâmicas) ── */
+function addMagRow(data) {
+  data = data || {};
+  const tbody = document.getElementById('mag-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" value="' + _esc(data.nome||'') + '" placeholder="Nome"></td>' +
+    '<td><input type="text" value="' + _esc(data.dif||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.mana||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.custo||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.desc||'') + '" placeholder="Descrição…"></td>' +
+    '<td><button class="mb-row-del" onclick="this.closest(\'tr\').remove();saveFicha()" title="Remover">✕</button></td>';
+  tbody.appendChild(tr);
+}
+
+/* ── Equipamentos (linhas dinâmicas) ── */
+function addEquipRow(data) {
+  data = data || {};
+  const tbody = document.getElementById('equip-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" value="' + _esc(data.item||'') + '" placeholder="Item…"></td>' +
+    '<td><input type="text" value="' + _esc(data.peso||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><input type="text" value="' + _esc(data.custo||'') + '" placeholder="—" style="text-align:center"></td>' +
+    '<td><button class="mb-row-del" onclick="this.closest(\'tr\').remove();saveFicha()" title="Remover">✕</button></td>';
+  tbody.appendChild(tr);
+}
+
+function _esc(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/* ── Carrega ficha ── */
+function loadFicha() {
+  const c = CHAR_DATA;
+
+  // Identidade (string)
+  ['nome','jogador','raca','classe','caminho','antecedente','motivacao','idiomas','recursos','anotacoes','carga'].forEach(k => {
+    const el = document.getElementById('f-' + k);
+    if (el && c[k] !== undefined) el.value = c[k];
+  });
+  // Identidade (number)
+  ['nivel','idade','pv','pvMax','pm','pmMax','bloqueio','esquiva','determinacao','desl','corrida'].forEach(k => {
+    const el = document.getElementById('f-' + k);
+    if (el && c[k] !== undefined) el.value = c[k];
+  });
+
+  // XP
+  XP_VAL = c.xp || 0;
+  initXPDots();
+
+  // Atributos MB
+  MB_ATTRS.forEach(attr => {
+    MB_SUBS.forEach(sub => {
+      const el = document.getElementById('f-' + attr + '-' + sub);
+      if (el && c[attr + '_' + sub] !== undefined) el.value = c[attr + '_' + sub];
+    });
+    calcAttr(attr);
+  });
+
+  // Barras
+  updateBar('pv');
+  updateBar('pm');
+
+  // Proteção (6 linhas)
+  for (let i = 0; i < 6; i++) {
+    ['item','tipo','def'].forEach(col => {
+      const el = document.getElementById('prot-' + i + '-' + col);
+      if (el && c['prot_' + i + '_' + col] !== undefined) el.value = c['prot_' + i + '_' + col];
+    });
+  }
+
+  // Ataques (6 linhas)
+  for (let i = 0; i < 6; i++) {
+    ['arma','dano','tipo'].forEach(col => {
+      const el = document.getElementById('atk-' + i + '-' + col);
+      if (el && c['atk_' + i + '_' + col] !== undefined) el.value = c['atk_' + i + '_' + col];
+    });
+  }
+
+  // Tabelas dinâmicas
+  document.getElementById('hab-tbody').innerHTML   = '';
+  (c.habilidades || []).forEach(row => addHabRow(row));
+  document.getElementById('mag-tbody').innerHTML   = '';
+  (c.magias      || []).forEach(row => addMagRow(row));
+  document.getElementById('equip-tbody').innerHTML = '';
+  (c.equipamentos|| []).forEach(row => addEquipRow(row));
+
+  // Atualiza mini-avatar no switcher (se for jogador)
+  if (SESSION.role !== 'gm') syncAvatarBtn();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÚLTIPLAS FICHAS — Companion / Animal Companheiro / Alter-ego
+══════════════════════════════════════════════════════════════ */
+
+/* Renderiza as tabs de fichas no switcher */
+function renderFichasSwitcher() {
+  const sw = document.getElementById('fichas-switcher');
+  if (!sw) return;
+  sw.style.display = 'flex';
+
+  // Botão de avatar só para players (vinculado ao token deles no mapa)
+  const avatarBtn = document.getElementById('ftab-avatar-btn');
+  if (avatarBtn) avatarBtn.style.display = SESSION.role === 'gm' ? 'none' : '';
+
+  const row = document.getElementById('fichas-tabs-row');
+  if (!row) return;
+  row.innerHTML = '';
+
+  ALL_FICHAS.forEach((ficha, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'ftab-ficha-wrap';
+
+    const btn = document.createElement('button');
+    btn.className = 'ftab-ficha' + (i === FICHA_INDEX ? ' active' : '');
+    btn.textContent = ficha.label || ('Ficha ' + (i + 1));
+    btn.title = ficha.label + ' · Botão direito para opções';
+    btn.onclick = () => switchFicha(i);
+    btn.ondblclick = (e) => { e.preventDefault(); e.stopPropagation(); showFichaCtxMenu(e, i); };
+    btn.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); showFichaCtxMenu(e, i); };
+    wrap.appendChild(btn);
+
+    // Botão 🗺️ — coloca / reposiciona token no mapa (players e GM)
+    const pid     = SESSION.pid;
+    const isMain  = i === 0 && SESSION.role !== 'gm';
+    const tokenId = isMain ? 'tok_player_' + pid : 'tok_ficha_' + ficha.id;
+    const noMapa  = (MAP_DATA.tokens || []).some(t => t.id === tokenId);
+    const mapBtn  = document.createElement('button');
+    mapBtn.className = 'ftab-map-btn' + (noMapa ? ' on-map' : '');
+    mapBtn.textContent = '🗺️';
+    mapBtn.title = noMapa ? 'Token no mapa — clique para reposicionar' : 'Colocar token no mapa';
+    mapBtn.onclick = (e) => { e.stopPropagation(); placeTokenFromFicha(i); };
+    wrap.appendChild(mapBtn);
+
+    // Botão ✕ visível apenas para fichas extras (companions)
+    if (i > 0) {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'ftab-del';
+      delBtn.textContent = '✕';
+      delBtn.title = 'Apagar ficha "' + (ficha.label || 'Ficha ' + (i + 1)) + '"';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteFicha(i); };
+      wrap.appendChild(delBtn);
+    }
+
+    row.appendChild(wrap);
+  });
+}
+
+/* Apaga uma ficha extra (companion) pelo índice */
+function deleteFicha(index) {
+  if (index <= 0) return; // não permite apagar a ficha principal
+  const ficha = ALL_FICHAS[index];
+  const label = ficha.label || ('Ficha ' + (index + 1));
+  if (!confirm('Apagar a ficha "' + label + '"?\nEsta ação não pode ser desfeita.')) return;
+
+  const pid    = SESSION.pid;
+  const charId = ficha.id;
+
+  ALL_FICHAS.splice(index, 1);
+  MBState.charList.save(SESSION.code, pid, ALL_FICHAS);
+
+  // Ajusta índice ativo
+  if (FICHA_INDEX >= ALL_FICHAS.length) FICHA_INDEX = ALL_FICHAS.length - 1;
+  CHAR_ID = ALL_FICHAS[FICHA_INDEX].id;
+  MBState.char.load(CHAR_ID, charData => {
+    CHAR_DATA = charData;
+    loadFicha();
+    renderFichasSwitcher();
+    showToast('🗑 Ficha "' + label + '" removida.');
+  });
+}
+
+/* Troca a ficha ativa */
+function switchFicha(index) {
+  if (index === FICHA_INDEX) return;
+  saveFicha(); // salva a ficha atual antes de trocar
+  FICHA_INDEX = index;
+  CHAR_ID = ALL_FICHAS[index].id;
+  MBState.char.load(CHAR_ID, charData => {
+    CHAR_DATA = charData;
+    loadFicha();
+    renderFichasSwitcher();
+    showToast('✦ Ficha: ' + (ALL_FICHAS[index].label || 'Ficha ' + (index + 1)));
+  });
+}
+
+/* Cria uma nova ficha (companion/animal) */
+function addNewFicha() {
+  const defaultLabel = SESSION.role === 'gm' ? 'Goblin' : 'Companion';
+  const promptHint   = SESSION.role === 'gm' ? '(ex: Goblin, Orc, Chefe, NPC…)' : '(ex: Companion, Animal, Alter-ego)';
+  const label = prompt('Nome da nova ficha\n' + promptHint + ':', defaultLabel);
+  if (!label || !label.trim()) return;
+
+  const pid       = SESSION.pid;
+  const newCharId = 'char_' + pid + '_' + Date.now();
+  const newChar   = { ...MBState.char.default(newCharId), nome: label.trim(), id: newCharId };
+
+  MBState.char.save(newChar);
+  ALL_FICHAS.push({ id: newCharId, label: label.trim() });
+  MBState.charList.save(SESSION.code, pid, ALL_FICHAS);
+
+  FICHA_INDEX = ALL_FICHAS.length - 1;
+  CHAR_ID     = newCharId;
+  CHAR_DATA   = newChar;
+
+  loadFicha();
+  renderFichasSwitcher();
+  showToast('✦ Nova ficha criada: ' + label.trim());
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TOKEN DO JOGADOR — cria / atualiza automaticamente
+══════════════════════════════════════════════════════════════ */
+
+/* Sincroniza HP e avatar do token do player se ele já existir no mapa.
+   Não cria token automaticamente — o player escolhe onde colocar. */
+function syncPlayerToken(pid) {
+  if (!Array.isArray(MAP_DATA.tokens)) return;
+  const tokenId = 'tok_player_' + pid;
+  const existing = MAP_DATA.tokens.find(t => t.id === tokenId);
+  if (!existing) return; // token ainda não foi colocado pelo player
+
+  let changed = false;
+  if (CHAR_DATA.pv !== undefined && existing.hp !== CHAR_DATA.pv) { existing.hp = CHAR_DATA.pv; changed = true; }
+  if (CHAR_DATA.pvMax !== undefined && existing.hpMax !== CHAR_DATA.pvMax) { existing.hpMax = CHAR_DATA.pvMax; changed = true; }
+  if (CHAR_DATA.avatar !== undefined && existing.imgSrc !== CHAR_DATA.avatar) { existing.imgSrc = CHAR_DATA.avatar || null; changed = true; }
+  if (changed) {
+    const oldEl = document.querySelector(`.token[data-id="${tokenId}"]`);
+    if (oldEl) oldEl.remove();
+    createTokenEl(existing);
+    saveToken(existing);
+  }
+}
+
+/* Sincroniza HP/HpMax da ficha ativa com o token correspondente no mapa.
+   Atualiza visual instantaneamente (só a barra) e persiste via saveToken. */
+function syncFichaTokenHP() {
+  if (!Array.isArray(MAP_DATA.tokens)) return;
+
+  const pid     = SESSION.pid;
+  const isMain  = FICHA_INDEX === 0 && SESSION.role !== 'gm';
+  const tokenId = isMain ? 'tok_player_' + pid : 'tok_ficha_' + CHAR_ID;
+  const token   = MAP_DATA.tokens.find(t => t.id === tokenId);
+  if (!token) return;
+
+  const newHp    = parseFloat(document.getElementById('f-pv')?.value)    ?? token.hp;
+  const newHpMax = parseFloat(document.getElementById('f-pvMax')?.value) ?? token.hpMax;
+
+  const changed = token.hp !== newHp || token.hpMax !== newHpMax;
+  token.hp    = newHp;
+  token.hpMax = newHpMax;
+
+  if (!changed) return;
+
+  // Atualiza barra e overlay de morte no DOM sem recriar o token inteiro
+  const el = document.querySelector(`.token[data-id="${tokenId}"]`);
+  if (el) {
+    const fill    = el.querySelector('.token-hp-fill');
+    const overlay = el.querySelector('.token-dead-overlay');
+    const dead    = token.hp <= 0 && token.hpMax > 0;
+    if (fill)    fill.style.width = Math.max(0, Math.min(100, (token.hp / token.hpMax) * 100)) + '%';
+    if (overlay) overlay.style.display = dead ? 'flex' : 'none';
+    el.classList.toggle('dead', dead);
+  }
+
+  saveToken(token); // persiste no servidor e sincroniza com outros jogadores
+}
+
+/* Atualiza imagem do token do player após upload de avatar */
+function applyAvatarToPlayerToken(pid, avatarBase64) {
+  const tokenId = 'tok_player_' + pid;
+  const token = MAP_DATA.tokens.find(t => t.id === tokenId);
+  if (!token) return;
+
+  token.imgSrc = avatarBase64 || null;
+  const oldEl = document.querySelector(`.token[data-id="${tokenId}"]`);
+  if (oldEl) oldEl.remove();
+  createTokenEl(token);
+  saveToken(token);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FOTO DE TOKEN — Upload e crop para qualquer token
+   _pendingAddTokenImg : undefined=sem mudança | string=nova foto
+   _pendingEditTokenImg: undefined=sem mudança | null=remover | string=nova foto
+══════════════════════════════════════════════════════════════ */
+let _pendingAddTokenImg  = undefined;
+let _pendingEditTokenImg = undefined;
+
+/* Upload de imagem de token em qualidade máxima para o servidor local */
+async function _uploadTokenImage(file, cb) {
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  try {
+    const resp = await fetch(
+      '/api/images/upload?type=tokens&name=' + encodeURIComponent(file.name),
+      { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-GM-Token': tok }, body: file }
+    );
+    const data = await resp.json();
+    if (data.ok) cb(data.url);
+    else showToast('⚠ Erro no upload: ' + (data.error || ''));
+  } catch (err) {
+    showToast('⚠ Erro ao enviar token: ' + err.message);
+  }
+}
+
+function handleAddTokenFile(input) {
+  const file = input.files[0]; if (!file) return;
+  showToast('⏳ Enviando imagem…');
+  _uploadTokenImage(file, url => {
+    _pendingAddTokenImg = url;
+    const prev = document.getElementById('add-tok-img-prev');
+    prev.src = url; prev.style.display = 'block';
+    document.getElementById('add-tok-img-ico').style.display = 'none';
+    document.getElementById('add-tok-clear').style.display = '';
+    showToast('✦ Imagem carregada!');
+  });
+}
+function clearAddTokenImg() {
+  _pendingAddTokenImg = undefined;
+  document.getElementById('add-tok-img-prev').style.display = 'none';
+  document.getElementById('add-tok-img-ico').style.display = '';
+  document.getElementById('add-tok-clear').style.display = 'none';
+  document.getElementById('add-tok-file').value = '';
+}
+
+function handleEditTokenFile(input) {
+  const file = input.files[0]; if (!file) return;
+  showToast('⏳ Enviando imagem…');
+  _uploadTokenImage(file, url => {
+    _pendingEditTokenImg = url;
+    const prev = document.getElementById('edit-tok-img-prev');
+    prev.src = url; prev.style.display = 'block';
+    document.getElementById('edit-tok-img-ico').style.display = 'none';
+    document.getElementById('edit-tok-clear').style.display = '';
+    showToast('✦ Imagem carregada!');
+  });
+}
+function clearEditTokenImg() {
+  _pendingEditTokenImg = null; // null = remover a foto ao salvar
+  document.getElementById('edit-tok-img-prev').style.display = 'none';
+  document.getElementById('edit-tok-img-ico').style.display = '';
+  document.getElementById('edit-tok-clear').style.display = 'none';
+  document.getElementById('edit-tok-file').value = '';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AVATAR DO PLAYER — Upload, crop e sincronização
+══════════════════════════════════════════════════════════════ */
+let _pendingAvatarBase64 = null;
+
+function openAvatarModal() {
+  _pendingAvatarBase64 = null;
+  // Mostra preview atual se houver
+  const hasAvatar = !!CHAR_DATA.avatar;
+  const previewImg = document.getElementById('avatar-preview-img');
+  const previewIco = document.getElementById('avatar-preview-ico');
+  const saveBtn    = document.getElementById('avatar-save-btn');
+  const removeBtn  = document.getElementById('avatar-remove-btn');
+
+  if (hasAvatar) {
+    previewImg.src = CHAR_DATA.avatar;
+    previewImg.style.display = 'block';
+    previewIco.style.display = 'none';
+    removeBtn.style.display = 'block';
+  } else {
+    previewImg.style.display = 'none';
+    previewIco.style.display = '';
+    removeBtn.style.display = 'none';
+  }
+  saveBtn.style.display = 'none';
+  document.getElementById('avatar-file-input').value = '';
+  openModal('modal-avatar');
+}
+
+/* Upload de avatar em qualidade máxima para o servidor local */
+async function handleAvatarFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const gmTok  = sessionStorage.getItem('tvtt_gm_tok')  || '';
+  const plrTok = sessionStorage.getItem('tvtt_plr_tok') || '';
+  const plrId  = sessionStorage.getItem('tvtt_plr_id')  || '';
+
+  const previewImg = document.getElementById('avatar-preview-img');
+  const previewIco = document.getElementById('avatar-preview-ico');
+  showToast('⏳ Enviando avatar…');
+
+  try {
+    const resp = await fetch(
+      '/api/images/upload?type=avatars&name=' + encodeURIComponent(file.name),
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': file.type || 'application/octet-stream',
+          'X-GM-Token':     gmTok,
+          'X-Player-Token': plrTok,
+          'X-Player-Id':    plrId,
+        },
+        body: file
+      }
+    );
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Erro no upload');
+
+    const url = data.url;
+    _pendingAvatarBase64 = url; // variável mantida por compatibilidade — agora guarda URL
+
+    previewImg.src = url;
+    previewImg.style.display = 'block';
+    previewIco.style.display = 'none';
+    document.getElementById('avatar-save-btn').style.display = 'block';
+    showToast('✦ Avatar carregado!');
+  } catch (err) {
+    showToast('⚠ Erro ao enviar avatar: ' + err.message);
+  }
+}
+
+/* Salva o avatar na ficha e no token */
+function saveAvatar() {
+  if (!_pendingAvatarBase64) return;
+
+  const pid = SESSION.pid;
+  CHAR_DATA.avatar = _pendingAvatarBase64;
+  MBState.char.save(CHAR_DATA); // persiste a ficha no servidor
+
+  // Atualiza botão de avatar no painel esquerdo
+  const btnImg = document.getElementById('ftab-avatar-img');
+  const btnIco = document.getElementById('ftab-avatar-ico');
+  if (btnImg && btnIco) {
+    btnImg.src = _pendingAvatarBase64;
+    btnImg.style.display = 'block';
+    btnIco.style.display = 'none';
+  }
+
+  applyAvatarToPlayerToken(pid, _pendingAvatarBase64);
+  closeModal('modal-avatar');
+  showToast('✦ Avatar do token atualizado!');
+}
+
+/* Remove o avatar da ficha e do token */
+function removeAvatar() {
+  if (!confirm('Remover a foto do token?')) return;
+  const pid = SESSION.pid;
+  delete CHAR_DATA.avatar;
+  MBState.char.save(CHAR_DATA);
+
+  const btnImg = document.getElementById('ftab-avatar-img');
+  const btnIco = document.getElementById('ftab-avatar-ico');
+  if (btnImg && btnIco) {
+    btnImg.style.display = 'none';
+    btnIco.style.display = '';
+  }
+
+  applyAvatarToPlayerToken(pid, null);
+  closeModal('modal-avatar');
+  showToast('🗑 Avatar removido.');
+}
+
+/* Sincroniza o mini-avatar no botão do painel (chamado ao carregar a ficha) */
+function syncAvatarBtn() {
+  const btnImg = document.getElementById('ftab-avatar-img');
+  const btnIco = document.getElementById('ftab-avatar-ico');
+  if (!btnImg || !btnIco) return;
+  if (CHAR_DATA && CHAR_DATA.avatar) {
+    btnImg.src = CHAR_DATA.avatar;
+    btnImg.style.display = 'block';
+    btnIco.style.display = 'none';
+  } else {
+    btnImg.style.display = 'none';
+    btnIco.style.display = '';
+  }
+}
+
+/* Menu de contexto de uma ficha (clique direito) */
+function showFichaCtxMenu(e, index) {
+  // Remove menu anterior se existir
+  const old = document.getElementById('ficha-ctx-menu');
+  if (old) old.remove();
+
+  const ficha = ALL_FICHAS[index];
+  const label = ficha.label || ('Ficha ' + (index + 1));
+  const pid   = SESSION.pid;
+
+  const menu = document.createElement('div');
+  menu.id = 'ficha-ctx-menu';
+  menu.style.cssText = `
+    position:fixed; z-index:9999;
+    background:#1e1a14; border:1px solid #5a4520;
+    border-radius:6px; padding:4px 0; min-width:180px;
+    box-shadow:0 4px 16px rgba(0,0,0,.6);
+    font-size:13px;
+  `;
+
+  // Posiciona no cursor
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let mx = e.clientX, my = e.clientY;
+  menu.style.left = Math.min(mx, vw - 200) + 'px';
+  menu.style.top  = Math.min(my, vh - 120) + 'px';
+
+  function addItem(icon, text, cb, disabled) {
+    const item = document.createElement('div');
+    item.style.cssText = `padding:7px 14px; cursor:${disabled?'default':'pointer'}; display:flex; align-items:center; gap:8px; color:${disabled?'#6b5a40':'#d4c09a'};`;
+    item.innerHTML = `<span>${icon}</span><span>${text}</span>`;
+    if (!disabled) {
+      item.onmouseenter = () => item.style.background = 'rgba(200,113,42,0.2)';
+      item.onmouseleave = () => item.style.background = '';
+      item.onclick = () => { menu.remove(); cb(); };
+    }
+    menu.appendChild(item);
+  }
+
+  function addSep() {
+    const sep = document.createElement('div');
+    sep.style.cssText = 'height:1px; background:#3a2e1e; margin:3px 0;';
+    menu.appendChild(sep);
+  }
+
+  // ── Opção: colocar no mapa ──
+  const jaNoMapa = (MAP_DATA.tokens||[]).some(t => t.id === 'tok_ficha_' + ficha.id || t.id === 'tok_player_' + pid);
+  addItem('🗺️', jaNoMapa ? 'Já está no mapa' : 'Colocar no mapa', () => {
+    placeTokenFromFicha(index);
+  }, jaNoMapa && index === 0 && SESSION.role !== 'gm');
+
+  addSep();
+
+  // ── Opção: renomear ──
+  addItem('✏️', 'Renomear ficha', () => {
+    const novoNome = prompt('Renomear ficha:', label);
+    if (novoNome && novoNome.trim()) {
+      ALL_FICHAS[index].label = novoNome.trim();
+      MBState.charList.save(SESSION.code, pid, ALL_FICHAS);
+      renderFichasSwitcher();
+    }
+  });
+
+  document.body.appendChild(menu);
+
+  // Fecha ao clicar fora
+  setTimeout(() => {
+    const close = (ev) => { if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('mousedown', close); } };
+    document.addEventListener('mousedown', close);
+  }, 10);
+}
+
+/* ── Modo de posicionamento de token ── */
+function _startPlacementMode(fichaIndex) {
+  _placementMode = { fichaIndex };
+  const cont = document.getElementById('map-container');
+  if (cont) cont.style.cursor = 'crosshair';
+  showToast('🗺️ Clique na célula do mapa para posicionar o token  |  Esc para cancelar');
+  // Cancela com Esc
+  function onKey(ev) {
+    if (ev.key === 'Escape') { _cancelPlacementMode(); document.removeEventListener('keydown', onKey); }
+  }
+  document.addEventListener('keydown', onKey);
+  // Guarda ref para remover o listener se cancelado de outro jeito
+  _placementMode._escHandler = onKey;
+}
+
+function _cancelPlacementMode() {
+  if (_placementMode && _placementMode._escHandler)
+    document.removeEventListener('keydown', _placementMode._escHandler);
+  _placementMode = null;
+  const cont = document.getElementById('map-container');
+  if (cont) cont.style.cursor = '';
+}
+
+function _doPlaceToken(fichaIndex, px, py) {
+  const ficha   = ALL_FICHAS[fichaIndex];
+  const pid     = SESSION.pid;
+  const isMain  = fichaIndex === 0 && SESSION.role !== 'gm';
+  const tokenId = isMain ? 'tok_player_' + pid : 'tok_ficha_' + ficha.id;
+  if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
+  const gs = MAP_DATA.gridSize || 50;
+
+  MBState.char.load(ficha.id, charData => {
+    // Remove token antigo se existir (reposicionamento)
+    MAP_DATA.tokens = MAP_DATA.tokens.filter(t => t.id !== tokenId);
+    const oldEl = document.querySelector(`.token[data-id="${tokenId}"]`);
+    if (oldEl) oldEl.remove();
+
+    const token = {
+      id:       tokenId,
+      name:     charData.nome || ficha.label || SESSION.name,
+      icon:     '👤',
+      color:    SESSION.color || '#40a0c8',
+      imgSrc:   charData.avatar || null,
+      hp:       charData.pv    || 20,
+      hpMax:    charData.pvMax || 20,
+      x: px, y: py,
+      size: gs,
+      playerId: pid
+    };
+
+    MAP_DATA.tokens.push(token);
+    createTokenEl(token);
+    saveToken(token);
+    showToast('✦ Token "' + (charData.nome || ficha.label || SESSION.name) + '" posicionado!');
+    renderFichasSwitcher(); // atualiza ícone 🗺️ no switcher
+  });
+}
+
+/* Coloca token da ficha no mapa — entra em modo de seleção de célula */
+function placeTokenFromFicha(fichaIndex) {
+  const ficha   = ALL_FICHAS[fichaIndex];
+  const pid     = SESSION.pid;
+  const isMain  = fichaIndex === 0 && SESSION.role !== 'gm';
+  const tokenId = isMain ? 'tok_player_' + pid : 'tok_ficha_' + ficha.id;
+
+  if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
+
+  // Se já existe, destaca mas também oferece reposicionamento
+  const existing = MAP_DATA.tokens.find(t => t.id === tokenId);
+  if (existing) {
+    const el = document.querySelector(`.token[data-id="${tokenId}"]`);
+    if (el) { el.style.outline = '3px solid #d4a843'; setTimeout(() => el.style.outline = '', 1500); }
+    if (!confirm('Token "' + (ficha.label||'Ficha') + '" já está no mapa.\nDeseja reposicioná-lo?')) return;
+  }
+
+  _startPlacementMode(fichaIndex);
+}
+
+/* ── Barra de recursos ── */
+function updateBar(res) {
+  const cur = parseInt(document.getElementById('f-' + res).value) || 0;
+  const max = parseInt(document.getElementById('f-' + res + 'Max').value) || 1;
+  const pct = Math.max(0, Math.min(100, (cur / max) * 100));
+  document.getElementById('bar-' + res).style.width = pct + '%';
+}
+
+/* ── Autosave ── */
+function setupFichaAutosave() {
+  const fichaEl = document.getElementById('ficha-inner');
+  fichaEl.addEventListener('input', e => {
+    // Recalcula total do atributo imediatamente ao digitar em sub-campos
+    if (e.target && e.target.id) {
+      const m = e.target.id.match(/^f-([a-z]+)-[a-z]+$/);
+      if (m && MB_ATTRS.includes(m[1])) calcAttr(m[1]);
+    }
+    // Também atualiza barra de PV/PM se o campo mudou
+    if (e.target && (e.target.id === 'f-pv' || e.target.id === 'f-pvMax')) { updateBar('pv'); syncFichaTokenHP(); }
+    if (e.target && (e.target.id === 'f-pm' || e.target.id === 'f-pmMax')) updateBar('pm');
+
+    if (saveTimer) clearTimeout(saveTimer);
+    const ind = document.getElementById('save-indicator');
+    if (ind) { ind.textContent = 'Salvando…'; ind.classList.remove('saved'); }
+    saveTimer = setTimeout(saveFicha, 1200);
+  });
+  // Garante salvamento mesmo se o jogador fechar/navegar antes do debounce
+  window.addEventListener('beforeunload', () => { if (SESSION.role !== 'gm') saveFicha(); });
+}
+
+/* ── Salva ficha ── */
+function saveFicha() {
+  if (CHAR_ID === 'char_default') return;
+  const c = CHAR_DATA;
+
+  ['nome','jogador','raca','classe','caminho','antecedente','motivacao','idiomas','recursos','anotacoes','carga'].forEach(k => {
+    const el = document.getElementById('f-' + k);
+    if (el) c[k] = el.value;
+  });
+  ['nivel','idade','pv','pvMax','pm','pmMax','bloqueio','esquiva','determinacao','desl','corrida'].forEach(k => {
+    const el = document.getElementById('f-' + k);
+    if (el) c[k] = parseFloat(el.value) || 0;
+  });
+
+  c.xp = XP_VAL;
+
+  MB_ATTRS.forEach(attr => {
+    MB_SUBS.forEach(sub => {
+      const el = document.getElementById('f-' + attr + '-' + sub);
+      if (el) c[attr + '_' + sub] = parseInt(el.value) || 0;
+    });
+  });
+
+  for (let i = 0; i < 6; i++) {
+    ['item','tipo'].forEach(col => {
+      const el = document.getElementById('prot-' + i + '-' + col);
+      if (el) c['prot_' + i + '_' + col] = el.value;
+    });
+    const defEl = document.getElementById('prot-' + i + '-def');
+    if (defEl) c['prot_' + i + '_def'] = parseFloat(defEl.value) || 0;
+  }
+  for (let i = 0; i < 6; i++) {
+    ['arma','dano','tipo'].forEach(col => {
+      const el = document.getElementById('atk-' + i + '-' + col);
+      if (el) c['atk_' + i + '_' + col] = el.value;
+    });
+  }
+
+  c.habilidades = [];
+  document.querySelectorAll('#hab-tbody tr').forEach(tr => {
+    const ins = tr.querySelectorAll('input');
+    c.habilidades.push({ nome: ins[0]?.value||'', dif: ins[1]?.value||'', mana: ins[2]?.value||'', desc: ins[3]?.value||'' });
+  });
+  c.magias = [];
+  document.querySelectorAll('#mag-tbody tr').forEach(tr => {
+    const ins = tr.querySelectorAll('input');
+    c.magias.push({ nome: ins[0]?.value||'', dif: ins[1]?.value||'', mana: ins[2]?.value||'', custo: ins[3]?.value||'', desc: ins[4]?.value||'' });
+  });
+  c.equipamentos = [];
+  document.querySelectorAll('#equip-tbody tr').forEach(tr => {
+    const ins = tr.querySelectorAll('input');
+    c.equipamentos.push({ item: ins[0]?.value||'', peso: ins[1]?.value||'', custo: ins[2]?.value||'' });
+  });
+
+  c.id = CHAR_ID;
+  MBState.char.save(c);
+
+  // Sincroniza HP/HP-max da ficha com o token no mapa
+  syncFichaTokenHP();
+
+  const ind = document.getElementById('save-indicator');
+  if (ind) {
+    ind.textContent = '✦ Salvo';
+    ind.classList.add('saved');
+    setTimeout(() => ind.classList.remove('saved'), 2000);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAINÉIS COLLAPSE
+══════════════════════════════════════════════════════════════ */
+function togglePanel(side) {
+  const panel = document.getElementById('panel-' + side);
+  const tab   = document.getElementById('collapse-' + side);
+  const open  = !panel.classList.contains('collapsed');
+  panel.classList.toggle('collapsed', open);
+  if (side === 'left')  tab.textContent = open ? '▶' : '◀';
+  if (side === 'right') tab.textContent = open ? '◀' : '▶';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SEÇÕES DA FICHA
+══════════════════════════════════════════════════════════════ */
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const icon = header.querySelector('span:last-child');
+  const collapsed = body.classList.toggle('collapsed');
+  if (icon) icon.textContent = collapsed ? '▸' : '▾';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ABAS DO PAINEL DIREITO
+══════════════════════════════════════════════════════════════ */
+function switchRTab(tab) {
+  // Aba administrativa: só GM pode acessar
+  if (tab === 'toklib' && SESSION.role !== 'gm') return;
+  document.querySelectorAll('.rtab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.rtab-content').forEach(c => c.classList.remove('active'));
+  const tabEl = document.getElementById('rtab-' + tab);
+  if (!tabEl) return;
+  tabEl.classList.add('active');
+  // Encontra o botão correspondente pela função onclick
+  document.querySelectorAll('.rtab').forEach(b => {
+    if (b.getAttribute('onclick') && b.getAttribute('onclick').includes("'" + tab + "'")) {
+      b.classList.add('active');
+    }
+  });
+  // Carrega biblioteca de tokens ao abrir aba
+  if (tab === 'toklib') loadTokenLibrary();
+}
+
+/* ══════════════════════════════════════════════════════════
+   FILE EXPLORER — Tokens & Backgrounds
+   Lê pastas/imagens do disco, navega como um gerenciador de
+   arquivos. Sem botões de criar/mover pastas via UI.
+══════════════════════════════════════════════════════════ */
+
+/* Estado do explorer de tokens */
+let _tokData   = { images: [], folders: [] };
+let _tokPath   = '';   // '' = raiz, 'NomePasta' = dentro da pasta
+
+/* Carrega e renderiza o explorer de tokens */
+function loadTokenLibrary() {
+  const grid = document.getElementById('tok-lib-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--dim);font-size:0.8rem;grid-column:1/-1;text-align:center;padding:20px">Carregando…</div>';
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  fetch('/api/images/list?type=tokens', { headers: { 'X-GM-Token': tok } })
+    .then(r => r.json())
+    .then(data => {
+      _tokData = { images: data.images || [], folders: data.folders || [] };
+      _renderTokExplorer();
+    })
+    .catch(() => {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.8rem;grid-column:1/-1;text-align:center;padding:20px">Erro ao carregar.</div>';
+    });
+}
+
+function _renderTokExplorer() {
+  _renderFexBreadcrumb('tok-breadcrumb', _tokPath, (p) => { _tokPath = p; _renderTokExplorer(); });
+  const grid = document.getElementById('tok-lib-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (_tokPath === '') {
+    /* Raiz: mostra pastas + imagens sem pasta */
+    _tokData.folders.forEach(folder => {
+      const count = _tokData.images.filter(i => i.folder === folder).length;
+      const card = _mkFolderCard(folder, count, () => { _tokPath = folder; _renderTokExplorer(); });
+      grid.appendChild(card);
+    });
+    const rootImgs = _tokData.images.filter(i => !i.folder);
+    rootImgs.forEach(entry => grid.appendChild(_mkTokImgCard(entry)));
+    if (_tokData.folders.length === 0 && rootImgs.length === 0) {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.78rem;grid-column:1/-1;text-align:center;padding:20px">Nenhum token ainda.<br>Envie imagens ao criar tokens.</div>';
+    }
+  } else {
+    /* Dentro de pasta: só imagens dessa pasta */
+    const imgs = _tokData.images.filter(i => i.folder === _tokPath);
+    if (imgs.length === 0) {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.78rem;grid-column:1/-1;text-align:center;padding:20px">Pasta vazia.</div>';
+    } else {
+      imgs.forEach(entry => grid.appendChild(_mkTokImgCard(entry)));
+    }
+  }
+}
+
+function _mkTokImgCard(entry) {
+  const card = document.createElement('div');
+  card.className = 'fex-card';
+  card.title = entry.filename.replace(/^\d+_/, '') + (entry.sizeKB ? ' · ' + entry.sizeKB + ' KB' : '');
+  card.onclick = () => {
+    _pendingAddTokenImg = entry.url;
+    const prev = document.getElementById('add-tok-img-prev');
+    if (prev) { prev.src = entry.url; prev.style.display = 'block'; }
+    const ico = document.getElementById('add-tok-img-ico');
+    if (ico) ico.style.display = 'none';
+    const clr = document.getElementById('add-tok-clear');
+    if (clr) clr.style.display = '';
+    openModal('modal-token');
+    showToast('🗃 Imagem selecionada da biblioteca');
+  };
+  const img = document.createElement('img');
+  img.src = entry.url; img.loading = 'lazy';
+  card.appendChild(img);
+  const name = document.createElement('div');
+  name.className = 'fex-name';
+  name.textContent = entry.filename.replace(/^\d+_/, '').replace(/\.[^.]+$/, '');
+  card.appendChild(name);
+  /* Botão deletar (aparece no hover) */
+  const del = document.createElement('button');
+  del.className = 'fex-del'; del.textContent = '🗑'; del.title = 'Deletar';
+  del.onclick = (e) => {
+    e.stopPropagation();
+    if (!confirm('Deletar "' + entry.filename.replace(/^\d+_/, '') + '"?')) return;
+    const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+    const qs  = '?type=tokens&name=' + encodeURIComponent(entry.filename) +
+                 (entry.folder ? '&folder=' + encodeURIComponent(entry.folder) : '');
+    fetch('/api/images/delete' + qs, { method: 'POST', headers: { 'X-GM-Token': tok } })
+      .then(r => r.json()).then(d => {
+        if (d.ok) { showToast('🗑 Token deletado'); loadTokenLibrary(); }
+        else showToast('⚠ ' + (d.error || 'Erro'));
+      });
+  };
+  card.appendChild(del);
+  return card;
+}
+
+/* ── Explorer de Backgrounds ── */
+let _bgData  = { images: [], folders: [] };
+let _bgPath  = '';
+
+function loadBgGallery() {
+  const grid = document.getElementById('bg-gallery');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--dim);font-size:0.8rem;grid-column:1/-1;text-align:center;padding:16px">Carregando…</div>';
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  fetch('/api/images/list?type=bg', { headers: { 'X-GM-Token': tok } })
+    .then(r => r.json())
+    .then(data => {
+      _bgData={images:data.images||[],folders:data.folders||[]};
+      _renderBgExplorer();
+    })
+    .catch(() => {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.8rem;grid-column:1/-1;text-align:center;padding:16px">Erro ao carregar.</div>';
+    });
+}
+
+function _renderBgExplorer() {
+  _renderFexBreadcrumb('bg-breadcrumb', _bgPath, (p) => { _bgPath = p; _renderBgExplorer(); });
+  const grid = document.getElementById('bg-gallery');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const showImgs = (imgs) => {
+    if (imgs.length === 0) {
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.78rem;grid-column:1/-1;text-align:center;padding:16px">Nenhuma imagem aqui.</div>';
+      return;
+    }
+    imgs.forEach(entry => {
+      const isActive = MAP_DATA.bgImageURL === entry.url;
+      const card = document.createElement('div');
+      card.className = 'fex-card' + (isActive ? ' active-bg' : '');
+      card.title = (entry.filename || '').replace(/^\d+_/, '') + (entry.sizeKB ? ' · ' + entry.sizeKB + ' KB' : '');
+      card.onclick = () => { setBgImage(entry.url); closeModal('modal-bg-image'); };
+      const img = document.createElement('img');
+      img.src = entry.url; img.loading = 'lazy';
+      card.appendChild(img);
+      const lbl = document.createElement('div');
+      lbl.className = 'fex-name';
+      lbl.textContent = (isActive ? '✓ ' : '') + (entry.filename || '').replace(/^\d+_/, '').replace(/\.[^.]+$/, '');
+      card.appendChild(lbl);
+      /* Deletar */
+      const del = document.createElement('button');
+      del.className = 'fex-del'; del.textContent = '🗑'; del.title = 'Deletar';
+      del.onclick=(e)=>{e.stopPropagation();deleteBgImageServer(entry.filename,entry.url);};
+      card.appendChild(del);
+      grid.appendChild(card);
+    });
+  };
+
+  if (_bgPath === '') {
+    _bgData.folders.forEach(folder => {
+      const count = _bgData.images.filter(i => i.folder === folder).length;
+      const fc = _mkFolderCard(folder, count, () => { _bgPath = folder; _renderBgExplorer(); });
+      grid.appendChild(fc);
+    });
+    showImgs(_bgData.images.filter(i => !i.folder));
+  } else {
+    showImgs(_bgData.images.filter(i => i.folder === _bgPath));
+  }
+}
+
+/* ── Utilitários compartilhados do File Explorer ── */
+
+/* Cria card de pasta */
+function _mkFolderCard(name, count, onclick) {
+  const card = document.createElement('div');
+  card.className = 'fex-card fex-folder-card';
+  card.title = name + ' (' + count + ' imagem' + (count !== 1 ? 'ns' : '') + ')';
+  card.onclick = onclick;
+  const icon = document.createElement('div');
+  icon.className = 'fex-folder-icon';
+  icon.innerHTML = '📂<div class="fex-folder-count">' + count + ' img</div>';
+  card.appendChild(icon);
+  const lbl = document.createElement('div');
+  lbl.className = 'fex-name'; lbl.textContent = name;
+  card.appendChild(lbl);
+  return card;
+}
+
+/* Renderiza breadcrumb num elemento */
+function _renderFexBreadcrumb(elId, currentPath, navigate) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = '';
+  const home = document.createElement('button');
+  home.className = 'fex-crumb' + (currentPath === '' ? ' current' : '');
+  home.textContent = '📁 Raiz';
+  home.onclick = () => { if (currentPath !== '') navigate(''); };
+  el.appendChild(home);
+  if (currentPath) {
+    const sep = document.createElement('span');
+    sep.className = 'fex-sep'; sep.textContent = ' › ';
+    el.appendChild(sep);
+    const sub = document.createElement('button');
+    sub.className = 'fex-crumb current';
+    sub.textContent = '📂 ' + currentPath;
+    el.appendChild(sub);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MODAIS
+══════════════════════════════════════════════════════════════ */
+function openModal(id) {
+  document.getElementById(id).style.display = 'flex';
+}
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   LOBBY
+══════════════════════════════════════════════════════════════ */
+function goLobby() {
+  saveFicha();
+  window.location.href = 'index.html';
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ATALHOS DE TECLADO
+══════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  // Ignora se estiver em um input/textarea
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+
+  switch(e.key.toLowerCase()) {
+    case 's': setTool('select'); break;
+    case 'm': setTool('move');   break;
+    case 't': openAddToken(null, null); break;
+    case 'g': toggleGrid(); break;
+    case 'f': toggleFog();  break;
+    case 'i': switchRTab('init'); break;
+    case 'd': switchRTab('dice'); break;
+    case 'c': switchRTab('chat'); break;
+    case 'delete':
+    case 'backspace':
+      if (SELECTED_TOKEN) { removeToken(SELECTED_TOKEN); } break;
+    case 'escape':
+      closeCtxMenu();
+      closeRollModePopup();
+      closeModal('modal-token');
+      closeModal('modal-edit-token');
+      closeModal('modal-bg-image');
+      deselectToken();
+      break;
+  }
+});
+
+/* Fecha ctx-menu ao clicar fora */
+document.addEventListener('mousedown', e => {
+  if (!e.target.closest('.ctx-menu')) closeCtxMenu();
+});
+
+/* Encerra right-pan se o mouse soltar fora do mapa */
+document.addEventListener('mouseup', e => {
+  if (e.button === 2 && isRightPanning) {
+    isRightPanning = false;
+    const stage = document.getElementById('map-stage');
+    if (stage) stage.style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
+  }
+});
+
+/* ══ Bloqueia menu nativo do navegador como fallback para qualquer elemento
+   que não tenha handler próprio. Sem useCapture para não interferir
+   nos handlers de token e mapa que já chamam e.preventDefault() ══ */
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Runtime
+data/rooms/
+data/images/
+dist/
+*.AppImage
+*.log
+.tvtt.pid
+.tvtt.log
+.server.pid
+.server.log
+.appimagetool
+.appdir-build/
+
+# Build artifacts
+windows/build-tmp/
+windows/*.spec
+windows/*.manifest
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
