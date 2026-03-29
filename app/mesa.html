@@ -1556,6 +1556,58 @@ body.is-player .gm-only { display: none !important; }
   </div>
 </div>
 
+<!-- ═══════════════ MODAL — Calibrar Grade ═══════════════ -->
+<div class="modal-overlay" id="modal-grid-calibrate" style="display:none" onclick="if(event.target===this) closeModal('modal-grid-calibrate')">
+  <div class="modal-box" style="max-width:340px">
+    <button class="modal-close" onclick="closeModal('modal-grid-calibrate')">✕</button>
+    <div class="modal-title">⚙ Calibrar Grade</div>
+    <div style="color:var(--dim);font-size:0.78rem;margin-bottom:14px;line-height:1.5">
+      Use os controles abaixo para alinhar o grid do VTT com o grid da imagem de fundo.
+    </div>
+
+    <!-- Tamanho da célula -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:0.8rem;color:var(--pale);margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:0.05em">Tamanho da célula (px)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="cta-btn sm" onclick="nudgeGrid('size',-1)" style="padding:4px 12px;font-size:1rem">−</button>
+        <input id="gc-size" type="number" min="10" max="300" step="1"
+          style="width:70px;text-align:center;background:var(--surface);border:1px solid var(--border-h);color:var(--pale);border-radius:6px;padding:4px 6px;font-size:0.95rem"
+          onchange="nudgeGrid('size',0,this.value)">
+        <button class="cta-btn sm" onclick="nudgeGrid('size',+1)" style="padding:4px 12px;font-size:1rem">+</button>
+      </div>
+    </div>
+
+    <!-- Offset X -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:0.8rem;color:var(--pale);margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:0.05em">Deslocamento Horizontal (X)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="cta-btn sm" onclick="nudgeGrid('ox',-1)" style="padding:4px 12px;font-size:1rem">←</button>
+        <input id="gc-ox" type="number" step="1"
+          style="width:70px;text-align:center;background:var(--surface);border:1px solid var(--border-h);color:var(--pale);border-radius:6px;padding:4px 6px;font-size:0.95rem"
+          onchange="nudgeGrid('ox',0,this.value)">
+        <button class="cta-btn sm" onclick="nudgeGrid('ox',+1)" style="padding:4px 12px;font-size:1rem">→</button>
+      </div>
+    </div>
+
+    <!-- Offset Y -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:0.8rem;color:var(--pale);margin-bottom:6px;font-family:'Cinzel',serif;letter-spacing:0.05em">Deslocamento Vertical (Y)</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="cta-btn sm" onclick="nudgeGrid('oy',-1)" style="padding:4px 12px;font-size:1rem">↑</button>
+        <input id="gc-oy" type="number" step="1"
+          style="width:70px;text-align:center;background:var(--surface);border:1px solid var(--border-h);color:var(--pale);border-radius:6px;padding:4px 6px;font-size:0.95rem"
+          onchange="nudgeGrid('oy',0,this.value)">
+        <button class="cta-btn sm" onclick="nudgeGrid('oy',+1)" style="padding:4px 12px;font-size:1rem">↓</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="cta-btn sm danger" onclick="resetGridCalibration()" style="flex:1">↺ Resetar</button>
+      <button class="cta-btn sm" onclick="saveGridCalibration()" style="flex:2">✦ Aplicar para todos</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ MODAL — Avatar do Token ═══════════════ -->
 <div class="modal-overlay" id="modal-avatar" style="display:none" onclick="if(event.target===this) closeModal('modal-avatar')">
   <div class="modal-box" style="max-width:320px">
@@ -1856,16 +1908,18 @@ function renderGrid() {
   if (!_bgImgBounds) return;
 
   const { dx, dy, dw, dh } = _bgImgBounds;
+  const gox = (MAP_DATA.gridOffsetX || 0) % gs; // offset dentro de uma célula
+  const goy = (MAP_DATA.gridOffsetY || 0) % gs;
   ctx.save();
   ctx.beginPath();
   ctx.rect(dx, dy, dw, dh);
   ctx.clip();
-  // Linhas verticais alinhadas à borda esquerda da imagem
-  for (let x = dx; x <= dx + dw; x += gs) {
+  // Linhas verticais com offset
+  for (let x = dx + gox; x <= dx + dw; x += gs) {
     ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
   }
-  // Linhas horizontais alinhadas à borda superior da imagem
-  for (let y = dy; y <= dy + dh; y += gs) {
+  // Linhas horizontais com offset
+  for (let y = dy + goy; y <= dy + dh; y += gs) {
     ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
   }
   ctx.restore();
@@ -1888,15 +1942,45 @@ function toggleFog() {
 }
 
 function openGridSettings() {
-  const val = prompt('Tamanho da célula da grade (px):', MAP_DATA.gridSize || 50);
-  if (val && !isNaN(val)) {
-    MAP_DATA.gridSize = Math.max(20, Math.min(200, parseInt(val)));
-    renderGrid();
-    renderTokens();
-    saveMap();
-    updateMapInfo();
-    showToast(`Grade: ${MAP_DATA.gridSize}px`);
+  if (SESSION.role !== 'gm') return;
+  document.getElementById('gc-size').value = MAP_DATA.gridSize    || 50;
+  document.getElementById('gc-ox').value   = MAP_DATA.gridOffsetX || 0;
+  document.getElementById('gc-oy').value   = MAP_DATA.gridOffsetY || 0;
+  openModal('modal-grid-calibrate');
+}
+
+function nudgeGrid(field, delta, directVal) {
+  if (SESSION.role !== 'gm') return;
+  const key = field === 'size' ? 'gridSize' : field === 'ox' ? 'gridOffsetX' : 'gridOffsetY';
+  const inputId = field === 'size' ? 'gc-size' : field === 'ox' ? 'gc-ox' : 'gc-oy';
+  let current = MAP_DATA[key] || (field === 'size' ? 50 : 0);
+  if (directVal !== undefined) {
+    current = parseInt(directVal) || 0;
+  } else {
+    current += delta;
   }
+  if (field === 'size') current = Math.max(10, Math.min(300, current));
+  MAP_DATA[key] = current;
+  document.getElementById(inputId).value = current;
+  renderGrid();
+  // Salva imediatamente para preview ao vivo para o próprio Mestre
+}
+
+function saveGridCalibration() {
+  saveMap();
+  renderTokens();
+  showToast('✦ Grade calibrada para todos os jogadores!');
+  closeModal('modal-grid-calibrate');
+}
+
+function resetGridCalibration() {
+  MAP_DATA.gridOffsetX = 0;
+  MAP_DATA.gridOffsetY = 0;
+  MAP_DATA.gridSize    = 50;
+  document.getElementById('gc-size').value = 50;
+  document.getElementById('gc-ox').value   = 0;
+  document.getElementById('gc-oy').value   = 0;
+  renderGrid();
 }
 
 function updateMapInfo() { /* info de grade removida */ }
@@ -2255,9 +2339,9 @@ function gridSnap(val, gs, offset) {
   return Math.floor((val - offset) / gs) * gs + offset + gs / 2;
 }
 function gridSnapXY(mx, my) {
-  const gs = MAP_DATA.gridSize || 50;
-  const ox = (_bgImgBounds && _bgImgBounds.dx) || 0;
-  const oy = (_bgImgBounds && _bgImgBounds.dy) || 0;
+  const gs  = MAP_DATA.gridSize || 50;
+  const ox  = ((_bgImgBounds && _bgImgBounds.dx) || 0) + ((MAP_DATA.gridOffsetX || 0) % gs);
+  const oy  = ((_bgImgBounds && _bgImgBounds.dy) || 0) + ((MAP_DATA.gridOffsetY || 0) % gs);
   return [gridSnap(mx, gs, ox), gridSnap(my, gs, oy)];
 }
 
