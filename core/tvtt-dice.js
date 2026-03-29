@@ -454,6 +454,8 @@
       document.head.appendChild(skinLink);
     }
     document.documentElement.setAttribute('data-dice-skin', skinName);
+    // Garante que o overlay não sobrescreva a skin global
+    overlay.removeAttribute('data-dice-skin');
     try {
       localStorage.setItem('tvtt-dice-skin', skinName);
     } catch(e) {}
@@ -461,6 +463,20 @@
 
   DiceAnimator.getSkin = function() {
     return currentSkin;
+  };
+
+  // Rola os dados com uma skin temporária aplicada APENAS no overlay,
+  // sem alterar a skin global do jogador local. Evita flicker no resultado.
+  DiceAnimator.rollWithSkin = function(rolls, sides, author, skin, callback) {
+    var validSkins = ['classic', 'marble', 'obsidian', 'ruby', 'sapphire', 'emerald', 'gold', 'silver', 'dragon'];
+    var safeSkin = (validSkins.indexOf(skin) !== -1) ? skin : currentSkin;
+    // Aplica a skin do remetente só no overlay (CSS custom props cascateiam)
+    overlay.setAttribute('data-dice-skin', safeSkin);
+    DiceAnimator.roll(rolls, sides, author, function() {
+      // Remove o override do overlay — volta a herdar a skin global do jogador
+      overlay.removeAttribute('data-dice-skin');
+      if (callback) callback();
+    });
   };
 
   // Auto-load saved skin (fallback para 'classic' se nenhuma foi salva)
