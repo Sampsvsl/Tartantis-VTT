@@ -2668,6 +2668,7 @@ function _sendBlindRoll(expr, result) {
     // Atualiza caixa com pontos para não parecer travado
     document.getElementById('dice-result-total').textContent = '···';
     document.getElementById('dice-result-detail').textContent = '🙈 Rolagem às cegas';
+    renderChatMsg(entry, true);
   }
 }
 
