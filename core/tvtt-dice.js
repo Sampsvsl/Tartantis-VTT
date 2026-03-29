@@ -463,12 +463,14 @@
     return currentSkin;
   };
 
-  // Auto-load saved skin
+  // Auto-load saved skin (fallback para 'classic' se nenhuma foi salva)
   (function() {
     try {
       var saved = localStorage.getItem('tvtt-dice-skin');
-      if (saved) DiceAnimator.setSkin(saved);
-    } catch(e) {}
+      DiceAnimator.setSkin(saved || 'classic');
+    } catch(e) {
+      DiceAnimator.setSkin('classic');
+    }
   })();
 
 })();
