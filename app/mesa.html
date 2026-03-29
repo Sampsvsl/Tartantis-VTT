@@ -101,6 +101,8 @@ body { overflow: hidden; user-select: none; }
 #grid-canvas {
   position: absolute; top: 0; left: 0;
   width: 3000px; height: 3000px;
+  image-rendering: -webkit-optimize-contrast; /* Safari */
+  image-rendering: high-quality;              /* Chrome/Edge */
 }
 #token-layer {
   position: absolute; top: 0; left: 0;
@@ -1845,10 +1847,27 @@ let _bgImgBounds  = null; // { dx, dy, dw, dh } — área da imagem no canvas
 
 function renderGrid() {
   const canvas = document.getElementById('grid-canvas');
-  const ctx    = canvas.getContext('2d');
-  const gs     = MAP_DATA.gridSize || 50;
 
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // ── HiDPI: resolução interna = 3000 × devicePixelRatio (máx 2×) ──
+  // O canvas CSS continua 3000×3000px; internamente tem mais pixels,
+  // então o zoom por CSS scale() não borralha a imagem.
+  const CSS_SIZE = 3000;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (canvas.width !== CSS_SIZE * dpr || canvas.height !== CSS_SIZE * dpr) {
+    canvas.width  = CSS_SIZE * dpr;
+    canvas.height = CSS_SIZE * dpr;
+  }
+
+  const ctx = canvas.getContext('2d');
+  // Escala o contexto para que todas as coordenadas continuem no espaço 0–3000
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Interpolação de alta qualidade ao desenhar a imagem no canvas
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  const gs = MAP_DATA.gridSize || 50;
+
+  ctx.clearRect(0, 0, CSS_SIZE, CSS_SIZE);
 
   // ── Fundo: imagem ou cor sólida ──
   if (MAP_DATA.bgImageURL) {
@@ -1863,27 +1882,26 @@ function renderGrid() {
     }
     if (_bgImageCache && _bgImageCache.img) {
       const img = _bgImageCache.img;
-      const cw = canvas.width, ch = canvas.height;
       const iw = img.naturalWidth  || img.width;
       const ih = img.naturalHeight || img.height;
       // "contain": escala uniforme para caber inteira sem distorcer
-      const scale = Math.min(cw / iw, ch / ih);
+      const scale = Math.min(CSS_SIZE / iw, CSS_SIZE / ih);
       const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
-      const dx = Math.floor((cw - dw) / 2), dy = Math.floor((ch - dh) / 2);
+      const dx = Math.floor((CSS_SIZE - dw) / 2), dy = Math.floor((CSS_SIZE - dh) / 2);
       _bgImgBounds = { dx, dy, dw, dh };
       // Cor sólida nas bordas que sobram
       ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
-      ctx.fillRect(0, 0, cw, ch);
+      ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
       ctx.drawImage(img, dx, dy, dw, dh);
     } else {
       _bgImgBounds = null;
       ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
     }
   } else {
     _bgImgBounds = null;
     ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
   }
 
   if (!MAP_DATA.showGrid) return;
