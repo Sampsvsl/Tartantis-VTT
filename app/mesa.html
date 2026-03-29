@@ -205,6 +205,26 @@ body { overflow: hidden; user-select: none; }
   padding: 10px; background: rgba(0,0,0,0.2);
   border: 1px solid var(--border); border-radius: 2px;
 }
+
+.skin-btn {
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: rgba(28,23,18,0.9);
+  color: var(--gold);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.skin-btn:hover {
+  border-color: var(--ember);
+  background: rgba(200,113,42,0.2);
+  transform: scale(1.1);
+}
+.skin-btn:active {
+  transform: scale(1);
+}
 .custom-roll-row input {
   width: 44px; text-align: center;
   background: rgba(0,0,0,0.4); border: 1px solid var(--border);
@@ -505,6 +525,15 @@ body { overflow: hidden; user-select: none; }
   /* O translate centra o CÍRCULO (token-body) no ponto x,y do mapa.
      Label e hp-bar ficam absolutamente posicionados abaixo, fora do fluxo. */
   transform: translate(-50%, -50%);
+  transition: left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              top 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.2s ease-out;
+}
+.token.animating {
+  z-index: 15;
+  transition: left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              top 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.2s ease-out;
 }
 .token-body {
   border-radius: 50%; border: 2px solid rgba(255,255,255,0.4);
@@ -1351,6 +1380,20 @@ body.is-player .gm-only { display: none !important; }
           <button class="die-btn" onclick="askRollMode('intel','Inteligência',event)">Inteligência</button>
           <button class="die-btn" onclick="askRollMode('von','Vontade',event)">Vontade</button>
         </div>
+
+        <!-- Skin Selector -->
+        <div style="padding:8px 0 2px; font-family:'Cinzel',serif; font-size:0.58rem; letter-spacing:0.2em; color:var(--dim); text-transform:uppercase;">Skin dos Dados</div>
+        <div class="dice-skin-selector" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('classic')" title="Clássico (marfim)" style="background:linear-gradient(145deg,#f9f3e1,#c5a028);color:#3a2010;">♟</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('marble')" title="Mármore" style="background:linear-gradient(145deg,#f0f0f0,#a0a0a0);color:#303030;">⬜</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('obsidian')" title="Obsidiana" style="background:linear-gradient(145deg,#4a4a4a,#1a1a1a);color:#ccc;">⬛</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('ruby')" title="Rubi" style="background:linear-gradient(145deg,#e85050,#800000);color:#fff;">🟥</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('sapphire')" title="Safira" style="background:linear-gradient(145deg,#4080c8,#103060);color:#fff;">🟦</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('emerald')" title="Esmeralda" style="background:linear-gradient(145deg,#40a050,#0a4020);color:#fff;">🟩</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('gold')" title="Ouro" style="background:linear-gradient(145deg,#d4af37,#8b7500);color:#3a2010;">🟨</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('silver')" title="Prata" style="background:linear-gradient(145deg,#d0d0d0,#707070);color:#303030;">⬜</button>
+          <button class="skin-btn" onclick="DiceAnimator.setSkin('dragon')" title="Dragão" style="background:linear-gradient(145deg,#5a2828,#2a0808);color:#ffaa77;">🐉</button>
+        </div>
       </div>
     </div>
 
@@ -2061,7 +2104,9 @@ function mapMouseMove(e) {
     // Snap suave durante drag
     dragToken.style.left = nx + 'px';
     dragToken.style.top  = ny + 'px';
-    dragToken.style.transform = 'translate(-50%,-50%) scale(1.1)';
+    const token = (MAP_DATA.tokens || []).find(t => t.id === dragToken.dataset.id);
+    const rot = token ? (token.rotation || 0) : 0;
+    dragToken.style.transform = `translate(-50%,-50%) rotate(${rot}deg) scale(1.1)`;
   }
 }
 
@@ -2124,7 +2169,8 @@ function mapMouseUp(e) {
       token.y = Math.floor(parseFloat(dragToken.style.top)  / gs) * gs + gs / 2;
       dragToken.style.left = token.x + 'px';
       dragToken.style.top  = token.y + 'px';
-      dragToken.style.transform = 'translate(-50%,-50%) scale(1)';
+      const rot = token.rotation || 0;
+      dragToken.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
       saveToken(token); // salva só este token (posição)
     }
     isDraggingToken = false; dragToken = null;
@@ -2232,13 +2278,77 @@ function confirmAddToken() {
 
 function renderTokens() {
   const layer = document.getElementById('token-layer');
-  layer.innerHTML = '';
-  (MAP_DATA.tokens || []).forEach(t => t && createTokenEl(t));
+  const existingEls = new Map();
+  layer.querySelectorAll('.token').forEach(el => existingEls.set(el.dataset.id, el));
+  
+  (MAP_DATA.tokens || []).forEach(token => {
+    if (!token) return;
+    let el = existingEls.get(token.id);
+    if (el) {
+      existingEls.delete(token.id);
+      updateTokenEl(el, token);
+    } else {
+      createTokenEl(token);
+    }
+  });
+  
+  existingEls.forEach(el => el.remove());
+}
+
+function updateTokenEl(el, token) {
+  const gs = MAP_DATA.gridSize || 50;
+  const size = Math.round(gs * 0.95);
+  
+  el.style.width = size + 'px';
+  el.style.height = size + 'px';
+  el.style.left = token.x + 'px';
+  el.style.top = token.y + 'px';
+  
+  const rot = token.rotation || 0;
+  el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+  
+  const body = el.querySelector('.token-body');
+  if (body) {
+    body.style.width = size + 'px';
+    body.style.height = size + 'px';
+    body.style.background = token.imgSrc ? 'transparent' : token.color + '33';
+    body.style.borderColor = token.color;
+    body.style.boxShadow = `0 0 12px ${token.color}44, 0 2px 8px rgba(0,0,0,0.6)`;
+    
+    const img = body.querySelector('img');
+    if (token.imgSrc) {
+      if (img) {
+        img.src = token.imgSrc;
+      } else {
+        const newImg = document.createElement('img');
+        newImg.src = token.imgSrc;
+        newImg.draggable = false;
+        body.insertBefore(newImg, body.firstChild);
+      }
+    } else {
+      if (img) img.remove();
+      body.textContent = token.icon || '👤';
+    }
+  }
+  
+  const label = el.querySelector('.token-label');
+  if (label) label.textContent = token.name;
+  
+  const hpFill = el.querySelector('.token-hp-fill');
+  if (hpFill) {
+    hpFill.style.width = Math.max(0, Math.min(100, (token.hp / token.hpMax) * 100)) + '%';
+    hpFill.style.background = token.color;
+  }
+  
+  const isDead = token.hp <= 0 && token.hpMax > 0;
+  el.classList.toggle('dead', isDead);
+  const deadOverlay = el.querySelector('.token-dead-overlay');
+  if (deadOverlay) deadOverlay.style.display = isDead ? 'flex' : 'none';
 }
 
 function createTokenEl(token) {
   const gs = MAP_DATA.gridSize || 50;
-  const size = Math.round(gs * 0.85);
+  const size = Math.round(gs * 0.95);
 
   const el = document.createElement('div');
   el.className = 'token';
@@ -2249,6 +2359,8 @@ function createTokenEl(token) {
   el.style.height = size + 'px';
   el.style.left = token.x + 'px';
   el.style.top  = token.y + 'px';
+  const rot = token.rotation || 0;
+  el.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
 
   const body = document.createElement('div');
   body.className = 'token-body';
@@ -2403,6 +2515,16 @@ function showCtxMenu(cx, cy, type) {
       sep.style.cssText = 'padding:5px 14px 2px; font-family:Cinzel,serif; font-size:0.58rem; letter-spacing:0.12em; color:var(--ember);';
       sep.textContent = tok.name.toUpperCase();
       menu.appendChild(sep);
+      // Rotation controls
+      const rot = tok.rotation || 0;
+      addCtxItem(`↺ Girar -45° (${rot - 45}°)`, () => rotateToken(ctxTokenId, -45));
+      addCtxItem(`↻ Girar +45° (${rot + 45}°)`, () => rotateToken(ctxTokenId, 45));
+      if (rot !== 0) {
+        addCtxItem('⬌ Resetar Rotação', () => rotateToken(ctxTokenId, 'reset'));
+      }
+      const sepR = document.createElement('hr');
+      sepR.style.cssText = 'border:none;border-top:1px solid #3a2e1e;margin:3px 0;';
+      menu.appendChild(sepR);
     }
     if (isGM) {
       // Verifica se já está no turno
@@ -2456,6 +2578,19 @@ function saveMap() {
 // Salva UM token de forma atômica (não sobrescreve tokens de outros clientes)
 function saveToken(token) {
   MBState.tokens.saveOne(SESSION.code, token);
+}
+
+function rotateToken(tokenId, degrees) {
+  const token = (MAP_DATA.tokens || []).find(t => t.id === tokenId);
+  if (!token) return;
+  const currentRot = token.rotation || 0;
+  if (degrees === 'reset') {
+    token.rotation = 0;
+  } else {
+    token.rotation = (currentRot + degrees + 360) % 360;
+  }
+  renderTokens();
+  saveToken(token);
 }
 
 // Remove UM token
@@ -4043,6 +4178,12 @@ document.addEventListener('keydown', e => {
     case 'delete':
     case 'backspace':
       if (SELECTED_TOKEN) { removeToken(SELECTED_TOKEN); } break;
+    case 'q':
+      if (SELECTED_TOKEN) { rotateToken(SELECTED_TOKEN, -45); } break;
+    case 'e':
+      if (SELECTED_TOKEN) { rotateToken(SELECTED_TOKEN, 45); } break;
+    case 'r':
+      if (SELECTED_TOKEN) { rotateToken(SELECTED_TOKEN, 'reset'); } break;
     case 'escape':
       closeCtxMenu();
       closeRollModePopup();

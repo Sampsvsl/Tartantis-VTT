@@ -4,7 +4,8 @@ function _wsSend(msg){if(_ws&&_ws.readyState===WebSocket.OPEN)_ws.send(JSON.stri
 function _wsConnect(room,callbacks,onStateLoaded){
   _wsRoom=room;_wsCbs=callbacks||{};_wsStateOnce=onStateLoaded||null;
   const proto=location.protocol==='https:'?'wss:':'ws:';
-  const url=`${proto}//${location.hostname||'127.0.0.1'}:${location.port||'3000'}/ws`;
+  const wsPort = location.port || (proto === 'wss:' ? '443' : '80');
+  const url=`${proto}//${location.hostname}:${wsPort}/ws`;
   _ws=new WebSocket(url);
   _ws.onopen=()=>{_ws.send(JSON.stringify({type:'join',room}));_wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];};
   _ws.onmessage=evt=>{

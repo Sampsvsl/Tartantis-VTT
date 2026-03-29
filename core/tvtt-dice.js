@@ -83,14 +83,12 @@
     '.mb-face{',
       'position:absolute;',
       'width:' + SIZE + 'px;height:' + SIZE + 'px;',
-      'background:linear-gradient(145deg,#f9f3e1 0%,#ede1c2 55%,#ddd1aa 100%);',
+      'background:var(--dice-bg-1);',
       'border-radius:13px;',
-      'border:2px solid rgba(140,100,40,.3);',
-      'box-shadow:',
-        'inset 0 3px 8px rgba(255,255,255,.72),',
-        'inset 0 -3px 7px rgba(100,70,20,.22);}',
+      'border:2px solid var(--dice-border);',
+      'box-shadow:var(--dice-shadow);}',
     '.mb-face::after{content:"";position:absolute;inset:0;border-radius:11px;',
-      'background:linear-gradient(135deg,rgba(255,255,255,.22) 0%,transparent 55%);}',
+      'background:var(--dice-light);}',
 
     // Posição das faces no cubo
     '.mb-f1{transform:translateZ('  + HALF + 'px);}',
@@ -103,7 +101,7 @@
     // Pontos do d6
     '.mb-dot{',
       'position:absolute;width:14px;height:14px;',
-      'background:radial-gradient(circle at 38% 32%,#6b3010,#1a0808);',
+      'background:radial-gradient(circle at 38% 32%,var(--dice-dot-color),var(--dice-dot-inner));',
       'border-radius:50%;transform:translate(-50%,-50%);',
       'box-shadow:0 1px 2px rgba(0,0,0,.4);}',
 
@@ -111,8 +109,8 @@
     '.mb-die{',
       'width:' + SIZE + 'px;height:' + SIZE + 'px;',
       'position:relative;',
-      'background:linear-gradient(145deg,#f5edd8 0%,#e8d9b0 50%,#d8c890 100%);',
-      'box-shadow:inset 0 4px 10px rgba(255,255,255,.6),inset 0 -4px 8px rgba(100,70,20,.3),0 6px 20px rgba(0,0,0,.55);',
+      'background:var(--dice-bg-2);',
+      'box-shadow:var(--dice-shadow-2);',
       'display:flex;align-items:center;justify-content:center;',
       'overflow:hidden;}',
 
@@ -120,32 +118,32 @@
     '.mb-die-num{',
       'font-family:"Cinzel Decorative",cursive;',
       'font-size:1.65rem;font-weight:700;line-height:1;',
-      'color:rgba(80,40,10,.3);',
+      'color:var(--dice-num-color);',
       'transition:color .35s,text-shadow .35s;',
       'position:relative;z-index:2;',
       'user-select:none;}',
     '.mb-mv.mb-settle .mb-die-num{',
-      'color:#2a1200;',
-      'text-shadow:0 1px 0 rgba(255,220,100,.6);}',
+      'color:var(--dice-num-settled);',
+      'text-shadow:var(--dice-num-shadow);}',
 
     // Rótulo do tipo (d8, d20…) — canto inferior direito
     '.mb-die-label{',
       'position:absolute;bottom:7%;right:9%;',
       'font-family:"Cinzel",serif;',
       'font-size:0.42rem;font-weight:700;letter-spacing:.1em;',
-      'color:rgba(100,60,10,.35);',
+      'color:var(--dice-label-color);',
       'z-index:2;user-select:none;}',
 
     // Borda interna (imitando chanfro da aresta do dado)
     '.mb-die::before{',
       'content:"";position:absolute;inset:4px;z-index:1;',
-      'border:1.5px solid rgba(140,100,40,.25);',
+      'border:1.5px solid var(--dice-inner-border);',
       'pointer-events:none;}',
 
     // Reflexo de luz
     '.mb-die::after{',
       'content:"";position:absolute;inset:0;',
-      'background:linear-gradient(135deg,rgba(255,255,255,.28) 0%,transparent 52%);',
+      'background:var(--dice-light);',
       'pointer-events:none;z-index:3;}',
 
     // Sombra no chão
@@ -165,10 +163,8 @@
       'border:2px solid transparent;pointer-events:none;',
       'transition:border-color .4s,box-shadow .45s;}',
     '.mb-mv.mb-settle .mb-glow{',
-      'border-color:rgba(212,168,67,.9);',
-      'box-shadow:',
-        '0 0 18px rgba(212,168,67,.65),',
-        '0 0 42px rgba(200,80,20,.35);}',
+      'border-color:var(--dice-glow);',
+      'box-shadow:var(--dice-glow-shadow);}',
 
     // border-radius do brilho varia por tipo
     '.mb-glow-sq  {border-radius:15px;}',  // d6: quadrado
@@ -437,5 +433,42 @@
       }, lastDelay + T_FLY + T_SHOW);
     }
   };
+
+  // ═══════════════════════════════════════════════════════════════
+  //  Dice Skin System
+  // ═══════════════════════════════════════════════════════════════
+  var skinLink = null;
+  var currentSkin = 'classic';
+
+  DiceAnimator.setSkin = function(skinName) {
+    var validSkins = ['classic', 'marble', 'obsidian', 'ruby', 'sapphire', 'emerald', 'gold', 'silver', 'dragon'];
+    if (validSkins.indexOf(skinName) === -1) {
+      console.warn('DiceAnimator.setSkin: unknown skin "' + skinName + '"');
+      return;
+    }
+    currentSkin = skinName;
+    if (!skinLink) {
+      skinLink = document.createElement('link');
+      skinLink.rel = 'stylesheet';
+      skinLink.href = '/core/dice-skins.css';
+      document.head.appendChild(skinLink);
+    }
+    document.documentElement.setAttribute('data-dice-skin', skinName);
+    try {
+      localStorage.setItem('tvtt-dice-skin', skinName);
+    } catch(e) {}
+  };
+
+  DiceAnimator.getSkin = function() {
+    return currentSkin;
+  };
+
+  // Auto-load saved skin
+  (function() {
+    try {
+      var saved = localStorage.getItem('tvtt-dice-skin');
+      if (saved) DiceAnimator.setSkin(saved);
+    } catch(e) {}
+  })();
 
 })();
