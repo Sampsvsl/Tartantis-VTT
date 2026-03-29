@@ -1538,6 +1538,15 @@ body.is-player .gm-only { display: none !important; }
       </label>
       <button class="cta-btn sm danger" onclick="removeBgImage()" id="btn-remove-bg" style="display:none">✕ Remover fundo</button>
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;margin-top:2px">
+      <span style="font-size:0.78rem;color:var(--dim);font-family:'Cinzel',serif;letter-spacing:0.05em">Cor do Grid:</span>
+      <button id="grid-color-gold"  onclick="setGridColor('gold')"  title="Dourado"
+        style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:linear-gradient(135deg,#d4a843,#a07020);transition:border-color 0.15s"></button>
+      <button id="grid-color-white" onclick="setGridColor('white')" title="Branco"
+        style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:linear-gradient(135deg,#fff,#ccc);transition:border-color 0.15s"></button>
+      <button id="grid-color-black" onclick="setGridColor('black')" title="Preto"
+        style="width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;background:linear-gradient(135deg,#444,#111);transition:border-color 0.15s"></button>
+    </div>
     <div class="bg-upload-progress" id="bg-upload-progress"><div class="bar" id="bg-progress-bar"></div></div>
     <div id="bg-upload-status" style="font-size:0.78rem;color:var(--dim);margin-bottom:8px;display:none"></div>
     <div class="bg-fex-wrap">
@@ -1828,8 +1837,19 @@ function renderGrid() {
   if (!MAP_DATA.showGrid) return;
 
   // ── Grade alinhada à imagem (ou ao canvas inteiro se sem imagem) ──
-  const gridOpacity = MAP_DATA.bgImageURL ? 0.35 : 0.18;
-  ctx.strokeStyle = `rgba(200,113,42,${gridOpacity})`;
+  const _gc = MAP_DATA.gridColor || 'gold';
+  const _gcMap = {
+    gold:  { r:200, g:113, b:42  },
+    white: { r:255, g:255, b:255 },
+    black: { r:0,   g:0,   b:0   }
+  };
+  const { r, g, b } = _gcMap[_gc] || _gcMap.gold;
+  const gridOpacity = _gc === 'black'
+    ? (MAP_DATA.bgImageURL ? 0.60 : 0.30)
+    : _gc === 'white'
+    ? (MAP_DATA.bgImageURL ? 0.55 : 0.25)
+    : (MAP_DATA.bgImageURL ? 0.35 : 0.18);
+  ctx.strokeStyle = `rgba(${r},${g},${b},${gridOpacity})`;
   ctx.lineWidth = 0.8;
 
   // Grade só aparece dentro dos limites da imagem de fundo
@@ -1893,8 +1913,26 @@ function openBgImageModal() {
   document.getElementById('bg-img-file').value = '';
   document.getElementById('bg-upload-progress').style.display = 'none';
   document.getElementById('bg-upload-status').style.display = 'none';
+  _updateGridColorUI();
   loadBgGallery();
   openModal('modal-bg-image');
+}
+
+function _updateGridColorUI() {
+  const active = MAP_DATA.gridColor || 'gold';
+  ['gold', 'white', 'black'].forEach(c => {
+    const btn = document.getElementById('grid-color-' + c);
+    if (btn) btn.style.borderColor = c === active ? 'var(--gold)' : 'transparent';
+  });
+}
+
+function setGridColor(color) {
+  if (SESSION.role !== 'gm') return;
+  MAP_DATA.gridColor = color;
+  _updateGridColorUI();
+  renderGrid();
+  saveMap();
+  showToast('🎨 Cor do grid: ' + { gold: 'Dourado', white: 'Branco', black: 'Preto' }[color]);
 }
 
 // loadBgGallery → implementado no bloco "File Explorer" abaixo
