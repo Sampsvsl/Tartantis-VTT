@@ -10,19 +10,29 @@ import time
 import webbrowser
 import threading
 import runpy
+import http.server
+import socketserver
+import urllib.request
+import urllib.parse
+import shutil
+import struct
+import hashlib
+import sqlite3
+import secrets
+import json
+import base64
+import mimetypes
 from pathlib import Path
 
 PORT = 3000
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent
-    MEIPASS_DIR = Path(sys._MEIPASS)
 else:
     BASE_DIR = Path(__file__).parent.parent
-    MEIPASS_DIR = BASE_DIR
 
-SERVER_SCRIPT = MEIPASS_DIR / 'core' / 'server.py'
-APP_DIR       = MEIPASS_DIR / 'app'
+SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
+APP_DIR       = BASE_DIR / 'app'
 LOG_FILE      = BASE_DIR / '.server.log'
 
 
@@ -72,7 +82,7 @@ def main():
         sys.stdout = f_log
         sys.stderr = f_log
         
-        sys.path.insert(0, str(MEIPASS_DIR))
+        sys.path.insert(0, str(BASE_DIR))
         def run_srv():
             try:
                 runpy.run_path(str(SERVER_SCRIPT), run_name='__main__')
