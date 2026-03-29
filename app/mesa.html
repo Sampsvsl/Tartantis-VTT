@@ -969,6 +969,7 @@ body.is-player .gm-only { display: none !important; }
   <div class="header-tools">
     <button class="tool-btn active" id="tool-select" onclick="setTool('select')" title="Selecionar (S)">↖</button>
     <button class="tool-btn" id="tool-move" onclick="setTool('move')" title="Mover Mapa (M)">✋</button>
+    <button class="tool-btn" id="tool-ruler" onclick="setTool('ruler')" title="Régua de Medição (R)">📏</button>
     <button class="tool-btn gm-only" id="tool-addtoken" onclick="openAddToken(null, null)" title="Adicionar Token (T)">👤</button>
     <div class="tool-sep gm-only"></div>
     <button class="tool-btn on gm-only" id="btn-grid" onclick="toggleGrid()" title="Grade (G)">▦</button>
@@ -1264,6 +1265,13 @@ body.is-player .gm-only { display: none !important; }
       <canvas id="grid-canvas" width="3000" height="3000"></canvas>
       <div id="token-layer"></div>
       <div class="fog-overlay" id="fog-overlay"></div>
+      <!-- Régua -->
+      <svg id="ruler-layer" width="3000" height="3000" style="position:absolute;top:0;left:0;pointer-events:none;z-index:900;overflow:visible;">
+        <line id="ruler-line" x1="0" y1="0" x2="0" y2="0" stroke="#d4a843" stroke-width="5" stroke-dasharray="10 6" opacity="0.9" style="display:none"></line>
+        <circle id="ruler-start" cx="0" cy="0" r="7" fill="#1c1712" stroke="#d4a843" stroke-width="2" style="display:none"></circle>
+        <circle id="ruler-end" cx="0" cy="0" r="7" fill="#1c1712" stroke="#d4a843" stroke-width="2" style="display:none"></circle>
+      </svg>
+      <div id="ruler-tooltip" style="position:absolute;display:none;background:rgba(28,23,18,0.95);color:#d4a843;border:2px solid #d4a843;padding:4px 8px;border-radius:6px;font-family:'Cinzel',serif;font-weight:bold;font-size:24px;pointer-events:none;z-index:901;transform:translate(-50%,-120%);box-shadow:0 4px 6px rgba(0,0,0,0.6);"></div>
     </div>
     <!-- Carrossel de Turno — overlay no topo do mapa -->
     <div id="init-carousel">
@@ -1563,6 +1571,10 @@ let mapScale        = 1.0;   // zoom atual (0.15 – 3.0)
 let isDraggingToken = false, dragToken = null, dragOffX = 0, dragOffY = 0;
 let _placementMode  = null; // { fichaIndex } — aguardando clique no mapa para posicionar token
 
+// Régua
+let isMeasuring = false;
+let measureStartX = 0, measureStartY = 0;
+
 // Context menu state
 let ctxMapX = 0, ctxMapY = 0, ctxTokenId = null;
 
@@ -1713,11 +1725,12 @@ function showToast(msg) {
 ══════════════════════════════════════════════════════════════ */
 function setTool(tool) {
   ACTIVE_TOOL = tool;
-  document.querySelectorAll('#tool-select, #tool-move, #tool-addtoken').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tool-select, #tool-move, #tool-addtoken, #tool-ruler').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('tool-' + tool);
   if (el) el.classList.add('active');
   document.getElementById('map-stage').style.cursor =
-    tool === 'move' ? 'grab' : tool === 'addtoken' ? 'cell' : 'crosshair';
+    tool === 'move' ? 'grab' : tool === 'addtoken' ? 'cell' : tool === 'ruler' ? 'crosshair' : 'default';
+  if (tool !== 'ruler' && typeof clearRuler === 'function') clearRuler();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1950,6 +1963,18 @@ function mapContextMenu(e) {
 function mapMouseDown(e) {
   closeCtxMenu();
 
+  // Régua
+  if (ACTIVE_TOOL === 'ruler' && e.button === 0) {
+    e.stopPropagation();
+    isMeasuring = true;
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const gs = MAP_DATA.gridSize || 50;
+    measureStartX = Math.floor(mx / gs) * gs + gs / 2;
+    measureStartY = Math.floor(my / gs) * gs + gs / 2;
+    updateRuler(measureStartX, measureStartY, measureStartX, measureStartY);
+    return;
+  }
+
   // Modo de posicionamento de token: próximo clique esquerdo coloca o token
   if (_placementMode !== null && e.button === 0) {
     e.stopPropagation();
@@ -2008,6 +2033,15 @@ function mapMouseDown(e) {
 }
 
 function mapMouseMove(e) {
+  if (isMeasuring) {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const gs = MAP_DATA.gridSize || 50;
+    const endX = Math.floor(mx / gs) * gs + gs / 2;
+    const endY = Math.floor(my / gs) * gs + gs / 2;
+    updateRuler(measureStartX, measureStartY, endX, endY);
+    return;
+  }
+
   if (isPanning || isRightPanning) {
     panOfsX = e.clientX - panStartX;
     panOfsY = e.clientY - panStartY;
@@ -2031,7 +2065,45 @@ function mapMouseMove(e) {
   }
 }
 
+function updateRuler(x1, y1, x2, y2) {
+  const line = document.getElementById('ruler-line');
+  const start = document.getElementById('ruler-start');
+  const end = document.getElementById('ruler-end');
+  const tooltip = document.getElementById('ruler-tooltip');
+  if (!line || !start || !end || !tooltip) return;
+  line.style.display = 'block';
+  start.style.display = 'block';
+  end.style.display = 'block';
+  tooltip.style.display = 'block';
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  start.setAttribute('cx', x1); start.setAttribute('cy', y1);
+  end.setAttribute('cx', x2); end.setAttribute('cy', y2);
+  
+  const gs = MAP_DATA.gridSize || 50;
+  const dx = Math.abs(x2 - x1) / gs;
+  const dy = Math.abs(y2 - y1) / gs;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const meters = (Math.round(dist * 10) / 10).toFixed(1);
+  
+  tooltip.textContent = meters + 'm';
+  tooltip.style.left = x2 + 'px';
+  tooltip.style.top = y2 + 'px';
+}
+
+function clearRuler() {
+  ['ruler-line','ruler-start','ruler-end','ruler-tooltip'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+}
+
 function mapMouseUp(e) {
+  if (isMeasuring && e.button === 0) {
+    isMeasuring = false;
+    clearRuler();
+  }
+
   if (isPanning) {
     isPanning = false;
     document.getElementById('map-stage').style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
