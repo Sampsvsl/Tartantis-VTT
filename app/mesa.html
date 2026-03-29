@@ -2083,7 +2083,9 @@ function updateRuler(x1, y1, x2, y2) {
   const gs = MAP_DATA.gridSize || 50;
   const dx = Math.abs(x2 - x1) / gs;
   const dy = Math.abs(y2 - y1) / gs;
-  const dist = Math.sqrt(dx*dx + dy*dy);
+  const diagonals = Math.min(dx, dy);
+  const straights = Math.abs(dx - dy);
+  const dist = (diagonals * 1.5) + (straights * 1.0);
   const meters = (Math.round(dist * 10) / 10).toFixed(1);
   
   tooltip.textContent = meters + 'm';
