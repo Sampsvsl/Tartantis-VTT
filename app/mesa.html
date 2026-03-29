@@ -1294,10 +1294,10 @@ body.is-player .gm-only { display: none !important; }
                onkeydown="if(event.key==='Enter') sendChat()">
         <button class="send-btn" onclick="sendChat()" title="Enviar">↵</button>
       </div>
-      <!-- Botão de rolagem às cegas — visível apenas para o Mestre -->
+      <!-- Botão de rolagem às cegas -->
       <button class="btn-blind-roll" id="blind-roll-btn-chat"
               onclick="toggleBlindRoll()"
-              style="display:none; margin-top:4px;">
+              style="margin-top:4px;">
         🙈 Rolagem às Cegas
       </button>
     </div>
@@ -1305,10 +1305,10 @@ body.is-player .gm-only { display: none !important; }
     <!-- Dados -->
     <div class="rtab-content" id="rtab-dice">
       <div class="dice-panel">
-        <!-- Botão de rolagem às cegas — visível apenas para o Mestre -->
+        <!-- Botão de rolagem às cegas -->
         <button class="btn-blind-roll" id="blind-roll-btn-dice"
                 onclick="toggleBlindRoll()"
-                style="display:none; margin-bottom:2px;">
+                style="margin-bottom:2px;">
           🙈 Rolagem às Cegas
         </button>
         <div class="dice-grid">
@@ -1690,10 +1690,6 @@ const TOKEN_COLORS = [
     if (role === 'gm') {
       const tabTl = document.getElementById('tab-toklib');
       if (tabTl) tabTl.style.display = '';
-      // Mostra botões de rolagem às cegas para o Mestre
-      document.querySelectorAll('.btn-blind-roll').forEach(function(btn) {
-        btn.style.display = '';
-      });
       // blindRoll via WS onBlindRollUpdate
     }
     addSysMsg('⚔ Mesa carregada. Bem-vindo, ' + (role === 'gm' ? 'Mestre' : name) + '!');
