@@ -113,20 +113,7 @@ def main():
     local_ip = get_local_ip()
     url = f"http://{local_ip}:{PORT}/portal.html"
 
-    opened = False
-    for browser_path in [
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-    ]:
-        if Path(browser_path).exists():
-            subprocess.Popen([browser_path, f'--app={url}', '--window-size=1280,820'])
-            opened = True
-            break
-
-    if not opened:
-        webbrowser.open(url)
+    webbrowser.open(url)
 
     if is_frozen:
         while True:

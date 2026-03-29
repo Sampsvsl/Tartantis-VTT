@@ -88,21 +88,7 @@ except:
 
 OPEN_URL="http://${LOCAL_IP}:${PORT}/portal.html"
 
-# ── Detecta e abre o navegador (modo app, como Foundry) ───
-for cmd in chromium chromium-browser google-chrome google-chrome-stable; do
-  if command -v "$cmd" &>/dev/null; then
-    "$cmd" --app="$OPEN_URL" --window-size=1280,820 >/dev/null 2>&1 &
-    exit 0
-  fi
-done
-
-# Fallback: firefox
-if command -v firefox &>/dev/null; then
-  firefox "$OPEN_URL" >/dev/null 2>&1 &
-  exit 0
-fi
-
-# Fallback: xdg-open (qualquer browser padrão)
+# ── Abre no navegador padrão ───
 if command -v xdg-open &>/dev/null; then
   xdg-open "$OPEN_URL" >/dev/null 2>&1 &
   exit 0

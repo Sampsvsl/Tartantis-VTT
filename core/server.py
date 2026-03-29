@@ -102,10 +102,9 @@ def _ws_recv_frame(sock):
 PORT = 3000
 
 if getattr(sys, 'frozen', False):
-    _MEIPASS_DIR = Path(sys._MEIPASS).resolve()
     PROJECT_DIR  = Path(sys.executable).parent.resolve()
-    APP_DIR      = _MEIPASS_DIR / 'app'
-    STATIC_CORE_DIR = _MEIPASS_DIR / 'core'
+    APP_DIR      = PROJECT_DIR / 'app'
+    STATIC_CORE_DIR = PROJECT_DIR / 'core'
 else:
     PROJECT_DIR  = Path(__file__).parent.parent.resolve()
     APP_DIR      = PROJECT_DIR / 'app'
