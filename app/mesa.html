@@ -2011,21 +2011,17 @@ function mapMouseDown(e) {
     e.stopPropagation();
     isMeasuring = true;
     const [mx, my] = clientToMap(e.clientX, e.clientY);
-    const gs = MAP_DATA.gridSize || 50;
-    const clickedCol = Math.floor(mx / gs);
-    const clickedRow = Math.floor(my / gs);
+    const [snapX, snapY] = gridSnapXY(mx, my);
     // Verifica se há um token no mesmo quadrado do clique
     const tokenNoQuadrado = Array.isArray(MAP_DATA.tokens) && MAP_DATA.tokens.find(t => {
-      const tCol = Math.floor(t.x / gs);
-      const tRow = Math.floor(t.y / gs);
-      return tCol === clickedCol && tRow === clickedRow;
+      return t.x === snapX && t.y === snapY;
     });
     if (tokenNoQuadrado) {
       measureStartX = tokenNoQuadrado.x;
       measureStartY = tokenNoQuadrado.y;
     } else {
-      measureStartX = clickedCol * gs + gs / 2;
-      measureStartY = clickedRow * gs + gs / 2;
+      measureStartX = snapX;
+      measureStartY = snapY;
     }
     updateRuler(measureStartX, measureStartY, measureStartX, measureStartY);
     return;
@@ -2035,9 +2031,7 @@ function mapMouseDown(e) {
   if (_placementMode !== null && e.button === 0) {
     e.stopPropagation();
     const [mx, my] = clientToMap(e.clientX, e.clientY);
-    const gs = MAP_DATA.gridSize || 50;
-    const px = Math.floor(mx / gs) * gs + gs / 2;
-    const py = Math.floor(my / gs) * gs + gs / 2;
+    const [px, py] = gridSnapXY(mx, my);
     const fi = _placementMode.fichaIndex;
     _cancelPlacementMode();
     _doPlaceToken(fi, px, py);
@@ -2092,8 +2086,7 @@ function mapMouseMove(e) {
   if (isMeasuring) {
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     const gs = MAP_DATA.gridSize || 50;
-    const endX = Math.floor(mx / gs) * gs + gs / 2;
-    const endY = Math.floor(my / gs) * gs + gs / 2;
+    const [endX, endY] = gridSnapXY(mx, my);
     updateRuler(measureStartX, measureStartY, endX, endY);
     return;
   }
@@ -2173,13 +2166,11 @@ function mapMouseUp(e) {
     document.getElementById('map-stage').style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
   }
   if (isDraggingToken && dragToken) {
-    const gs = MAP_DATA.gridSize || 50;
     const tid = dragToken.dataset.id;
     const token = (MAP_DATA.tokens || []).find(t => t.id === tid);
     if (token) {
-      // Snap para grade (Math.floor = célula correta, não a adjacente)
-      token.x = Math.floor(parseFloat(dragToken.style.left) / gs) * gs + gs / 2;
-      token.y = Math.floor(parseFloat(dragToken.style.top)  / gs) * gs + gs / 2;
+      // Snap para grade respeitando o offset dx/dy da imagem de fundo
+      [token.x, token.y] = gridSnapXY(parseFloat(dragToken.style.left), parseFloat(dragToken.style.top));
       dragToken.style.left = token.x + 'px';
       dragToken.style.top  = token.y + 'px';
       const rot = token.rotation || 0;
@@ -2218,6 +2209,18 @@ function clientToMap(cx, cy) {
     (cx - rect.left - panOfsX) / mapScale,
     (cy - rect.top  - panOfsY) / mapScale
   ];
+}
+
+// Snap de coordenada para o centro do quadrado do grid,
+// respeitando o offset dx/dy da imagem de fundo.
+function gridSnap(val, gs, offset) {
+  return Math.floor((val - offset) / gs) * gs + offset + gs / 2;
+}
+function gridSnapXY(mx, my) {
+  const gs = MAP_DATA.gridSize || 50;
+  const ox = (_bgImgBounds && _bgImgBounds.dx) || 0;
+  const oy = (_bgImgBounds && _bgImgBounds.dy) || 0;
+  return [gridSnap(mx, gs, ox), gridSnap(my, gs, oy)];
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2266,17 +2269,14 @@ function confirmAddToken() {
   const colEl = document.querySelector('#color-picker .color-dot.selected');
   const color = colEl ? colEl.dataset.color : TOKEN_COLORS[0];
 
-  const gs = MAP_DATA.gridSize || 50;
   let px, py;
   if (pendingTokenPos) {
-    px = Math.floor(pendingTokenPos.x / gs) * gs + gs / 2;
-    py = Math.floor(pendingTokenPos.y / gs) * gs + gs / 2;
+    [px, py] = gridSnapXY(pendingTokenPos.x, pendingTokenPos.y);
   } else {
     // Centro do mapa visível
     const cont = document.getElementById('map-container').getBoundingClientRect();
     const [mx, my] = clientToMap(cont.left + cont.width / 2, cont.top + cont.height / 2);
-    px = Math.floor(mx / gs) * gs + gs / 2;
-    py = Math.floor(my / gs) * gs + gs / 2;
+    [px, py] = gridSnapXY(mx, my);
   }
 
   const imgSrc = _pendingAddTokenImg || null;
