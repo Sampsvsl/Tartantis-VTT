@@ -2209,27 +2209,16 @@ function _getWallsForVision() {
 }
 
 function _raySegmentIntersect(ox, oy, dx, dy, x1, y1, x2, y2) {
-  const rpx = dx - ox;
-  const rpy = dy - oy;
-  const spx = x2 - x1;
-  const spy = y2 - y1;
-  const rmag = Math.sqrt(rpx * rpx + rpy * rpy);
-  const smag = Math.sqrt(spx * spx + spy * spy);
-  if (rmag === 0 || smag === 0) return null;
-  const rx = rpx / rmag;
-  const ry = rpy / rmag;
-  const sx = spx / smag;
-  const sy = spy / smag;
-  const h = rx * sy - ry * sx;
-  if (Math.abs(h) < 0.0001) return null;
-  const t1 = (sx * (oy - y1) - sy * (ox - x1)) / h;
-  const t2 = (rx * (oy - y1) - ry * (ox - x1)) / h;
-  if (t1 < 0 || t1 > 1 || t2 < 0 || t2 > 1) return null;
-  return {
-    x: ox + t1 * rpx,
-    y: oy + t1 * rpy,
-    dist: t1 * rmag
-  };
+  // Parâmetros [0,1]: t = posição no raio (0=origem, 1=ponta), s = posição na parede
+  const rpx = dx - ox, rpy = dy - oy;   // vetor do raio (origem → ponta)
+  const spx = x2 - x1, spy = y2 - y1;   // vetor da parede
+  const denom = rpx * spy - rpy * spx;
+  if (Math.abs(denom) < 0.0001) return null; // paralelos
+  const t = ((x1 - ox) * spy - (y1 - oy) * spx) / denom;
+  const s = ((x1 - ox) * rpy - (y1 - oy) * rpx) / denom;
+  if (t < 0 || t > 1 || s < 0 || s > 1) return null;
+  const dist = t * Math.sqrt(rpx * rpx + rpy * rpy);
+  return { x: ox + t * rpx, y: oy + t * rpy, dist };
 }
 
 function _calcVisibilityPolygon(originX, originY, radius, walls) {
@@ -3241,40 +3230,26 @@ function clearRuler() {
 }
 
 function _checkWallCollision(newX, newY, gs, oldX, oldY) {
-  const walls = (MAP_DATA.walls || []).filter(w => {
-    if (w.type === 'wall') return true;
-    if (w.type === 'door' && w.open === true) return false;
-    if (w.type === 'door' || w.type === 'window') return false;
-    return true;
-  });
-  
+  // Filtra apenas paredes e portas fechadas (janelas não bloqueiam movimento)
+  const walls = (MAP_DATA.walls || []).filter(w =>
+    w.type === 'wall' || (w.type === 'door' && w.open !== true)
+  );
   if (!walls.length) return false;
-  
-  const halfSize = gs * 0.45;
-  const newRect = { x1: newX - halfSize, y1: newY - halfSize, x2: newX + halfSize, y2: newY + halfSize };
-  const oldRect = { x1: oldX - halfSize, y1: oldY - halfSize, x2: oldX + halfSize, y2: oldY + halfSize };
-  
-  if (!_rectsOverlap(oldRect, newRect)) return false;
-  
-  for (let i = 0; i < walls.length; i++) {
-    const w = walls[i];
-    if (_lineIntersectsRect(w.x1, w.y1, w.x2, w.y2, oldRect.x1, oldRect.y1, oldRect.x2, oldRect.y2)) {
-      return true;
-    }
-    if (_lineIntersectsRect(w.x1, w.y1, w.x2, w.y2, newRect.x1, newRect.y1, newRect.x2, newRect.y2)) {
-      return true;
-    }
-    if (_lineIntersectsLine(oldRect.x1, oldRect.y1, newRect.x1, newRect.y1, w.x1, w.y1, w.x2, w.y2)) {
-      return true;
-    }
-    if (_lineIntersectsLine(oldRect.x2, oldRect.y1, newRect.x2, newRect.y1, w.x1, w.y1, w.x2, w.y2)) {
-      return true;
-    }
-    if (_lineIntersectsLine(oldRect.x1, oldRect.y2, newRect.x1, newRect.y2, w.x1, w.y1, w.x2, w.y2)) {
-      return true;
-    }
-    if (_lineIntersectsLine(oldRect.x2, oldRect.y2, newRect.x2, newRect.y2, w.x1, w.y1, w.x2, w.y2)) {
-      return true;
+
+  // Verifica se o caminho do centro do token (old→new) cruza alguma parede
+  // Também verifica as 4 arestas do bounding box do token para movimentos diagonais
+  const h = gs * 0.45; // metade do tamanho do token
+  const corners = [
+    [oldX - h, oldY - h, newX - h, newY - h],
+    [oldX + h, oldY - h, newX + h, newY - h],
+    [oldX - h, oldY + h, newX - h, newY + h],
+    [oldX + h, oldY + h, newX + h, newY + h],
+    [oldX,     oldY,     newX,     newY    ],  // centro
+  ];
+
+  for (const w of walls) {
+    for (const [ax, ay, bx, by] of corners) {
+      if (_lineIntersectsLine(ax, ay, bx, by, w.x1, w.y1, w.x2, w.y2)) return true;
     }
   }
   return false;
