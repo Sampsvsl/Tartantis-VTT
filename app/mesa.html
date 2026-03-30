@@ -109,10 +109,10 @@ body { overflow: hidden; user-select: none; }
   width: 3000px; height: 3000px;
   pointer-events: none; z-index: 15;
 }
-.fog-canvas {
+.fog-canvas, #fog-canvas {
   position: absolute; top: 0; left: 0;
   width: 3000px; height: 3000px;
-  pointer-events: none; z-index: 10;
+  pointer-events: none; z-index: 12; /* acima do grid (sem z-index), abaixo dos tokens (z=15) */
   display: none;
 }
 
