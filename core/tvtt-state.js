@@ -20,6 +20,7 @@ function _wsConnect(room,callbacks,onStateLoaded){
     if(type==='init_turn'&&_wsCbs.onInitTurnUpdate)_wsCbs.onInitTurnUpdate(data);
     if(type==='blind_roll'&&_wsCbs.onBlindRollUpdate)_wsCbs.onBlindRollUpdate(data);
     if(type==='char_update'&&_wsCbs.onCharUpdate)_wsCbs.onCharUpdate(data);
+    if(type==='walls'&&_wsCbs.onWallsUpdate)_wsCbs.onWallsUpdate(data||[]);
   };
   _ws.onclose=()=>{setTimeout(()=>{if(_wsRoom)_wsConnect(_wsRoom,_wsCbs,null);},3000);};
   _ws.onerror=()=>{};
@@ -102,11 +103,19 @@ const MBState={
 
   // ── Mapa: estado sincronizado via WS, persistido pelo servidor ──
   map:{
-    default(){return{tokens:[],gridSize:50,showGrid:true,fogActive:false,bgColor:'#1c1712',bgImage:null,panX:0,panY:0};},
+    default(){return{tokens:[],gridSize:50,showGrid:true,fog:{enabled:false,cleared:{}},walls:[],bgColor:'#1c1712',bgImage:null,panX:0,panY:0};},
     save(code,data){
       if(!code||code==='LOCAL')return;
       const{tokens:_t,...settings}=data;
       _wsSend({type:'map',room:code,data:settings});
+    }
+  },
+
+  // ── Paredes: sincronizadas via WS, persistidas junto com o mapa ──
+  walls:{
+    save(code,walls){
+      if(!code||code==='LOCAL')return;
+      _wsSend({type:'walls',room:code,data:walls});
     }
   },
 

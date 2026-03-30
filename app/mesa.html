@@ -107,13 +107,12 @@ body { overflow: hidden; user-select: none; }
 #token-layer {
   position: absolute; top: 0; left: 0;
   width: 3000px; height: 3000px;
-  pointer-events: none;
+  pointer-events: none; z-index: 15;
 }
-.fog-overlay {
+.fog-canvas {
   position: absolute; top: 0; left: 0;
   width: 3000px; height: 3000px;
-  background: rgba(0,0,0,0.82);
-  pointer-events: none; z-index: 5;
+  pointer-events: none; z-index: 10;
   display: none;
 }
 
@@ -1039,6 +1038,7 @@ body.is-player .gm-only { display: none !important; }
   color: var(--dim); transition: all 0.15s;
 }
 .gm-item .gm-state.on  { color: var(--gold); border-color: rgba(212,168,67,0.4); background: rgba(212,168,67,0.08); }
+.gm-item.on { color: var(--pale); background: rgba(200,113,42,0.15); }
 .gm-item.disabled { opacity: 0.38; cursor: default; pointer-events: none; }
 .gm-item.disabled:hover { color: var(--dim); background: transparent; }
 .gm-soon {
@@ -1093,6 +1093,17 @@ body.is-player .gm-only { display: none !important; }
           <span class="gm-icon">🌫</span> Névoa
           <span class="gm-state" id="gm-fog-state">OFF</span>
         </button>
+        <button class="gm-item" id="gm-fog-clear" onclick="setFogTool('clear')">
+          <span class="gm-icon">🧽</span> Borracha
+          <span class="gm-state" id="gm-fog-clear-state"></span>
+        </button>
+        <button class="gm-item" id="gm-fog-restore" onclick="setFogTool('restore')">
+          <span class="gm-icon">💧</span> Restaurar
+          <span class="gm-state" id="gm-fog-restore-state"></span>
+        </button>
+        <button class="gm-item" onclick="clearAllFog();closeGMPanel()">
+          <span class="gm-icon">♻</span> Restaurar Tudo
+        </button>
         <button class="gm-item" onclick="openBgImageModal();closeGMPanel()">
           <span class="gm-icon">🖼</span> Imagem de Fundo
         </button>
@@ -1101,13 +1112,30 @@ body.is-player .gm-only { display: none !important; }
         </button>
       </div>
 
-      <!-- Em breve -->
+      <!-- Avançado -->
       <div class="gm-panel-section">
         <div class="gm-panel-label">Avançado</div>
-        <button class="gm-item disabled">
+        <button class="gm-item" id="gm-wall-edit" onclick="toggleWallEditMode()">
           <span class="gm-icon">🧱</span> Paredes / Portas
-          <span class="gm-soon">em breve</span>
+          <span class="gm-state" id="gm-wall-state"></span>
         </button>
+        <div id="wall-controls" style="display:none; padding-left: 20px;">
+          <button class="gm-item" id="gm-wall-delete" onclick="toggleWallDeleteMode()">
+            <span class="gm-icon">🗑️</span> Excluir
+          </button>
+          <button class="gm-item" onclick="setWallType('wall')">
+            <span class="gm-icon">🧱</span> Parede
+          </button>
+          <button class="gm-item" onclick="setWallType('door')">
+            <span class="gm-icon">🚪</span> Porta
+          </button>
+          <button class="gm-item" id="gm-toggle-door" onclick="toggleDoor()">
+            <span class="gm-icon">🔃</span> Abrir/Fechar
+          </button>
+          <button class="gm-item" onclick="setWallType('window')">
+            <span class="gm-icon">🪟</span> Janela
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1396,8 +1424,8 @@ body.is-player .gm-only { display: none !important; }
         onwheel="mapWheel(event)">
     <div class="map-stage" id="map-stage">
       <canvas id="grid-canvas" width="3000" height="3000"></canvas>
+      <canvas id="fog-canvas" width="3000" height="3000"></canvas>
       <div id="token-layer"></div>
-      <div class="fog-overlay" id="fog-overlay"></div>
       <!-- Régua -->
       <svg id="ruler-layer" width="3000" height="3000" style="position:absolute;top:0;left:0;pointer-events:none;z-index:900;overflow:visible;">
         <line id="ruler-line" x1="0" y1="0" x2="0" y2="0" stroke="#d4a843" stroke-width="5" stroke-dasharray="10 6" opacity="0.9" style="display:none"></line>
@@ -1620,6 +1648,27 @@ body.is-player .gm-only { display: none !important; }
         <button class="cta-btn sm danger" id="edit-tok-clear" onclick="clearEditTokenImg()" style="display:none">✕</button>
       </div>
     </div>
+    <div class="ficha-field" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
+      <label style="color:var(--gold);font-size:0.85rem">💡 Iluminação</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
+          <input type="checkbox" id="edit-tok-light-enabled" onchange="document.getElementById('edit-tok-light-options').style.display = this.checked ? 'block' : 'none'; updateVision()">
+          <span style="font-size:0.8rem">Ativar luz</span>
+        </label>
+      </div>
+      <div id="edit-tok-light-options" style="display:none;margin-top:8px">
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <div style="flex:1">
+            <label style="font-size:0.7rem;color:var(--dim)">Raio (quadrados)</label>
+            <input type="number" id="edit-tok-light-radius" class="mb-input" min="1" max="20" value="6" style="width:100%" onchange="updateVision()">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:0.7rem;color:var(--dim)">Cor</label>
+            <input type="color" id="edit-tok-light-color" value="#fffbe6" style="width:100%;height:28px;border:1px solid var(--border);border-radius:4px" onchange="updateVision()">
+          </div>
+        </div>
+      </div>
+    </div>
     <div style="display:flex;gap:8px">
       <button class="cta-btn" onclick="confirmEditToken()">✦ Salvar</button>
       <button class="cta-btn danger sm" onclick="removeToken(document.getElementById('edit-tok-id').value); closeModal('modal-edit-token')">🗑 Remover</button>
@@ -1832,7 +1881,8 @@ const TOKEN_COLORS = [
 
   MAP_DATA = MBState.map.default(); INIT_LIST = [];
   MBState.startSync(code,{
-    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();document.getElementById('fog-overlay').style.display=MAP_DATA.fogActive?'block':'none';updateGMPanelStates();},
+    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();_initFogFromMapData();renderFog();renderWalls();updateGMPanelStates();},
+    onWallsUpdate(walls){if(!MAP_DATA.walls)MAP_DATA.walls=[];MAP_DATA.walls=walls||[];renderWalls();},
     onTokenSet(token){if(!token||!token.id)return;if(!MAP_DATA.tokens)MAP_DATA.tokens=[];const idx=MAP_DATA.tokens.findIndex(t=>t.id===token.id);if(idx>=0)MAP_DATA.tokens[idx]=token;else MAP_DATA.tokens.push(token);renderTokens();},
     onTokenRemove(id){if(!id)return;MAP_DATA.tokens=(MAP_DATA.tokens||[]).filter(t=>t.id!==id);renderTokens();},
     onChatNew(entry){if(entry.blind&&SESSION.role!=='gm'){renderChatMsg(entry,true);return;}if(entry.type==='roll'&&entry.ok&&entry.rolls&&entry.rolls.length>0&&typeof DiceAnimator!=='undefined'){try{const senderSkin=entry.skin||DiceAnimator.getSkin();DiceAnimator.rollWithSkin(entry.rolls,entry.sides||6,entry.author,senderSkin,()=>renderChatMsg(entry,true));}catch(e){renderChatMsg(entry,true);}}else{renderChatMsg(entry,true);}},
@@ -1896,7 +1946,10 @@ const TOKEN_COLORS = [
     setupFichaAutosave();
     setupColorPicker();
 
-    document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
+    _initFogFromMapData();
+    renderFog();
+    renderMapComplete();
+    updateVision();
     updateGMPanelStates();
 
     centerMapOnBg();
@@ -1937,10 +1990,689 @@ function setTool(tool) {
 }
 
 /* ══════════════════════════════════════════════════════════════
-   GRADE (CANVAS)
+    GRADE (CANVAS)
 ══════════════════════════════════════════════════════════════ */
 let _bgImageCache = null; // { url, img } — imagem de fundo em cache
 let _bgImgBounds  = null; // { dx, dy, dw, dh } — área da imagem no canvas
+
+/* ══════════════════════════════════════════════════════════════
+    NÉVOA DE GUERRA (FASE 2)
+══════════════════════════════════════════════════════════════ */
+let _fogCanvas = null;
+let _fogCtx    = null;
+let _fogDirty  = true;
+let _fogTool   = null; // 'clear' | 'restore' | null — ferramenta ativa do GM
+let _fogDragging = false;
+
+/* ══════════════════════════════════════════════════════════════
+    PAREDES, PORTAS E JANELAS (FASE 3)
+══════════════════════════════════════════════════════════════ */
+let _wallEditMode  = false;   // modo edição ativo
+let _wallDraft     = null;    // { x1, y1, x2, y2 } segmento em construção
+let _wallSelected  = null;    // id do segmento selecionado
+let _wallHover     = null;    // id do segmento sob o cursor
+let _wallDragging  = false;
+let _wallDeleteMode = false;  // modo borracha de excluir
+const WALL_SNAP_DIST = 15;    // pixels para snap com endpoints
+
+/* ══════════════════════════════════════════════════════════════
+    ILUMINAÇÃO DINÂMICA (FASE 4) — Ray Casting
+══════════════════════════════════════════════════════════════ */
+let _visionDirty = true;
+let _playerVisibilityPolygon = null;
+
+function _initFogFromMapData() {
+  if (!_fogCanvas) {
+    _fogCanvas = document.getElementById('fog-canvas');
+    _fogCtx = _fogCanvas ? _fogCanvas.getContext('2d') : null;
+  }
+  if (!MAP_DATA.fog) {
+    MAP_DATA.fog = { enabled: false, cleared: {} };
+  }
+  if (MAP_DATA.fogActive !== undefined) {
+    if (MAP_DATA.fog.enabled === undefined) {
+      MAP_DATA.fog.enabled = !!MAP_DATA.fogActive;
+    }
+    delete MAP_DATA.fogActive;
+  }
+  if (MAP_DATA.fog && MAP_DATA.fog.enabled) {
+    _fogDirty = true;
+  }
+}
+
+function renderFog() {
+  if (!_fogCanvas || !_fogCtx) {
+    _initFogFromMapData();
+  }
+  if (!_fogCanvas || !_fogCtx) return;
+
+  const canvas = _fogCanvas;
+  const ctx = _fogCtx;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const gs = MAP_DATA.gridSize || 50;
+  const fog = MAP_DATA.fog || { enabled: false, cleared: {} };
+  const isGM = SESSION.role === 'gm';
+
+  if (!fog.enabled) {
+    canvas.style.display = 'none';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, 3000, 3000);
+    _fogDirty = false;
+    return;
+  }
+
+  if (ctx.canvas.width !== 3000 * dpr || ctx.canvas.height !== 3000 * dpr) {
+    ctx.canvas.width = 3000 * dpr;
+    ctx.canvas.height = 3000 * dpr;
+    _fogDirty = true;
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  if (!_fogDirty) {
+    canvas.style.display = 'none';
+    return;
+  }
+
+  canvas.style.display = 'block';
+
+  const fogOpacity = isGM ? 0.40 : 0.95;
+  const fogColor = isGM ? 'rgba(30,40,60,' : 'rgba(0,0,0,';
+
+  ctx.clearRect(0, 0, 3000, 3000);
+
+  ctx.fillStyle = fogColor + fogOpacity + ')';
+  ctx.fillRect(0, 0, 3000, 3000);
+
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+
+  const bounds = _bgImgBounds || { dx: 0, dy: 0, dw: 3000, dh: 3000 };
+  const startCol = Math.floor(bounds.dx / gs);
+  const endCol = Math.ceil((bounds.dx + bounds.dw) / gs);
+  const startRow = Math.floor(bounds.dy / gs);
+  const endRow = Math.ceil((bounds.dy + bounds.dh) / gs);
+
+  for (let col = startCol; col <= endCol; col++) {
+    for (let row = startRow; row <= endRow; row++) {
+      const key = `${col},${row}`;
+      if (fog.cleared[key]) {
+        const x = col * gs;
+        const y = row * gs;
+        ctx.fillRect(x, y, gs, gs);
+      }
+    }
+  }
+
+  if (!isGM) {
+    _renderVisibilityInFog();
+  }
+
+  ctx.globalCompositeOperation = 'source-over';
+  _fogDirty = false;
+}
+
+function _setFogCell(col, row, cleared) {
+  if (!MAP_DATA.fog) MAP_DATA.fog = { enabled: false, cleared: {} };
+  const key = `${col},${row}`;
+  if (cleared) {
+    MAP_DATA.fog.cleared[key] = true;
+  } else {
+    delete MAP_DATA.fog.cleared[key];
+  }
+  _fogDirty = true;
+  renderFog();
+}
+
+function _handleFogTool(x, y) {
+  if (SESSION.role !== 'gm' || !_fogTool) return;
+  const gs = MAP_DATA.gridSize || 50;
+  const col = Math.floor(x / gs);
+  const row = Math.floor(y / gs);
+  _setFogCell(col, row, _fogTool === 'clear');
+}
+
+function toggleFog() {
+  if (!MAP_DATA.fog) MAP_DATA.fog = { enabled: false, cleared: {} };
+  MAP_DATA.fog.enabled = !MAP_DATA.fog.enabled;
+  _fogDirty = true;
+  renderFog();
+  saveMap();
+  updateGMPanelStates();
+  showToast(MAP_DATA.fog.enabled ? '🌫 Névoa ativada (GM vê com 45%)' : '☀ Névoa desativada');
+}
+
+function setFogTool(tool) {
+  if (SESSION.role !== 'gm') return;
+  if (_fogTool === tool) {
+    _fogTool = null;
+  } else {
+    _fogTool = tool;
+  }
+  const clearBtn = document.getElementById('gm-fog-clear');
+  const restoreBtn = document.getElementById('gm-fog-restore');
+  if (clearBtn) clearBtn.classList.toggle('on', _fogTool === 'clear');
+  if (restoreBtn) restoreBtn.classList.toggle('on', _fogTool === 'restore');
+  const mapContainer = document.getElementById('map-container');
+  if (mapContainer) {
+    mapContainer.style.cursor = _fogTool ? 'crosshair' : '';
+  }
+  if (_fogTool) {
+    showToast(_fogTool === 'clear' ? '🧽 Modo borracha ativo' : '💧 Modo restaurar ativo');
+  }
+}
+
+function clearAllFog() {
+  if (!MAP_DATA.fog) MAP_DATA.fog = { enabled: false, cleared: {} };
+  MAP_DATA.fog.cleared = {};
+  _fogDirty = true;
+  renderFog();
+  saveMap();
+  showToast('🧹 Toda a névoa restaurada');
+}
+
+function restoreAllFog() {
+  if (!MAP_DATA.fog) MAP_DATA.fog = { enabled: false, cleared: {} };
+  const gs = MAP_DATA.gridSize || 50;
+  const bounds = _bgImgBounds || { dx: 0, dy: 0, dw: 3000, dh: 3000 };
+  const startCol = Math.floor(bounds.dx / gs);
+  const endCol = Math.ceil((bounds.dx + bounds.dw) / gs);
+  const startRow = Math.floor(bounds.dy / gs);
+  const endRow = Math.ceil((bounds.dy + bounds.dh) / gs);
+  for (let col = startCol; col <= endCol; col++) {
+    for (let row = startRow; row <= endRow; row++) {
+      MAP_DATA.fog.cleared[`${col},${row}`] = true;
+    }
+  }
+  _fogDirty = true;
+  renderFog();
+  saveMap();
+  showToast('👁 Toda a área visível');
+}
+
+/* ══════════════════════════════════════════════════════════════
+    ILUMINAÇÃO DINÂMICA (FASE 4) — Ray Casting
+══════════════════════════════════════════════════════════════ */
+function _getPlayerToken() {
+  if (SESSION.role === 'gm') return null;
+  const pid = SESSION.pid;
+  return (MAP_DATA.tokens || []).find(t => t.id === 'tok_player_' + pid);
+}
+
+function _getWallsForVision() {
+  return (MAP_DATA.walls || []).filter(w => {
+    if (w.type === 'wall') return true;
+    if (w.type === 'door') return w.open !== true;
+    if (w.type === 'window') return false;
+    return true;
+  });
+}
+
+function _raySegmentIntersect(ox, oy, dx, dy, x1, y1, x2, y2) {
+  const rpx = dx - ox;
+  const rpy = dy - oy;
+  const spx = x2 - x1;
+  const spy = y2 - y1;
+  const rmag = Math.sqrt(rpx * rpx + rpy * rpy);
+  const smag = Math.sqrt(spx * spx + spy * spy);
+  if (rmag === 0 || smag === 0) return null;
+  const rx = rpx / rmag;
+  const ry = rpy / rmag;
+  const sx = spx / smag;
+  const sy = spy / smag;
+  const h = rx * sy - ry * sx;
+  if (Math.abs(h) < 0.0001) return null;
+  const t1 = (sx * (oy - y1) - sy * (ox - x1)) / h;
+  const t2 = (rx * (oy - y1) - ry * (ox - x1)) / h;
+  if (t1 < 0 || t1 > 1 || t2 < 0 || t2 > 1) return null;
+  return {
+    x: ox + t1 * rpx,
+    y: oy + t1 * rpy,
+    dist: t1 * rmag
+  };
+}
+
+function _calcVisibilityPolygon(originX, originY, radius, walls) {
+  const rays = [];
+  const angleStep = Math.PI / 180;
+  const extraAngles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+
+  walls.forEach(w => {
+    const angles = [
+      Math.atan2(w.y1 - originY, w.x1 - originX),
+      Math.atan2(w.y2 - originY, w.x2 - originX)
+    ];
+    angles.forEach(angle => {
+      rays.push(angle - 0.0001);
+      rays.push(angle);
+      rays.push(angle + 0.0001);
+    });
+  });
+
+  for (let a = 0; a < Math.PI * 2; a += angleStep) {
+    rays.push(a);
+  }
+
+  const uniqueRays = [...new Set(rays.map(a => Math.round(a * 10000) / 10000))];
+  const points = [];
+
+  uniqueRays.forEach(angle => {
+    const dx = Math.cos(angle) * radius;
+    const dy = Math.sin(angle) * radius;
+    let closest = { x: originX + dx, y: originY + dy, dist: radius };
+
+    walls.forEach(w => {
+      const hit = _raySegmentIntersect(originX, originY, originX + dx, originY + dy, w.x1, w.y1, w.x2, w.y2);
+      if (hit && hit.dist < closest.dist) {
+        closest = hit;
+      }
+    });
+
+    points.push(closest);
+  });
+
+  points.sort((a, b) => {
+    const angleA = Math.atan2(a.y - originY, a.x - originX);
+    const angleB = Math.atan2(b.y - originY, b.x - originX);
+    return angleA - angleB;
+  });
+
+  return points;
+}
+
+function _updatePlayerVision() {
+  const token = _getPlayerToken();
+  if (!token || !token.light || !token.light.enabled) {
+    _playerVisibilityPolygon = null;
+    _visionDirty = true;
+    return;
+  }
+
+  const gs = MAP_DATA.gridSize || 50;
+  const radius = (token.light.radius || 18) * gs;
+  const walls = _getWallsForVision();
+  const tokenX = (token.x || 0) + gs / 2;
+  const tokenY = (token.y || 0) + gs / 2;
+
+  _playerVisibilityPolygon = _calcVisibilityPolygon(tokenX, tokenY, radius, walls);
+  _visionDirty = true;
+}
+
+function _renderVisibilityInFog() {
+  if (!_fogCanvas || !_fogCtx || !_playerVisibilityPolygon) return;
+
+  const ctx = _fogCtx;
+  const polygon = _playerVisibilityPolygon;
+  if (!polygon || polygon.length < 3) return;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+
+  const token = _getPlayerToken();
+  const light = token && token.light;
+  const radius = light ? (light.radius || 18) * (MAP_DATA.gridSize || 50) : 900;
+
+  const cx = polygon.reduce((s, p) => s + p.x, 0) / polygon.length;
+  const cy = polygon.reduce((s, p) => s + p.y, 0) / polygon.length;
+
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  gradient.addColorStop(0, 'rgba(0,0,0,1)');
+  gradient.addColorStop(0.7, 'rgba(0,0,0,0.8)');
+  gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.moveTo(polygon[0].x, polygon[0].y);
+  for (let i = 1; i < polygon.length; i++) {
+    ctx.lineTo(polygon[i].x, polygon[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function updateVision() {
+  _updatePlayerVision();
+  renderFog();
+}
+
+/* ══════════════════════════════════════════════════════════════
+    PAREDES, PORTAS E JANELAS (FASE 3)
+══════════════════════════════════════════════════════════════ */
+function renderMapComplete() {
+  const canvas = document.getElementById('grid-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const CSS_SIZE = 3000;
+  if (ctx.canvas.width !== CSS_SIZE * dpr || ctx.canvas.height !== CSS_SIZE * dpr) {
+    ctx.canvas.width = CSS_SIZE * dpr;
+    ctx.canvas.height = CSS_SIZE * dpr;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  ctx.clearRect(0, 0, CSS_SIZE, CSS_SIZE);
+
+  if (MAP_DATA.bgImageURL && _bgImageCache && _bgImageCache.img) {
+    const img = _bgImageCache.img;
+    const iw = img.naturalWidth || img.width;
+    const ih = img.naturalHeight || img.height;
+    const scale = Math.min(CSS_SIZE / iw, CSS_SIZE / ih);
+    const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
+    const dx = Math.floor((CSS_SIZE - dw) / 2);
+    const dy = Math.floor((CSS_SIZE - dh) / 2);
+    ctx.drawImage(img, dx, dy, dw, dh);
+    _bgImgBounds = { dx, dy, dw, dh };
+  } else {
+    ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
+    ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
+    _bgImgBounds = null;
+  }
+
+  if (MAP_DATA.showGrid) {
+    const gs = MAP_DATA.gridSize || 50;
+    const _gc = MAP_DATA.gridColor || 'gold';
+    const _gcMap = { gold: { r: 200, g: 113, b: 42 }, white: { r: 255, g: 255, b: 255 }, black: { r: 0, g: 0, b: 0 } };
+    const { r, g, b } = _gcMap[_gc] || _gcMap.gold;
+    const gridOpacity = _gc === 'black' ? (MAP_DATA.bgImageURL ? 0.60 : 0.30) : _gc === 'white' ? (MAP_DATA.bgImageURL ? 0.55 : 0.25) : (MAP_DATA.bgImageURL ? 0.35 : 0.18);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${gridOpacity})`;
+    ctx.lineWidth = 0.8;
+
+    let dx, dy, dw, dh, gox, goy;
+    if (!_bgImgBounds) {
+      dx = 0; dy = 0; dw = 3000; dh = 3000;
+      gox = (MAP_DATA.gridOffsetX || 0) % gs;
+      goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    } else {
+      dx = _bgImgBounds.dx; dy = _bgImgBounds.dy;
+      dw = _bgImgBounds.dw; dh = _bgImgBounds.dh;
+      gox = (MAP_DATA.gridOffsetX || 0) % gs;
+      goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
+    for (let x = dx + gox; x <= dx + dw; x += gs) {
+      ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
+    }
+    for (let y = dy + goy; y <= dy + dh; y += gs) {
+      ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawWallsOnCanvas(ctx, dpr);
+}
+
+function _drawWallsOnCanvas(ctx, dpr) {
+  const walls = MAP_DATA.walls || [];
+  const isGM = SESSION.role === 'gm';
+
+  if (!isGM) return;
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  walls.forEach(wall => {
+    const isSelected = _wallSelected === wall.id;
+    const isHover = _wallHover === wall.id;
+
+    if (wall.type === 'wall') {
+      ctx.strokeStyle = '#888888';
+      ctx.lineWidth = 4;
+    } else if (wall.type === 'door') {
+      ctx.strokeStyle = wall.open ? '#4a90d9' : '#8B4513';
+      ctx.lineWidth = 6;
+    } else if (wall.type === 'window') {
+      ctx.strokeStyle = '#4682B4';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([8, 4]);
+    }
+
+    if (isSelected || isHover) {
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth += 2;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(wall.x1, wall.y1);
+    ctx.lineTo(wall.x2, wall.y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (isGM && _wallEditMode) {
+      ctx.fillStyle = isSelected ? '#FFD700' : '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(wall.x1, wall.y1, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(wall.x2, wall.y2, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  if (_wallDraft && _wallDraft.x1 !== undefined) {
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(_wallDraft.x1, _wallDraft.y1);
+    ctx.lineTo(_wallDraft.x2, _wallDraft.y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+function renderWalls() {
+  renderMapComplete();
+}
+
+function _getWallAtPoint(x, y) {
+  const walls = MAP_DATA.walls || [];
+  const threshold = 10;
+  for (let i = walls.length - 1; i >= 0; i--) {
+    const w = walls[i];
+    const dist = _pointToSegmentDistance(x, y, w.x1, w.y1, w.x2, w.y2);
+    if (dist < threshold) {
+      return w.id;
+    }
+  }
+  return null;
+}
+
+function _pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  let param = -1;
+  if (lenSq !== 0) param = dot / lenSq;
+  let xx, yy;
+  if (param < 0) { xx = x1; yy = y1; }
+  else if (param > 1) { xx = x2; yy = y2; }
+  else { xx = x1 + param * C; yy = y1 + param * D; }
+  const dx = px - xx;
+  const dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function _getNearestEndpoint(x, y) {
+  const walls = MAP_DATA.walls || [];
+  let nearest = null;
+  let minDist = WALL_SNAP_DIST;
+  for (const w of walls) {
+    const d1 = Math.hypot(x - w.x1, y - w.y1);
+    const d2 = Math.hypot(x - w.x2, y - w.y2);
+    if (d1 < minDist) { minDist = d1; nearest = { x: w.x1, y: w.y1 }; }
+    if (d2 < minDist) { minDist = d2; nearest = { x: w.x2, y: w.y2 }; }
+  }
+  return nearest;
+}
+
+function _cycleWallType() {
+  if (!_wallSelected) return;
+  const wall = (MAP_DATA.walls || []).find(w => w.id === _wallSelected);
+  if (!wall) return;
+  const types = ['wall', 'door', 'window'];
+  const currentIdx = types.indexOf(wall.type);
+  const nextIdx = (currentIdx + 1) % types.length;
+  wall.type = types[nextIdx];
+  if (wall.type === 'door' && wall.open === undefined) {
+    wall.open = false;
+  }
+  saveWalls();
+  renderWalls();
+  updateGMPanelStates();
+  updateVision();
+  const labels = { wall: 'parede', door: 'porta', window: 'janela' };
+  showToast(`🧱 ${labels[wall.type]}`);
+}
+
+function toggleWallEditMode() {
+  if (SESSION.role !== 'gm') return;
+  _wallEditMode = !_wallEditMode;
+  _wallSelected = null;
+  _wallDraft = null;
+  _wallDeleteMode = false;
+  updateWallsUI();
+  showToast(_wallEditMode ? '🧱 Modo de paredes ativo (ESC para sair)' : '🧱 Modo de paredes encerrado');
+}
+
+function toggleWallDeleteMode() {
+  if (SESSION.role !== 'gm' || !_wallEditMode) return;
+  _wallDeleteMode = !_wallDeleteMode;
+  _wallSelected = null;
+  updateWallsUI();
+  showToast(_wallDeleteMode ? '🗑️ Modo excluir ativo (clique nas paredes)' : '🧱 Modo de paredes ativo');
+}
+
+function updateWallsUI() {
+  const mapContainer = document.getElementById('map-container');
+  if (mapContainer) {
+    if (_wallDeleteMode) {
+      mapContainer.style.cursor = 'not-allowed';
+    } else if (_wallEditMode) {
+      mapContainer.style.cursor = 'crosshair';
+    } else {
+      mapContainer.style.cursor = '';
+    }
+  }
+  const btn = document.getElementById('gm-wall-edit');
+  if (btn) btn.classList.toggle('on', _wallEditMode);
+  const deleteBtn = document.getElementById('gm-wall-delete');
+  if (deleteBtn) deleteBtn.classList.toggle('on', _wallDeleteMode);
+  const wallControls = document.getElementById('wall-controls');
+  if (wallControls) wallControls.style.display = (_wallEditMode && !_wallDeleteMode) ? 'block' : 'none';
+  renderWalls();
+}
+
+function _startWallDraft(x, y) {
+  const snap = _getNearestEndpoint(x, y);
+  if (snap) {
+    _wallDraft = { x1: snap.x, y1: snap.y, x2: snap.x, y2: snap.y };
+  } else {
+    _wallDraft = { x1: x, y1: y, x2: x, y2: y };
+  }
+}
+
+function _updateWallDraft(x, y) {
+  if (_wallDraft) {
+    const snap = _getNearestEndpoint(x, y);
+    if (snap) {
+      _wallDraft.x2 = snap.x;
+      _wallDraft.y2 = snap.y;
+    } else {
+      _wallDraft.x2 = x;
+      _wallDraft.y2 = y;
+    }
+    renderWalls();
+  }
+}
+
+function _finishWallDraft(x, y) {
+  if (!_wallDraft) return;
+  const dx = Math.abs(x - _wallDraft.x1);
+  const dy = Math.abs(y - _wallDraft.y1);
+  if (dx < 10 && dy < 10) {
+    _wallDraft = null;
+    renderWalls();
+    return;
+  }
+  const newWall = {
+    id: 'w' + Date.now(),
+    x1: _wallDraft.x1,
+    y1: _wallDraft.y1,
+    x2: x,
+    y2: y,
+    type: 'wall'
+  };
+  if (!MAP_DATA.walls) MAP_DATA.walls = [];
+  MAP_DATA.walls.push(newWall);
+  _wallDraft = null;
+  saveWalls();
+  renderWalls();
+  showToast('🧱 Parede adicionada');
+}
+
+function _selectWall(wallId) {
+  _wallSelected = _wallSelected === wallId ? null : wallId;
+  _wallDeleteMode = false;
+  renderWalls();
+  updateGMPanelStates();
+}
+
+function deleteSelectedWall() {
+  if (SESSION.role !== 'gm' || !_wallSelected) return;
+  MAP_DATA.walls = (MAP_DATA.walls || []).filter(w => w.id !== _wallSelected);
+  _wallSelected = null;
+  saveWalls();
+  renderWalls();
+  showToast('🧱 Parede removida');
+}
+
+function toggleDoor() {
+  if (SESSION.role !== 'gm' || !_wallSelected) return;
+  const wall = (MAP_DATA.walls || []).find(w => w.id === _wallSelected);
+  if (wall && wall.type === 'door') {
+    wall.open = !wall.open;
+    saveWalls();
+    renderWalls();
+    updateVision();
+    showToast(wall.open ? '🚪 Porta aberta' : '🚪 Porta fechada');
+  }
+}
+
+function setWallType(type) {
+  if (SESSION.role !== 'gm' || !_wallSelected) return;
+  const wall = (MAP_DATA.walls || []).find(w => w.id === _wallSelected);
+  if (wall) {
+    wall.type = type;
+    if (type === 'door') {
+      if (wall.open === undefined) wall.open = false;
+    }
+    saveWalls();
+    renderWalls();
+    updateGMPanelStates();
+    const typeLabel = { wall: 'parede', door: 'porta', window: 'janela' }[type] || type;
+    showToast(`🧱 Alterado para ${typeLabel}`);
+  }
+}
+
+function saveWalls() {
+  if (!MAP_DATA.walls) MAP_DATA.walls = [];
+  MBState.walls.save(SESSION.code, MAP_DATA.walls);
+}
 
 function renderGrid() {
   const canvas = document.getElementById('grid-canvas');
@@ -2019,21 +2751,28 @@ function renderGrid() {
   ctx.strokeStyle = `rgba(${r},${g},${b},${gridOpacity})`;
   ctx.lineWidth = 0.8;
 
-  // Grade só aparece dentro dos limites da imagem de fundo
-  if (!_bgImgBounds) return;
+  let dx, dy, dw, dh;
+  let gox = (MAP_DATA.gridOffsetX || 0) % gs;
+  let goy = (MAP_DATA.gridOffsetY || 0) % gs;
 
-  const { dx, dy, dw, dh } = _bgImgBounds;
-  const gox = (MAP_DATA.gridOffsetX || 0) % gs; // offset dentro de uma célula
-  const goy = (MAP_DATA.gridOffsetY || 0) % gs;
+  if (!_bgImgBounds) {
+    dx = 0; dy = 0; dw = ctx.canvas.width; dh = ctx.canvas.height;
+    gox = (MAP_DATA.gridOffsetX || 0) % gs;
+    goy = (MAP_DATA.gridOffsetY || 0) % gs;
+  } else {
+    dx = _bgImgBounds.dx; dy = _bgImgBounds.dy;
+    dw = _bgImgBounds.dw; dh = _bgImgBounds.dh;
+    gox = (MAP_DATA.gridOffsetX || 0) % gs;
+    goy = (MAP_DATA.gridOffsetY || 0) % gs;
+  }
+
   ctx.save();
   ctx.beginPath();
   ctx.rect(dx, dy, dw, dh);
   ctx.clip();
-  // Linhas verticais com offset
   for (let x = dx + gox; x <= dx + dw; x += gs) {
     ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
   }
-  // Linhas horizontais com offset
   for (let y = dy + goy; y <= dy + dh; y += gs) {
     ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
   }
@@ -2048,25 +2787,26 @@ function toggleGrid() {
   updateGMPanelStates();
 }
 
-function toggleFog() {
-  MAP_DATA.fogActive = !MAP_DATA.fogActive;
-  document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
-  saveMap();
-  updateGMPanelStates();
-  showToast(MAP_DATA.fogActive ? '🌫 Névoa ativada' : '☀ Névoa desativada');
-}
-
 /* ── Painel GM Tools ── */
 function updateGMPanelStates() {
   const gridState = document.getElementById('gm-grid-state');
   const fogState  = document.getElementById('gm-fog-state');
+  const fogEnabled = MAP_DATA.fog ? MAP_DATA.fog.enabled : false;
   if (gridState) {
     gridState.textContent = MAP_DATA.showGrid ? 'ON' : 'OFF';
     gridState.classList.toggle('on', !!MAP_DATA.showGrid);
   }
   if (fogState) {
-    fogState.textContent = MAP_DATA.fogActive ? 'ON' : 'OFF';
-    fogState.classList.toggle('on', !!MAP_DATA.fogActive);
+    fogState.textContent = fogEnabled ? 'ON' : 'OFF';
+    fogState.classList.toggle('on', fogEnabled);
+  }
+  if (_wallEditMode) {
+    updateWallsUI();
+  }
+  const toggleDoorBtn = document.getElementById('gm-toggle-door');
+  if (toggleDoorBtn) {
+    const selectedWall = _wallSelected ? (MAP_DATA.walls || []).find(w => w.id === _wallSelected) : null;
+    toggleDoorBtn.style.display = (selectedWall && selectedWall.type === 'door') ? '' : 'none';
   }
 }
 
@@ -2275,6 +3015,49 @@ function mapContextMenu(e) {
 function mapMouseDown(e) {
   closeCtxMenu();
 
+  // Ferramenta de névoa (GM)
+  if (_fogTool && SESSION.role === 'gm' && e.button === 0) {
+    _fogDragging = true;
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    _handleFogTool(mx, my);
+    saveMap();
+    return;
+  }
+
+  // Modo edição de paredes (GM)
+  if (_wallEditMode && SESSION.role === 'gm' && e.button === 0) {
+    e.stopPropagation();
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const wallId = _getWallAtPoint(mx, my);
+    if (_wallDeleteMode && wallId) {
+      MAP_DATA.walls = (MAP_DATA.walls || []).filter(w => w.id !== wallId);
+      saveWalls();
+      renderWalls();
+      updateVision();
+      showToast('🗑️ Parede removida');
+      return;
+    }
+    const endpoint = _getNearestEndpoint(mx, my);
+    if (endpoint) {
+      _wallSelected = null;
+      _wallDraft = { x1: endpoint.x, y1: endpoint.y, x2: endpoint.x, y2: endpoint.y };
+      renderWalls();
+      updateGMPanelStates();
+      return;
+    }
+    if (wallId) {
+      if (wallId === _wallSelected) {
+        _cycleWallType();
+      } else {
+        _selectWall(wallId);
+        updateGMPanelStates();
+      }
+    } else {
+      _startWallDraft(mx, my);
+    }
+    return;
+  }
+
   // Régua
   if (ACTIVE_TOOL === 'ruler' && e.button === 0) {
     e.stopPropagation();
@@ -2352,6 +3135,43 @@ function mapMouseDown(e) {
 }
 
 function mapMouseMove(e) {
+  if (_fogDragging && _fogTool && SESSION.role === 'gm') {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    _handleFogTool(mx, my);
+    return;
+  }
+
+  // Preview de parede em modo edição
+  if (_wallEditMode && SESSION.role === 'gm') {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const endpoint = _getNearestEndpoint(mx, my);
+    const mapContainer = document.getElementById('map-container');
+    if (_wallDeleteMode) {
+      const wallId = _getWallAtPoint(mx, my);
+      mapContainer.style.cursor = wallId ? 'not-allowed' : 'not-allowed';
+    } else if (endpoint) {
+      mapContainer.style.cursor = 'crosshair';
+    } else if (_wallDraft) {
+      mapContainer.style.cursor = 'crosshair';
+    }
+    if (_wallDraft) {
+      if (endpoint) {
+        _wallDraft.x2 = endpoint.x;
+        _wallDraft.y2 = endpoint.y;
+      } else {
+        _wallDraft.x2 = mx;
+        _wallDraft.y2 = my;
+      }
+      renderWalls();
+    }
+    const wallId = _getWallAtPoint(mx, my);
+    if (_wallHover !== wallId) {
+      _wallHover = wallId;
+      renderWalls();
+    }
+    return;
+  }
+
   if (isMeasuring) {
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     const gs = MAP_DATA.gridSize || 50;
@@ -2420,7 +3240,79 @@ function clearRuler() {
   });
 }
 
+function _checkWallCollision(newX, newY, gs, oldX, oldY) {
+  const walls = (MAP_DATA.walls || []).filter(w => {
+    if (w.type === 'wall') return true;
+    if (w.type === 'door' && w.open === true) return false;
+    if (w.type === 'door' || w.type === 'window') return false;
+    return true;
+  });
+  
+  if (!walls.length) return false;
+  
+  const halfSize = gs * 0.45;
+  const newRect = { x1: newX - halfSize, y1: newY - halfSize, x2: newX + halfSize, y2: newY + halfSize };
+  const oldRect = { x1: oldX - halfSize, y1: oldY - halfSize, x2: oldX + halfSize, y2: oldY + halfSize };
+  
+  if (!_rectsOverlap(oldRect, newRect)) return false;
+  
+  for (let i = 0; i < walls.length; i++) {
+    const w = walls[i];
+    if (_lineIntersectsRect(w.x1, w.y1, w.x2, w.y2, oldRect.x1, oldRect.y1, oldRect.x2, oldRect.y2)) {
+      return true;
+    }
+    if (_lineIntersectsRect(w.x1, w.y1, w.x2, w.y2, newRect.x1, newRect.y1, newRect.x2, newRect.y2)) {
+      return true;
+    }
+    if (_lineIntersectsLine(oldRect.x1, oldRect.y1, newRect.x1, newRect.y1, w.x1, w.y1, w.x2, w.y2)) {
+      return true;
+    }
+    if (_lineIntersectsLine(oldRect.x2, oldRect.y1, newRect.x2, newRect.y1, w.x1, w.y1, w.x2, w.y2)) {
+      return true;
+    }
+    if (_lineIntersectsLine(oldRect.x1, oldRect.y2, newRect.x1, newRect.y2, w.x1, w.y1, w.x2, w.y2)) {
+      return true;
+    }
+    if (_lineIntersectsLine(oldRect.x2, oldRect.y2, newRect.x2, newRect.y2, w.x1, w.y1, w.x2, w.y2)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function _rectsOverlap(r1, r2) {
+  return !(r1.x2 < r2.x1 || r1.x1 > r2.x2 || r1.y2 < r2.y1 || r1.y1 > r2.y2);
+}
+
+function _lineIntersectsRect(x1, y1, x2, y2, rx1, ry1, rx2, ry2) {
+  if (_lineIntersectsLine(x1, y1, x2, y2, rx1, ry1, rx1, ry2)) return true;
+  if (_lineIntersectsLine(x1, y1, x2, y2, rx2, ry1, rx2, ry2)) return true;
+  if (_lineIntersectsLine(x1, y1, x2, y2, rx1, ry1, rx2, ry1)) return true;
+  if (_lineIntersectsLine(x1, y1, x2, y2, rx1, ry2, rx2, ry2)) return true;
+  return false;
+}
+
+function _lineIntersectsLine(x1, y1, x2, y2, x3, y3, x4, y4) {
+  const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+  if (Math.abs(denom) < 0.0001) return false;
+  const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+  const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+  return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+}
+
 function mapMouseUp(e) {
+  if (_fogDragging) {
+    _fogDragging = false;
+    saveMap();
+  }
+
+  // Finalizar desenho de parede
+  if (_wallEditMode && _wallDraft && SESSION.role === 'gm' && e.button === 0) {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    _finishWallDraft(mx, my);
+    return;
+  }
+
   if (isMeasuring && e.button === 0) {
     isMeasuring = false;
     clearRuler();
@@ -2438,13 +3330,25 @@ function mapMouseUp(e) {
     const tid = dragToken.dataset.id;
     const token = (MAP_DATA.tokens || []).find(t => t.id === tid);
     if (token) {
-      // Snap para grade respeitando o offset dx/dy da imagem de fundo
-      [token.x, token.y] = gridSnapXY(parseFloat(dragToken.style.left), parseFloat(dragToken.style.top));
+      const gs = MAP_DATA.gridSize || 50;
+      const oldX = token.x;
+      const oldY = token.y;
+      let [newX, newY] = gridSnapXY(parseFloat(dragToken.style.left), parseFloat(dragToken.style.top));
+      
+      if (_checkWallCollision(newX, newY, gs, oldX, oldY)) {
+        newX = oldX;
+        newY = oldY;
+        showToast('🚫 Movimento bloqueado por parede!', 1500);
+      }
+      
+      token.x = newX;
+      token.y = newY;
       dragToken.style.left = token.x + 'px';
       dragToken.style.top  = token.y + 'px';
       const rot = token.rotation || 0;
       dragToken.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
-      saveToken(token); // salva só este token (posição)
+      saveToken(token);
+      updateVision();
     }
     isDraggingToken = false; dragToken = null;
   }
@@ -2549,7 +3453,11 @@ function confirmAddToken() {
   }
 
   const imgSrc = _pendingAddTokenImg || null;
-  const token = { id: 'tok_' + Date.now(), name, icon, color, hp, hpMax, x: px, y: py, size: gs, imgSrc };
+  const token = { 
+    id: 'tok_' + Date.now(), name, icon, color, hp, hpMax, 
+    x: px, y: py, size: gs, imgSrc,
+    light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
+  };
   if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
   MAP_DATA.tokens.push(token);
   createTokenEl(token);
@@ -2765,6 +3673,14 @@ function openEditToken(id) {
     prevImg.style.display = 'none'; prevIco.style.display = '';
     clearBtn.style.display = 'none';
   }
+  // Light settings
+  const light = token.light || { enabled: false, radius: 18, color: '#fffbe6' };
+  const lightEnabled = document.getElementById('edit-tok-light-enabled');
+  const lightOptions = document.getElementById('edit-tok-light-options');
+  lightEnabled.checked = light.enabled;
+  lightOptions.style.display = light.enabled ? 'block' : 'none';
+  document.getElementById('edit-tok-light-radius').value = light.radius || 18;
+  document.getElementById('edit-tok-light-color').value = light.color || '#fffbe6';
   document.getElementById('edit-tok-file').value = '';
   openModal('modal-edit-token');
 }
@@ -2777,8 +3693,13 @@ function confirmEditToken() {
   token.hp    = parseInt(document.getElementById('edit-tok-hp').value) || 0;
   token.hpMax = parseInt(document.getElementById('edit-tok-hpmax').value) || token.hpMax;
   if (_pendingEditTokenImg !== undefined) token.imgSrc = _pendingEditTokenImg; // null = remover, string = nova foto
+  const lightEnabled = document.getElementById('edit-tok-light-enabled').checked;
+  const lightRadius = parseInt(document.getElementById('edit-tok-light-radius').value) || 6;
+  const lightColor = document.getElementById('edit-tok-light-color').value;
+  token.light = { enabled: lightEnabled, radius: lightRadius, dimRadius: lightRadius + 3, color: lightColor };
   renderTokens();
   saveToken(token);
+  updateVision();
   closeModal('modal-edit-token');
   showToast('✦ Token atualizado');
 }
@@ -4062,12 +4983,14 @@ function _doPlaceToken(fichaIndex, px, py) {
       hpMax:    charData.pvMax || 20,
       x: px, y: py,
       size: gs,
-      playerId: pid
+      playerId: pid,
+      light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
     };
 
     MAP_DATA.tokens.push(token);
     createTokenEl(token);
     saveToken(token);
+    updateVision();
     showToast('✦ Token "' + (charData.nome || ficha.label || SESSION.name) + '" posicionado!');
     renderFichasSwitcher(); // atualiza ícone 🗺️ no switcher
   });
@@ -4486,6 +5409,19 @@ document.addEventListener('keydown', e => {
       closeModal('modal-edit-token');
       closeModal('modal-bg-image');
       deselectToken();
+      if (_wallEditMode) {
+        _wallEditMode = false;
+        _wallSelected = null;
+        _wallDraft = null;
+        _wallDeleteMode = false;
+        const btn = document.getElementById('gm-wall-edit');
+        if (btn) btn.classList.remove('on');
+        const deleteBtn = document.getElementById('gm-wall-delete');
+        if (deleteBtn) deleteBtn.classList.remove('on');
+        const mapContainer = document.getElementById('map-container');
+        if (mapContainer) mapContainer.style.cursor = '';
+        renderWalls();
+      }
       break;
   }
 });

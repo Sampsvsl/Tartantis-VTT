@@ -920,6 +920,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                 with _ws_hub_lock:
                     _ws_ensure_room(mr);st=_ws_room_state[mr]
                     if mt=='map' and data:st['map']=data;persist=True
+                    elif mt=='walls' and isinstance(data,list):st['map']['walls']=data;persist=True
                     elif mt=='token_set' and data and data.get('id'):st['tokens'][data['id']]=data;persist=True
                     elif mt=='token_remove' and isinstance(data,dict) and data.get('id'):st['tokens'].pop(data['id'],None);persist=True
                     elif mt=='init':st['init']=data if isinstance(data,list) else [];persist=True
