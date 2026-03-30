@@ -2070,7 +2070,8 @@ function renderFog() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   if (!_fogDirty) {
-    canvas.style.display = 'none';
+    // Névoa já está renderizada e atualizada — apenas garante visibilidade
+    canvas.style.display = 'block';
     return;
   }
 
@@ -2273,7 +2274,7 @@ function _updatePlayerVision() {
   const token = _getPlayerToken();
   if (!token || !token.light || !token.light.enabled) {
     _playerVisibilityPolygon = null;
-    _visionDirty = true;
+    _fogDirty = true;   // força re-render da névoa (sem polígono = névoa total)
     return;
   }
 
@@ -2284,7 +2285,7 @@ function _updatePlayerVision() {
   const tokenY = (token.y || 0) + gs / 2;
 
   _playerVisibilityPolygon = _calcVisibilityPolygon(tokenX, tokenY, radius, walls);
-  _visionDirty = true;
+  _fogDirty = true;   // obriga re-render da névoa com novo polígono de visão
 }
 
 function _renderVisibilityInFog() {
@@ -2404,12 +2405,13 @@ function _drawWallsOnCanvas(ctx, dpr) {
   const walls = MAP_DATA.walls || [];
   const isGM = SESSION.role === 'gm';
 
-  if (!isGM) return;
-
   ctx.save();
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   walls.forEach(wall => {
+    // Players só vêem portas (não vêem paredes nem janelas)
+    if (!isGM && wall.type !== 'door') return;
+
     const isSelected = _wallSelected === wall.id;
     const isHover = _wallHover === wall.id;
 
@@ -2418,7 +2420,7 @@ function _drawWallsOnCanvas(ctx, dpr) {
       ctx.lineWidth = 4;
     } else if (wall.type === 'door') {
       ctx.strokeStyle = wall.open ? '#4a90d9' : '#8B4513';
-      ctx.lineWidth = 6;
+      ctx.lineWidth = isGM ? 6 : 5;
     } else if (wall.type === 'window') {
       ctx.strokeStyle = '#4682B4';
       ctx.lineWidth = 4;
@@ -2435,6 +2437,23 @@ function _drawWallsOnCanvas(ctx, dpr) {
     ctx.lineTo(wall.x2, wall.y2);
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Ícone de porta: pequeno arco no meio indicando dobradiça
+    if (wall.type === 'door') {
+      const mx = (wall.x1 + wall.x2) / 2;
+      const my = (wall.y1 + wall.y2) / 2;
+      ctx.fillStyle = wall.open ? '#4a90d9' : '#8B4513';
+      ctx.beginPath();
+      ctx.arc(mx, my, isGM ? 6 : 5, 0, Math.PI * 2);
+      ctx.fill();
+      // Pequeno triângulo indicando que é interativa
+      if (!isGM) {
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(mx, my, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     if (isGM && _wallEditMode) {
       ctx.fillStyle = isSelected ? '#FFD700' : '#FFFFFF';
@@ -2694,8 +2713,8 @@ function renderGrid() {
       _bgImageCache = { url: MAP_DATA.bgImageURL, img: null };
       const imgEl = new Image();
       imgEl.crossOrigin = 'anonymous';
-      imgEl.onload = () => { _bgImageCache.img = imgEl; renderGrid(); };
-      imgEl.onerror = () => { _bgImageCache = null; _bgImgBounds = null; renderGrid(); };
+      imgEl.onload = () => { _bgImageCache.img = imgEl; renderMapComplete(); };
+      imgEl.onerror = () => { _bgImageCache = null; _bgImgBounds = null; renderMapComplete(); };
       imgEl.src = MAP_DATA.bgImageURL;
     }
     if (_bgImageCache && _bgImageCache.img) {
@@ -2722,50 +2741,53 @@ function renderGrid() {
     ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
   }
 
-  if (!MAP_DATA.showGrid) return;
+  if (MAP_DATA.showGrid) {
+    // ── Grade alinhada à imagem (ou ao canvas inteiro se sem imagem) ──
+    const _gc = MAP_DATA.gridColor || 'gold';
+    const _gcMap = {
+      gold:  { r:200, g:113, b:42  },
+      white: { r:255, g:255, b:255 },
+      black: { r:0,   g:0,   b:0   }
+    };
+    const { r, g, b } = _gcMap[_gc] || _gcMap.gold;
+    const gridOpacity = _gc === 'black'
+      ? (MAP_DATA.bgImageURL ? 0.60 : 0.30)
+      : _gc === 'white'
+      ? (MAP_DATA.bgImageURL ? 0.55 : 0.25)
+      : (MAP_DATA.bgImageURL ? 0.35 : 0.18);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${gridOpacity})`;
+    ctx.lineWidth = 0.8;
 
-  // ── Grade alinhada à imagem (ou ao canvas inteiro se sem imagem) ──
-  const _gc = MAP_DATA.gridColor || 'gold';
-  const _gcMap = {
-    gold:  { r:200, g:113, b:42  },
-    white: { r:255, g:255, b:255 },
-    black: { r:0,   g:0,   b:0   }
-  };
-  const { r, g, b } = _gcMap[_gc] || _gcMap.gold;
-  const gridOpacity = _gc === 'black'
-    ? (MAP_DATA.bgImageURL ? 0.60 : 0.30)
-    : _gc === 'white'
-    ? (MAP_DATA.bgImageURL ? 0.55 : 0.25)
-    : (MAP_DATA.bgImageURL ? 0.35 : 0.18);
-  ctx.strokeStyle = `rgba(${r},${g},${b},${gridOpacity})`;
-  ctx.lineWidth = 0.8;
+    let dx, dy, dw, dh;
+    let gox = (MAP_DATA.gridOffsetX || 0) % gs;
+    let goy = (MAP_DATA.gridOffsetY || 0) % gs;
 
-  let dx, dy, dw, dh;
-  let gox = (MAP_DATA.gridOffsetX || 0) % gs;
-  let goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    if (!_bgImgBounds) {
+      dx = 0; dy = 0; dw = CSS_SIZE; dh = CSS_SIZE;
+      gox = (MAP_DATA.gridOffsetX || 0) % gs;
+      goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    } else {
+      dx = _bgImgBounds.dx; dy = _bgImgBounds.dy;
+      dw = _bgImgBounds.dw; dh = _bgImgBounds.dh;
+      gox = (MAP_DATA.gridOffsetX || 0) % gs;
+      goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    }
 
-  if (!_bgImgBounds) {
-    dx = 0; dy = 0; dw = CSS_SIZE; dh = CSS_SIZE;
-    gox = (MAP_DATA.gridOffsetX || 0) % gs;
-    goy = (MAP_DATA.gridOffsetY || 0) % gs;
-  } else {
-    dx = _bgImgBounds.dx; dy = _bgImgBounds.dy;
-    dw = _bgImgBounds.dw; dh = _bgImgBounds.dh;
-    gox = (MAP_DATA.gridOffsetX || 0) % gs;
-    goy = (MAP_DATA.gridOffsetY || 0) % gs;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
+    for (let x = dx + gox; x <= dx + dw; x += gs) {
+      ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
+    }
+    for (let y = dy + goy; y <= dy + dh; y += gs) {
+      ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
+    }
+    ctx.restore();
   }
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(dx, dy, dw, dh);
-  ctx.clip();
-  for (let x = dx + gox; x <= dx + dw; x += gs) {
-    ctx.beginPath(); ctx.moveTo(x, dy); ctx.lineTo(x, dy + dh); ctx.stroke();
-  }
-  for (let y = dy + goy; y <= dy + dh; y += gs) {
-    ctx.beginPath(); ctx.moveTo(dx, y); ctx.lineTo(dx + dw, y); ctx.stroke();
-  }
-  ctx.restore();
+  // Paredes/portas/janelas — sempre ao topo (GM sempre vê, players só vêem portas)
+  _drawWallsOnCanvas(ctx, dpr);
 }
 
 function toggleGrid() {
@@ -3003,6 +3025,24 @@ function mapContextMenu(e) {
 
 function mapMouseDown(e) {
   closeCtxMenu();
+
+  // Clique em porta — disponível para todos (GM fora do modo edição e players)
+  if (e.button === 0 && !_wallEditMode && !_fogTool) {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    const DOOR_THRESHOLD = 18; // px no espaço do mapa
+    const doors = (MAP_DATA.walls || []).filter(w => w.type === 'door');
+    for (const door of doors) {
+      if (_pointToSegmentDistance(mx, my, door.x1, door.y1, door.x2, door.y2) < DOOR_THRESHOLD) {
+        door.open = !door.open;
+        saveWalls();
+        renderWalls();
+        updateVision();
+        showToast(door.open ? '🚪 Porta aberta' : '🚪 Porta fechada');
+        e.stopPropagation();
+        return;
+      }
+    }
+  }
 
   // Ferramenta de névoa (GM)
   if (_fogTool && SESSION.role === 'gm' && e.button === 0) {
