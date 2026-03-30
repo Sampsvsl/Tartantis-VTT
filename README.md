@@ -15,55 +15,33 @@ Pensa nele como o Foundry VTT, mas gratuito, leve e com a identidade visual do u
 ## ✨ Funcionalidades
 
 🗺 **Mesa Interativa**
-- Imagens de fundo em qualidade máxima (PNG, JPG, WebP e mais)
-- Grid customizável: tamanho, cor (dourado, branco ou preto) e calibração de offset para mapas que já têm grid desenhado
-- Névoa de guerra para o Mestre controlar o que os jogadores veem
-- Zoom e pan suaves com suporte a HiDPI / Retina
+Imagens de fundo em qualidade máxima (PNG, JPG, WebP e mais), grid customizável com tamanho, cor e calibração de offset para mapas que já têm grid desenhado, névoa de guerra e zoom suave com suporte a HiDPI / Retina.
 
 🪄 **Tokens**
-- Tokens com imagem personalizada, nome, HP e cor
-- Drag & drop com snap automático ao grid
-- Régua de medição de distância entre quadrados, com snap em tokens
-- Menu de contexto com edição rápida
+Tokens com imagem personalizada, nome, HP e cor. Drag & drop com snap automático ao grid, régua de medição com snap em tokens e menu de contexto com edição rápida.
 
 🎲 **Sistema de Dados**
-- Todos os dados: d4, d6, d8, d10, d12, d20 e d100
-- Animação física com arremesso, quique e brilho
-- **9 skins de dados** (Clássico, Mármore, Obsidiana, Rubi, Safira, Esmeralda, Ouro, Prata e Dragão)
-- Skins por jogador — cada um vê os dados do amigo com a skin dele
-- Rolagem às cegas para o Mestre
+Todos os dados (d4, d6, d8, d10, d12, d20 e d100) com animação física de arremesso, quique e brilho. São **9 skins** disponíveis: Clássico, Mármore, Obsidiana, Rubi, Safira, Esmeralda, Ouro, Prata e Dragão. Cada jogador escolhe a sua skin — e os outros veem os dados rolarem com ela. Rolagem às cegas também está disponível para o Mestre.
 
 📋 **Fichas e Iniciativa**
-- Fichas de personagem integradas (sistema Mighty Blade)
-- Tracker de iniciativa com carrossel visual
+Fichas de personagem integradas no sistema Mighty Blade e tracker de iniciativa com carrossel visual.
 
 💬 **Chat e Sincronização**
-- Chat em tempo real via WebSocket
-- Todos os dados, tokens e mapa sincronizam instantaneamente entre todos os jogadores
+Chat em tempo real via WebSocket. Todos os dados, tokens e mapa sincronizam instantaneamente entre todos os jogadores na mesa.
 
 ## 🚀 Como instalar
 
-### Windows
-1. Baixe o `.exe` na [página de releases](../../releases/latest)
-2. Execute — ele abre o firewall automaticamente e inicia o servidor
-3. Compartilhe o link exibido na tela para os jogadores entrarem
+**Windows:** baixe o `.exe` na [página de releases](../../releases/latest), execute e pronto. Ele abre o firewall automaticamente, inicia o servidor e exibe o link para os jogadores entrarem.
 
-### macOS
-1. Baixe o `TartantisVTT-macOS.zip` na [página de releases](../../releases/latest)
-2. Extraia o `.zip` e mova o `TartantisVTT.app` para a pasta Aplicativos
-3. Na primeira vez, clique com botão direito → **Abrir** (necessário para bypass do Gatekeeper)
-4. O servidor inicia e o portal abre automaticamente no browser
+**macOS:** baixe o `TartantisVTT-macOS.zip` nos [releases](../../releases/latest), extraia e mova o `.app` para Aplicativos. Na primeira vez clique com botão direito → **Abrir** para passar pelo Gatekeeper. O servidor sobe sozinho e o portal abre no browser.
 
-### Linux (AppImage)
-1. Baixe o `.AppImage` na [página de releases](../../releases/latest)
-2. Dê permissão de execução e rode:
+**Linux (AppImage):** baixe o `.AppImage` nos [releases](../../releases/latest) e rode:
 ```bash
 chmod +x TartantisVTT-x86_64.AppImage
 ./TartantisVTT-x86_64.AppImage
 ```
 
-### Raspberry Pi (servidor 24/7)
-O Tartantis roda perfeitamente como servidor headless — ideal para deixar ligado o tempo todo na rede:
+**Raspberry Pi (servidor 24/7):** o Tartantis roda perfeitamente como servidor headless, ideal para deixar ligado o tempo todo na rede:
 ```bash
 git clone https://github.com/Sampsvsl/Tartantis-VTT.git
 cd Tartantis-VTT
@@ -73,30 +51,19 @@ Os jogadores acessam pelo IP da Raspberry na porta **30000** de qualquer disposi
 
 ## 🌐 Jogando com amigos pela internet
 
-O Tartantis usa a porta **30000** (a mesma do Foundry VTT).
+O Tartantis usa a porta **30000** (a mesma do Foundry VTT). Na rede local os jogadores acessam `http://[SEU-IP]:30000` direto pelo browser. Pela internet, use o túnel Cloudflare integrado no portal do Mestre ou faça port-forward da porta **30000** no seu roteador.
 
-**Rede local:** os jogadores acessam `http://[SEU-IP]:30000` direto pelo browser.
+## 🛠 Build
 
-**Pela internet:** use o túnel Cloudflare integrado no portal do Mestre, ou faça port-forward da porta **30000** no seu roteador.
-
-## 🛠 Build (para desenvolvedores)
-
-Os builds são gerados automaticamente pelo GitHub Actions a cada nova tag de versão — o release sai com `.exe`, `.AppImage` e `.app` já prontos.
-
-Para buildar localmente:
+Os builds são gerados automaticamente pelo GitHub Actions a cada nova tag de versão — o release sai com `.exe`, `.AppImage` e `.app` já prontos. Para buildar localmente:
 
 ```bash
-# Linux — AppImage
-bash build-linux.sh
-
-# macOS — .app
-bash build-macos.sh
-
-# Windows — EXE
-cd windows && build.bat
+bash build-linux.sh    # Linux — AppImage
+bash build-macos.sh    # macOS — .app
+cd windows && build.bat  # Windows — EXE
 ```
 
-Dependências: **Python 3.8+** (sem bibliotecas externas — tudo na stdlib).
+Dependências: **Python 3.8+** sem bibliotecas externas — tudo na stdlib.
 
 ## ☕ Apoie o Projeto
 
