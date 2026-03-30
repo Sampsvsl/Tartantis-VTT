@@ -95,7 +95,7 @@ def main():
             ['python', str(SERVER_SCRIPT)],
             stderr=subprocess.STDOUT,
             stdout=open(LOG_FILE, 'w', encoding='utf-8'),
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0
+            creationflags=0x08000000 if sys.platform == 'win32' else 0
         )
 
     if not wait_for_server(PORT, timeout=12):
