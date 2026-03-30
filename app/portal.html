@@ -258,6 +258,15 @@ hr.divider { border:none;border-top:1px solid rgba(200,113,42,.18);margin:16px 0
         <div class="share-hint" id="sh-tun-hint"></div>
       </div>
 
+      <div class="share-block" style="margin-top:14px; opacity:0.85;">
+        <div class="share-label">📂 Pasta de Dados (Portátil)</div>
+        <div class="share-row">
+          <div class="share-url" id="sh-data" style="font-size:0.62rem; color:var(--gold);">—</div>
+          <button class="share-copy-btn" onclick="copyDataPath()">Copiar</button>
+        </div>
+        <div class="share-hint">Coloque seus tokens em <span style="color:var(--pale)">/images/tokens</span> nesta pasta.</div>
+      </div>
+
       <hr class="divider">
       <button class="btn btn-ghost" onclick="loadCampaigns()">← Voltar às Campanhas</button>
       <button class="btn btn-danger" onclick="confirmDeleteCampaign()" style="margin-top:3px;">Apagar esta Campanha</button>
@@ -335,7 +344,7 @@ hr.divider { border:none;border-top:1px solid rgba(200,113,42,.18);margin:16px 0
   </div>
 </div>
 
-<div class="version">MIGHTY BLADE VTT · v0.3</div>
+<div class="version">TARTANTIS VTT · v1.1.0</div>
 <div class="toast" id="toast"></div>
 
 <script src="../core/tvtt-state.js"></script>
@@ -657,6 +666,7 @@ async function loadShareInfo(c) {
     const r=await fetch('/api/info');
     _sinfo=await r.json();
     const sfx=`?join=${c.code}`;
+    document.getElementById('sh-data').textContent = _sinfo.dataDir || '—';
     document.getElementById('sh-lan').textContent=_sinfo.localUrl+sfx;
     if(_sinfo.publicIpReady&&_sinfo.publicUrl){
       document.getElementById('sh-pub').textContent=_sinfo.publicUrl+sfx;
@@ -676,6 +686,17 @@ async function loadShareInfo(c) {
       else tunHint.innerHTML='<b>Linux:</b> <span style="color:var(--pale)">sudo apt install cloudflared</span> (Debian/Ubuntu) · <span style="color:var(--pale)">sudo pacman -S cloudflared</span> (Arch)';
     }
   }catch(e){document.getElementById('sh-lan').textContent='Servidor offline';}
+}
+
+function copyDataPath() {
+  const path = document.getElementById('sh-data').textContent;
+  if(path && path !== '—' && path !== '...') {
+    if(navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(path).then(()=>toast('✓ Caminho copiado!')).catch(()=>prompt('Pasta de Dados:',path));
+    } else {
+      prompt('Pasta de Dados:',path);
+    }
+  }
 }
 
 function copyLink(t) {

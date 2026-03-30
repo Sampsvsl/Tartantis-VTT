@@ -61,6 +61,13 @@ command -v python3 &>/dev/null || {
 { command -v ufw       &>/dev/null && (pkexec ufw allow ${PORT}/tcp 2>/dev/null || sudo ufw allow ${PORT}/tcp 2>/dev/null) ; } &
 { command -v firewall-cmd &>/dev/null && (sudo firewall-cmd --permanent --add-port=${PORT}/tcp && sudo firewall-cmd --reload) 2>/dev/null ; } &
 
+# Detecta diretório original do AppImage (para modo portátil)
+if [ -n "$APPIMAGE" ]; then
+  export TARTANTIS_APP_DIR="$(dirname "$APPIMAGE")"
+else
+  export TARTANTIS_APP_DIR="$(pwd)"
+fi
+
 cd "$APP"
 nohup python3 core/server.py >"$LOGFILE" 2>&1 &
 echo $! > "$PIDFILE"

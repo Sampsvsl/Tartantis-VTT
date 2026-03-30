@@ -111,13 +111,43 @@ else:
     STATIC_CORE_DIR = PROJECT_DIR / 'core'
 
 import platform
+import os
+
+# ── Configuração de Diretórios (Smart Portable Mode) ────────────────
 if getattr(sys, 'frozen', False):
-    DATA_DIR = PROJECT_DIR / 'data'
+    # Caso empacotado (ex: PyInstaller)
+    _base_dir = Path(sys.executable).parent.resolve()
 else:
-    if platform.system() == 'Linux':
-        DATA_DIR = Path.home() / '.TartantisVTT' / 'data'
-    else:
-        DATA_DIR = PROJECT_DIR / 'data'
+    # Caso rodando via script/AppImage
+    _base_dir = PROJECT_DIR
+
+# TARTANTIS_APP_DIR é injetado pelo AppRun no Linux
+env_app_dir = os.environ.get('TARTANTIS_APP_DIR')
+if env_app_dir:
+    PORTABLE_DIR = Path(env_app_dir).resolve()
+else:
+    PORTABLE_DIR = PROJECT_DIR
+
+def _get_persistent_data_dir():
+    # 1. Tenta usar pasta 'data' no diretório do executável/AppImage (Portátil)
+    local_data = PORTABLE_DIR / 'data'
+    try:
+        # Se a pasta já existe ou se podemos criar, usamos ela
+        if not local_data.exists():
+            local_data.mkdir(parents=True, exist_ok=True)
+        # Testa escrita simples
+        test_file = local_data / '.write_test'
+        test_file.touch()
+        test_file.unlink()
+        return local_data
+    except Exception:
+        # 2. Fallback para pasta do usuário (~/.TartantisVTT/data)
+        if platform.system() == 'Linux':
+            return Path.home() / '.TartantisVTT' / 'data'
+        return PROJECT_DIR / 'data'
+
+DATA_DIR = _get_persistent_data_dir()
+print(f"[*] Diretório de dados: {DATA_DIR}")
 
 GM_PASS_FILE  = DATA_DIR / 'gm-password.txt'
 CAMPAIGNS_DIR = DATA_DIR / 'campaigns'
@@ -654,6 +684,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
             'hasTunnel':            tunnel_url is not None,
             'cloudflaredAvailable': shutil.which('cloudflared') is not None,
             'activeCampaignId':     _active_campaign_id,
+            'dataDir':              str(DATA_DIR.resolve()),
         })
 
     # ── Resposta HTTP ─────────────────────────────────────
