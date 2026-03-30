@@ -21,7 +21,7 @@ oLink.WorkingDirectory = "{Path(target).parent}"
     with open(vbs_path, 'w', encoding='utf-8') as f:
         f.write(vbs)
     try:
-        subprocess.run(['cscript', '//Nologo', str(vbs_path)], creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.run(['cscript', '//Nologo', str(vbs_path)], creationflags=0x08000000)
     except:
         pass
     finally:
@@ -38,7 +38,8 @@ def main():
         messagebox.showerror("Erro", "Instalador deve ser rodado empacotado.")
         return
         
-    meipass = Path(sys._MEIPASS)
+        
+    meipass = Path(getattr(sys, '_MEIPASS', '.'))
     payload_zip = meipass / 'payload.zip'
     
     if not payload_zip.exists():
