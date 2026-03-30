@@ -981,6 +981,71 @@ body { overflow: hidden; user-select: none; }
 .bg-empty-msg { color: var(--dim); font-size: 0.82rem; text-align: center; padding: 20px 0; }
 /* Restrições para jogadores */
 body.is-player .gm-only { display: none !important; }
+
+/* ── Painel GM Tools ── */
+.gm-panel-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+#gm-panel-btn {
+  width: 34px; height: 30px;
+  background: rgba(139,26,26,0.12); border: 1px solid rgba(139,26,26,0.35);
+  border-radius: 2px; color: #c07070; cursor: pointer;
+  font-size: 0.8rem; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center;
+  letter-spacing: 0.05em; font-family: 'Cinzel', serif;
+}
+#gm-panel-btn:hover { color: #e87070; border-color: rgba(139,26,26,0.7); background: rgba(139,26,26,0.22); }
+#gm-panel-btn.open  { color: #e87070; border-color: rgba(139,26,26,0.7); background: rgba(139,26,26,0.22); }
+
+#gm-panel {
+  display: none;
+  position: absolute; top: calc(100% + 6px); left: 0;
+  z-index: 600;
+  background: rgba(8,6,4,0.98); border: 1px solid var(--border-h);
+  border-radius: 3px; padding: 5px 0; min-width: 190px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.75);
+  animation: scaleIn 0.1s ease;
+}
+#gm-panel.open { display: block; }
+
+.gm-panel-section {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--border);
+}
+.gm-panel-section:last-child { border-bottom: none; }
+
+.gm-panel-label {
+  padding: 3px 12px 1px;
+  font-family: 'Cinzel', serif; font-size: 0.48rem;
+  letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim);
+  opacity: 0.6;
+}
+
+.gm-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 14px; cursor: pointer;
+  font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.08em;
+  color: var(--dim); transition: all 0.12s;
+  background: transparent; border: none; width: 100%; text-align: left;
+}
+.gm-item:hover  { color: var(--pale); background: rgba(200,113,42,0.1); }
+.gm-item .gm-icon { font-size: 0.9rem; width: 18px; text-align: center; flex-shrink: 0; }
+.gm-item .gm-state {
+  margin-left: auto; font-size: 0.52rem; letter-spacing: 0.1em;
+  padding: 1px 5px; border-radius: 2px;
+  background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+  color: var(--dim); transition: all 0.15s;
+}
+.gm-item .gm-state.on  { color: var(--gold); border-color: rgba(212,168,67,0.4); background: rgba(212,168,67,0.08); }
+.gm-item.disabled { opacity: 0.38; cursor: default; pointer-events: none; }
+.gm-item.disabled:hover { color: var(--dim); background: transparent; }
+.gm-soon {
+  margin-left: auto; font-size: 0.48rem; letter-spacing: 0.08em;
+  color: var(--dim); opacity: 0.5;
+  font-family: 'Cinzel', serif;
+}
 </style>
 </head>
 <body>
@@ -1001,13 +1066,50 @@ body.is-player .gm-only { display: none !important; }
     <button class="tool-btn active" id="tool-select" onclick="setTool('select')" title="Selecionar (S)">↖</button>
     <button class="tool-btn" id="tool-move" onclick="setTool('move')" title="Mover Mapa (M)">✋</button>
     <button class="tool-btn" id="tool-ruler" onclick="setTool('ruler')" title="Régua de Medição (R)">📏</button>
-    <button class="tool-btn gm-only" id="tool-addtoken" onclick="openAddToken(null, null)" title="Adicionar Token (T)">👤</button>
-    <div class="tool-sep gm-only"></div>
-    <button class="tool-btn on gm-only" id="btn-grid" onclick="toggleGrid()" title="Grade (G)">▦</button>
-    <button class="tool-btn gm-only" id="btn-fog" onclick="toggleFog()" title="Névoa de Guerra (F)">🌫</button>
-    <button class="tool-btn gm-only" id="btn-bg-img" onclick="openBgImageModal()" title="Imagem de Fundo do Mapa">🖼</button>
-    <div class="tool-sep gm-only"></div>
-    <button class="tool-btn gm-only" id="btn-settings" onclick="openGridSettings()" title="Tamanho da Grade">⚙</button>
+  </div>
+
+  <!-- Painel Ferramentas do Mestre (só GM vê) -->
+  <div class="tool-sep gm-only"></div>
+  <div class="gm-panel-wrap gm-only">
+    <button id="gm-panel-btn" onclick="toggleGMPanel()" title="Ferramentas do Mestre">GM</button>
+
+    <div id="gm-panel">
+      <!-- Tokens -->
+      <div class="gm-panel-section">
+        <div class="gm-panel-label">Tokens</div>
+        <button class="gm-item" onclick="openAddToken(null,null);closeGMPanel()">
+          <span class="gm-icon">👤</span> Adicionar Token
+        </button>
+      </div>
+
+      <!-- Mapa -->
+      <div class="gm-panel-section">
+        <div class="gm-panel-label">Mapa</div>
+        <button class="gm-item" id="gm-item-grid" onclick="toggleGrid()">
+          <span class="gm-icon">▦</span> Grade
+          <span class="gm-state on" id="gm-grid-state">ON</span>
+        </button>
+        <button class="gm-item" id="gm-item-fog" onclick="toggleFog()">
+          <span class="gm-icon">🌫</span> Névoa
+          <span class="gm-state" id="gm-fog-state">OFF</span>
+        </button>
+        <button class="gm-item" onclick="openBgImageModal();closeGMPanel()">
+          <span class="gm-icon">🖼</span> Imagem de Fundo
+        </button>
+        <button class="gm-item" onclick="openGridSettings();closeGMPanel()">
+          <span class="gm-icon">⚙</span> Calibrar Grade
+        </button>
+      </div>
+
+      <!-- Em breve -->
+      <div class="gm-panel-section">
+        <div class="gm-panel-label">Avançado</div>
+        <button class="gm-item disabled">
+          <span class="gm-icon">🧱</span> Paredes / Portas
+          <span class="gm-soon">em breve</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Direita -->
@@ -1730,7 +1832,7 @@ const TOKEN_COLORS = [
 
   MAP_DATA = MBState.map.default(); INIT_LIST = [];
   MBState.startSync(code,{
-    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();document.getElementById('fog-overlay').style.display=MAP_DATA.fogActive?'block':'none';document.getElementById('btn-fog').classList.toggle('on',MAP_DATA.fogActive);document.getElementById('btn-grid').classList.toggle('on',MAP_DATA.showGrid);},
+    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();document.getElementById('fog-overlay').style.display=MAP_DATA.fogActive?'block':'none';updateGMPanelStates();},
     onTokenSet(token){if(!token||!token.id)return;if(!MAP_DATA.tokens)MAP_DATA.tokens=[];const idx=MAP_DATA.tokens.findIndex(t=>t.id===token.id);if(idx>=0)MAP_DATA.tokens[idx]=token;else MAP_DATA.tokens.push(token);renderTokens();},
     onTokenRemove(id){if(!id)return;MAP_DATA.tokens=(MAP_DATA.tokens||[]).filter(t=>t.id!==id);renderTokens();},
     onChatNew(entry){if(entry.blind&&SESSION.role!=='gm'){renderChatMsg(entry,true);return;}if(entry.type==='roll'&&entry.ok&&entry.rolls&&entry.rolls.length>0&&typeof DiceAnimator!=='undefined'){try{const senderSkin=entry.skin||DiceAnimator.getSkin();DiceAnimator.rollWithSkin(entry.rolls,entry.sides||6,entry.author,senderSkin,()=>renderChatMsg(entry,true));}catch(e){renderChatMsg(entry,true);}}else{renderChatMsg(entry,true);}},
@@ -1782,12 +1884,8 @@ const TOKEN_COLORS = [
       syncPlayerToken(SESSION.pid);
     }
 
-    // Botões e conteúdo exclusivos do mestre — oculta completamente para players
+    // Conteúdo exclusivo do mestre — painel GM já é oculto via .gm-only + body.is-player
     if (role !== 'gm') {
-      const gmOnly = ['tool-addtoken', 'btn-bg-img', 'btn-fog', 'btn-grid'];
-      gmOnly.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
-      // Oculta separadores da toolbar
-      document.querySelectorAll('.tool-sep').forEach(sep => sep.style.display = 'none');
       // Garante que a aba e o conteúdo da biblioteca de tokens não existam para players
       const tabTl = document.getElementById('tab-toklib');
       if (tabTl) tabTl.remove();
@@ -1799,8 +1897,7 @@ const TOKEN_COLORS = [
     setupColorPicker();
 
     document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
-    document.getElementById('btn-fog').classList.toggle('on', MAP_DATA.fogActive);
-    document.getElementById('btn-grid').classList.toggle('on', MAP_DATA.showGrid);
+    updateGMPanelStates();
 
     centerMapOnBg();
     updateMapInfo();
@@ -1831,7 +1928,7 @@ function showToast(msg) {
 ══════════════════════════════════════════════════════════════ */
 function setTool(tool) {
   ACTIVE_TOOL = tool;
-  document.querySelectorAll('#tool-select, #tool-move, #tool-addtoken, #tool-ruler').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tool-select, #tool-move, #tool-ruler').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('tool-' + tool);
   if (el) el.classList.add('active');
   document.getElementById('map-stage').style.cursor =
@@ -1945,19 +2042,51 @@ function renderGrid() {
 
 function toggleGrid() {
   MAP_DATA.showGrid = !MAP_DATA.showGrid;
-  document.getElementById('btn-grid').classList.toggle('on', MAP_DATA.showGrid);
   renderGrid();
   saveMap();
   updateMapInfo();
+  updateGMPanelStates();
 }
 
 function toggleFog() {
   MAP_DATA.fogActive = !MAP_DATA.fogActive;
   document.getElementById('fog-overlay').style.display = MAP_DATA.fogActive ? 'block' : 'none';
-  document.getElementById('btn-fog').classList.toggle('on', MAP_DATA.fogActive);
   saveMap();
+  updateGMPanelStates();
   showToast(MAP_DATA.fogActive ? '🌫 Névoa ativada' : '☀ Névoa desativada');
 }
+
+/* ── Painel GM Tools ── */
+function updateGMPanelStates() {
+  const gridState = document.getElementById('gm-grid-state');
+  const fogState  = document.getElementById('gm-fog-state');
+  if (gridState) {
+    gridState.textContent = MAP_DATA.showGrid ? 'ON' : 'OFF';
+    gridState.classList.toggle('on', !!MAP_DATA.showGrid);
+  }
+  if (fogState) {
+    fogState.textContent = MAP_DATA.fogActive ? 'ON' : 'OFF';
+    fogState.classList.toggle('on', !!MAP_DATA.fogActive);
+  }
+}
+
+function toggleGMPanel() {
+  const btn   = document.getElementById('gm-panel-btn');
+  const panel = document.getElementById('gm-panel');
+  const open  = panel.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+function closeGMPanel() {
+  document.getElementById('gm-panel').classList.remove('open');
+  document.getElementById('gm-panel-btn').classList.remove('open');
+}
+
+// Fecha o painel ao clicar fora dele
+document.addEventListener('click', function(e) {
+  const wrap = document.querySelector('.gm-panel-wrap');
+  if (wrap && !wrap.contains(e.target)) closeGMPanel();
+}, true);
 
 function openGridSettings() {
   if (SESSION.role !== 'gm') return;
@@ -4350,6 +4479,7 @@ document.addEventListener('keydown', e => {
     case 'r':
       if (SELECTED_TOKEN) { rotateToken(SELECTED_TOKEN, 'reset'); } break;
     case 'escape':
+      closeGMPanel();
       closeCtxMenu();
       closeRollModePopup();
       closeModal('modal-token');
