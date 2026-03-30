@@ -2077,7 +2077,7 @@ function renderFog() {
 
   canvas.style.display = 'block';
 
-  const fogOpacity = isGM ? 0.40 : 0.95;
+  const fogOpacity = isGM ? 0.40 : 1.0;   // player: névoa totalmente opaca
   const fogColor = isGM ? 'rgba(30,40,60,' : 'rgba(0,0,0,';
 
   ctx.clearRect(0, 0, 3000, 3000);
@@ -2272,20 +2272,24 @@ function _calcVisibilityPolygon(originX, originY, radius, walls) {
 
 function _updatePlayerVision() {
   const token = _getPlayerToken();
-  if (!token || !token.light || !token.light.enabled) {
+  if (!token) {
     _playerVisibilityPolygon = null;
-    _fogDirty = true;   // força re-render da névoa (sem polígono = névoa total)
+    _fogDirty = true;
     return;
   }
 
   const gs = MAP_DATA.gridSize || 50;
-  const radius = (token.light.radius || 18) * gs;
+  // Visão padrão: raio de 3000px (cobre todo o canvas) — limitada apenas por paredes.
+  // Se o token tiver luz configurada, usa o raio dela como limite extra de alcance.
+  const lightRadius = (token.light && token.light.enabled && token.light.radius)
+    ? token.light.radius * gs
+    : 3000;
   const walls = _getWallsForVision();
   const tokenX = (token.x || 0) + gs / 2;
   const tokenY = (token.y || 0) + gs / 2;
 
-  _playerVisibilityPolygon = _calcVisibilityPolygon(tokenX, tokenY, radius, walls);
-  _fogDirty = true;   // obriga re-render da névoa com novo polígono de visão
+  _playerVisibilityPolygon = _calcVisibilityPolygon(tokenX, tokenY, lightRadius, walls);
+  _fogDirty = true;
 }
 
 function _renderVisibilityInFog() {
@@ -2298,19 +2302,8 @@ function _renderVisibilityInFog() {
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
 
-  const token = _getPlayerToken();
-  const light = token && token.light;
-  const radius = light ? (light.radius || 18) * (MAP_DATA.gridSize || 50) : 900;
-
-  const cx = polygon.reduce((s, p) => s + p.x, 0) / polygon.length;
-  const cy = polygon.reduce((s, p) => s + p.y, 0) / polygon.length;
-
-  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-  gradient.addColorStop(0, 'rgba(0,0,0,1)');
-  gradient.addColorStop(0.7, 'rgba(0,0,0,0.8)');
-  gradient.addColorStop(1, 'rgba(0,0,0,0)');
-
-  ctx.fillStyle = gradient;
+  // Fill sólido: apaga 100% da névoa dentro do polígono de visão
+  ctx.fillStyle = 'rgba(0,0,0,1)';
   ctx.beginPath();
   ctx.moveTo(polygon[0].x, polygon[0].y);
   for (let i = 1; i < polygon.length; i++) {
