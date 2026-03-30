@@ -93,6 +93,19 @@ if command -v xdg-open &>/dev/null; then
   xdg-open "$OPEN_URL" >/dev/null 2>&1 &
 fi
 
+# ── Checa por updates em background ───
+(
+  UPDATE_INFO=$(python3 -c "from core import updater; from pathlib import Path; available, ver, url = updater.check_for_updates(Path('$DIR')); print(f'{available}|{ver}|{url}')" 2>/dev/null)
+  if [[ "$UPDATE_INFO" == "True|"* ]]; then
+    VER=$(echo "$UPDATE_INFO" | cut -d'|' -f2)
+    URL=$(echo "$UPDATE_INFO" | cut -d'|' -f3)
+    MSG="Nova versão disponível: v$VER\nClique para baixar."
+    if command -v notify-send &>/dev/null; then
+      notify-send "Tartantis VTT - Update" "$MSG" --icon=info
+    fi
+  fi
+) &
+
 # ── Aguarda o usuário fechar para matar o processo ───
 if command -v zenity &>/dev/null; then
   zenity --info --title="Tartantis VTT" --text="O Servidor do Tartantis VTT está rodando!\nO jogo foi aberto no seu navegador padrão.\n\nFeche esta janela (ou clique OK) para desligar o servidor." 

@@ -10,29 +10,24 @@ import time
 import webbrowser
 import threading
 import runpy
-import http.server
-import socketserver
-import urllib.request
-import urllib.parse
-import shutil
-import struct
-import hashlib
-import sqlite3
-import secrets
-import json
-import base64
-import mimetypes
-import re
-import platform
 from pathlib import Path
 
-PORT = 30000
-
+# --- Configuração de Caminhos ---
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent
 else:
     BASE_DIR = Path(__file__).parent.parent
 
+# Adiciona BASE_DIR ao path para que o pacote 'core' seja encontrado
+sys.path.insert(0, str(BASE_DIR))
+
+# Agora podemos importar o updater (mesmo que o linter reclame do caminho dinâmico)
+try:
+    from core import updater # type: ignore
+except ImportError:
+    updater = None
+
+PORT = 30000
 SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
 APP_DIR       = BASE_DIR / 'app'
 LOG_FILE      = BASE_DIR / '.server.log'
@@ -79,12 +74,13 @@ def main():
             print(f"Erro: Arquivo {SERVER_SCRIPT} nao encontrado.")
         sys.exit(1)
 
+    server_proc = None
+
     if is_frozen:
         f_log = open(LOG_FILE, 'w', encoding='utf-8')
         sys.stdout = f_log
         sys.stderr = f_log
         
-        sys.path.insert(0, str(BASE_DIR))
         def run_srv():
             try:
                 runpy.run_path(str(SERVER_SCRIPT), run_name='__main__')
@@ -108,7 +104,8 @@ def main():
             ctypes.windll.user32.MessageBoxW(0, f"Falha ao iniciar o servidor na porta {PORT}.\nVerifique: {LOG_FILE}", "Tartantis VTT", 0x10)
         else:
             print(f"Falha ao iniciar o servidor. Log: {LOG_FILE}")
-        if not is_frozen:
+        
+        if server_proc:
             server_proc.terminate()
         sys.exit(1)
 
@@ -130,14 +127,28 @@ def main():
             except: pass
             
         tk.Label(root, text="O Servidor do Tartantis VTT está rodando!\nO jogo foi aberto no seu navegador padrão.\n\nFeche esta janela para desligar o servidor e encerrar.", justify="center").pack(expand=True)
+        
+        # UI de Check de Updates
+        update_label = tk.Label(root, text="", fg="blue", cursor="hand2")
+        update_label.pack(pady=5)
+        
+        def check_updates_task():
+            if not updater:
+                return
+            try:
+                available, ver, uurl = updater.check_for_updates(BASE_DIR)
+                if available:
+                    update_label.config(text=f"Nova versão disponível: v{ver} (Clique aqui)")
+                    update_label.bind("<Button-1>", lambda e: webbrowser.open(uurl))
+            except: 
+                pass
+            
+        threading.Thread(target=check_updates_task, daemon=True).start()
+        
         root.mainloop()
         os._exit(0)
 
     run_gui()
-
-
-if __name__ == '__main__':
-    main()
 
 
 if __name__ == '__main__':
