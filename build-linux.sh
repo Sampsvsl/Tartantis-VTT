@@ -137,7 +137,17 @@ fi
 
 # ── Gera AppImage ────────────────────────────────────────────────
 echo -e "${DIM}  → Gerando AppImage…${RESET}"
-ARCH=x86_64 "$TOOL" "$APPDIR" "$OUTPUT" 2>/dev/null
+# appimagetool também é AppImage — extrai para rodar sem FUSE no CI/sandbox
+TOOL_SQUASH="$DIR/.appimagetool-squashfs"
+if [ ! -d "$TOOL_SQUASH" ]; then
+  _TMP="$(mktemp -d)"
+  pushd "$_TMP" > /dev/null
+  "$TOOL" --appimage-extract 2>/dev/null
+  mv squashfs-root "$TOOL_SQUASH"
+  popd > /dev/null
+  rm -rf "$_TMP"
+fi
+ARCH=x86_64 "$TOOL_SQUASH/AppRun" "$(realpath "$APPDIR")" "$(realpath "$OUTPUT")" 2>/dev/null
 rm -rf "$APPDIR"
 
 if [ -f "$OUTPUT" ]; then
