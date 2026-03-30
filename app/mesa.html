@@ -2756,7 +2756,7 @@ function renderGrid() {
   let goy = (MAP_DATA.gridOffsetY || 0) % gs;
 
   if (!_bgImgBounds) {
-    dx = 0; dy = 0; dw = ctx.canvas.width; dh = ctx.canvas.height;
+    dx = 0; dy = 0; dw = CSS_SIZE; dh = CSS_SIZE;
     gox = (MAP_DATA.gridOffsetX || 0) % gs;
     goy = (MAP_DATA.gridOffsetY || 0) % gs;
   } else {

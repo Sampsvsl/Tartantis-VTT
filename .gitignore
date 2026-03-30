@@ -10,6 +10,7 @@ dist/
 .server.log
 .appimagetool
 .appdir-build/
+.appimagetool-squashfs/
 
 # Build artifacts
 windows/build-tmp/
