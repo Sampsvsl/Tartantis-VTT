@@ -1648,27 +1648,6 @@ body.is-player .gm-only { display: none !important; }
         <button class="cta-btn sm danger" id="edit-tok-clear" onclick="clearEditTokenImg()" style="display:none">✕</button>
       </div>
     </div>
-    <div class="ficha-field" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
-      <label style="color:var(--gold);font-size:0.85rem">💡 Iluminação</label>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
-        <label style="display:flex;align-items:center;gap:4px;cursor:pointer">
-          <input type="checkbox" id="edit-tok-light-enabled" onchange="document.getElementById('edit-tok-light-options').style.display = this.checked ? 'block' : 'none'; updateVision()">
-          <span style="font-size:0.8rem">Ativar luz</span>
-        </label>
-      </div>
-      <div id="edit-tok-light-options" style="display:none;margin-top:8px">
-        <div style="display:flex;gap:6px;margin-bottom:6px">
-          <div style="flex:1">
-            <label style="font-size:0.7rem;color:var(--dim)">Raio (quadrados)</label>
-            <input type="number" id="edit-tok-light-radius" class="mb-input" min="1" max="20" value="6" style="width:100%" onchange="updateVision()">
-          </div>
-          <div style="flex:1">
-            <label style="font-size:0.7rem;color:var(--dim)">Cor</label>
-            <input type="color" id="edit-tok-light-color" value="#fffbe6" style="width:100%;height:28px;border:1px solid var(--border);border-radius:4px" onchange="updateVision()">
-          </div>
-        </div>
-      </div>
-    </div>
     <div style="display:flex;gap:8px">
       <button class="cta-btn" onclick="confirmEditToken()">✦ Salvar</button>
       <button class="cta-btn danger sm" onclick="removeToken(document.getElementById('edit-tok-id').value); closeModal('modal-edit-token')">🗑 Remover</button>
@@ -2201,12 +2180,44 @@ function _getPlayerToken() {
 }
 
 function _getWallsForVision() {
-  return (MAP_DATA.walls || []).filter(w => {
+  const raw = (MAP_DATA.walls || []).filter(w => {
     if (w.type === 'wall') return true;
     if (w.type === 'door') return w.open !== true;
     if (w.type === 'window') return false;
     return true;
   });
+  // Snap endpoints próximos para fechar gaps de quinas desenhadas com snap
+  return _snapWallEndpointsForVision(raw);
+}
+
+function _snapWallEndpointsForVision(walls) {
+  if (!walls.length) return walls;
+  const SNAP = WALL_SNAP_DIST; // mesmo threshold do editor
+  // Copia superficial para não alterar MAP_DATA
+  const w2 = walls.map(w => ({ ...w }));
+  const pts = [];
+  w2.forEach(w => {
+    pts.push({ wall: w, n: 1 });
+    pts.push({ wall: w, n: 2 });
+  });
+  for (let i = 0; i < pts.length; i++) {
+    const pi = pts[i];
+    const ax = pi.n === 1 ? pi.wall.x1 : pi.wall.x2;
+    const ay = pi.n === 1 ? pi.wall.y1 : pi.wall.y2;
+    for (let j = i + 1; j < pts.length; j++) {
+      const pj = pts[j];
+      const bx = pj.n === 1 ? pj.wall.x1 : pj.wall.x2;
+      const by = pj.n === 1 ? pj.wall.y1 : pj.wall.y2;
+      if (Math.hypot(ax - bx, ay - by) < SNAP) {
+        const mx = (ax + bx) / 2, my = (ay + by) / 2;
+        if (pi.n === 1) { pi.wall.x1 = mx; pi.wall.y1 = my; }
+        else            { pi.wall.x2 = mx; pi.wall.y2 = my; }
+        if (pj.n === 1) { pj.wall.x1 = mx; pj.wall.y1 = my; }
+        else            { pj.wall.x2 = mx; pj.wall.y2 = my; }
+      }
+    }
+  }
+  return w2;
 }
 
 function _raySegmentIntersect(ox, oy, dx, dy, x1, y1, x2, y2) {
@@ -2223,49 +2234,48 @@ function _raySegmentIntersect(ox, oy, dx, dy, x1, y1, x2, y2) {
 }
 
 function _calcVisibilityPolygon(originX, originY, radius, walls) {
-  const rays = [];
-  const angleStep = Math.PI / 180;
-  const extraAngles = [0, Math.PI / 2, Math.PI, Math.PI * 1.5];
+  // Epsilon maior: com raio 3000px, 0.0001 rad = < 1px de separação — inútil.
+  // 0.001 rad = ~3px de separação na borda, suficiente para "abrir" as quinas.
+  const EPS = 0.001;
+  const angleStep = Math.PI / 180; // 1° entre raios uniformes
+
+  // Coleta ângulos dos endpoints das paredes + raios uniformes
+  const raySet = new Set();
+  const addAngle = a => {
+    // Normaliza para [-π, π] com 5 casas decimais
+    const norm = n => Math.round(((n % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2) * 1e5) / 1e5;
+    raySet.add(norm(a - EPS));
+    raySet.add(norm(a));
+    raySet.add(norm(a + EPS));
+  };
 
   walls.forEach(w => {
-    const angles = [
-      Math.atan2(w.y1 - originY, w.x1 - originX),
-      Math.atan2(w.y2 - originY, w.x2 - originX)
-    ];
-    angles.forEach(angle => {
-      rays.push(angle - 0.0001);
-      rays.push(angle);
-      rays.push(angle + 0.0001);
-    });
+    addAngle(Math.atan2(w.y1 - originY, w.x1 - originX) + Math.PI); // normaliza para [0, 2π]
+    addAngle(Math.atan2(w.y2 - originY, w.x2 - originX) + Math.PI);
   });
-
   for (let a = 0; a < Math.PI * 2; a += angleStep) {
-    rays.push(a);
+    const norm = n => Math.round(n * 1e5) / 1e5;
+    raySet.add(norm(a));
   }
 
-  const uniqueRays = [...new Set(rays.map(a => Math.round(a * 10000) / 10000))];
   const points = [];
-
-  uniqueRays.forEach(angle => {
-    const dx = Math.cos(angle) * radius;
-    const dy = Math.sin(angle) * radius;
-    let closest = { x: originX + dx, y: originY + dy, dist: radius };
+  raySet.forEach(angle => {
+    // Converte de volta para [-π, π] para usar com cos/sin
+    const a = angle - Math.PI;
+    const ex = originX + Math.cos(a) * radius;
+    const ey = originY + Math.sin(a) * radius;
+    let closest = { x: ex, y: ey, dist: radius };
 
     walls.forEach(w => {
-      const hit = _raySegmentIntersect(originX, originY, originX + dx, originY + dy, w.x1, w.y1, w.x2, w.y2);
-      if (hit && hit.dist < closest.dist) {
-        closest = hit;
-      }
+      const hit = _raySegmentIntersect(originX, originY, ex, ey, w.x1, w.y1, w.x2, w.y2);
+      if (hit && hit.dist < closest.dist) closest = hit;
     });
 
-    points.push(closest);
+    points.push({ ...closest, angle: a });
   });
 
-  points.sort((a, b) => {
-    const angleA = Math.atan2(a.y - originY, a.x - originX);
-    const angleB = Math.atan2(b.y - originY, b.x - originX);
-    return angleA - angleB;
-  });
+  // Ordena por ângulo normalizado para formar polígono correto
+  points.sort((a, b) => a.angle - b.angle);
 
   return points;
 }
@@ -3681,14 +3691,6 @@ function openEditToken(id) {
     prevImg.style.display = 'none'; prevIco.style.display = '';
     clearBtn.style.display = 'none';
   }
-  // Light settings
-  const light = token.light || { enabled: false, radius: 18, color: '#fffbe6' };
-  const lightEnabled = document.getElementById('edit-tok-light-enabled');
-  const lightOptions = document.getElementById('edit-tok-light-options');
-  lightEnabled.checked = light.enabled;
-  lightOptions.style.display = light.enabled ? 'block' : 'none';
-  document.getElementById('edit-tok-light-radius').value = light.radius || 18;
-  document.getElementById('edit-tok-light-color').value = light.color || '#fffbe6';
   document.getElementById('edit-tok-file').value = '';
   openModal('modal-edit-token');
 }
@@ -3701,10 +3703,6 @@ function confirmEditToken() {
   token.hp    = parseInt(document.getElementById('edit-tok-hp').value) || 0;
   token.hpMax = parseInt(document.getElementById('edit-tok-hpmax').value) || token.hpMax;
   if (_pendingEditTokenImg !== undefined) token.imgSrc = _pendingEditTokenImg; // null = remover, string = nova foto
-  const lightEnabled = document.getElementById('edit-tok-light-enabled').checked;
-  const lightRadius = parseInt(document.getElementById('edit-tok-light-radius').value) || 6;
-  const lightColor = document.getElementById('edit-tok-light-color').value;
-  token.light = { enabled: lightEnabled, radius: lightRadius, dimRadius: lightRadius + 3, color: lightColor };
   renderTokens();
   saveToken(token);
   updateVision();
