@@ -10,6 +10,19 @@ import time
 import webbrowser
 import threading
 import runpy
+import base64
+import hashlib
+import json
+import re
+import secrets
+import shutil
+import struct
+import urllib.request
+import urllib.parse
+import platform
+import http.server
+import socketserver
+import xmlrpc.server
 from pathlib import Path
 
 # --- Configuração de Caminhos ---
