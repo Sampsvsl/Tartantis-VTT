@@ -75,7 +75,6 @@ jobs:
   release:
     needs: [build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: write
     steps:
@@ -88,9 +87,10 @@ jobs:
       - name: Criar Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('release-{0}', github.run_number) }}
           files: |
             dist/Instalador_TartantisVTT.exe
             dist/TartantisVTT-x86_64.AppImage
             dist/TartantisVTT-macOS.zip
           generate_release_notes: false
-          draft: true   # cria como rascunho — você edita e publica com o texto no estilo
+          draft: true
