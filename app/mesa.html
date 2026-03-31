@@ -1871,6 +1871,11 @@ const TOKEN_COLORS = [
     onCharUpdate(charData){
       // Atualiza ficha em memória se for a ficha ativa (p.ex. GM vê edição do player)
       if(charData&&charData.id===CHAR_ID){CHAR_DATA={...CHAR_DATA,...charData};loadFicha();}
+    },
+    onKicked(){
+      // Outro dispositivo entrou com o mesmo player — expulsa esta sessão
+      alert('⚠ Outro dispositivo entrou com este personagem. Você foi desconectado.');
+      window.location.href = 'portal.html';
     }
   },function onStateLoaded(state){
     if(state.map&&Object.keys(state.map).length)MAP_DATA={...MAP_DATA,...state.map};
@@ -1879,7 +1884,7 @@ const TOKEN_COLORS = [
     if(typeof state.init_turn==='number')INIT_TURN=state.init_turn;
     if(typeof state.blind_roll==='boolean')_blindRoll=state.blind_roll;
     _loadCharsAndFinalize();
-  });
+  }, SESSION.pid);
   // Para LOCAL: startSync já chama onStateLoaded({}) internamente — sem double-call
 
   function _loadCharsAndFinalize(){

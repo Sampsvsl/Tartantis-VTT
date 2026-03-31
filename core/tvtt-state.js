@@ -1,17 +1,19 @@
 // tvtt-state.js v4.0 — Tartantis VTT — Estado global (sem localStorage)
 let _ws=null,_wsRoom=null,_wsCbs={},_wsStateOnce=null,_wsPending=[];
 function _wsSend(msg){if(_ws&&_ws.readyState===WebSocket.OPEN)_ws.send(JSON.stringify(msg));else _wsPending.push(msg);}
-function _wsConnect(room,callbacks,onStateLoaded){
-  _wsRoom=room;_wsCbs=callbacks||{};_wsStateOnce=onStateLoaded||null;
+let _wsPid='';
+function _wsConnect(room,callbacks,onStateLoaded,pid){
+  _wsRoom=room;_wsCbs=callbacks||{};_wsStateOnce=onStateLoaded||null;_wsPid=pid||'';
   const proto=location.protocol==='https:'?'wss:':'ws:';
   const wsPort = location.port || (proto === 'wss:' ? '443' : '80');
   const url=`${proto}//${location.hostname}:${wsPort}/ws`;
   _ws=new WebSocket(url);
-  _ws.onopen=()=>{_ws.send(JSON.stringify({type:'join',room}));_wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];};
+  _ws.onopen=()=>{_ws.send(JSON.stringify({type:'join',room,pid:_wsPid}));_wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];};
   _ws.onmessage=evt=>{
     let msg;try{msg=JSON.parse(evt.data);}catch(e){return;}
     const{type,data}=msg;
     if(type==='state'){if(_wsStateOnce){_wsStateOnce(data||{});_wsStateOnce=null;}return;}
+    if(type==='kicked'){if(_wsCbs.onKicked)_wsCbs.onKicked();return;}
     if(type==='map'&&_wsCbs.onMapUpdate)_wsCbs.onMapUpdate(data||{});
     if(type==='token_set'&&_wsCbs.onTokenSet)_wsCbs.onTokenSet(data);
     if(type==='token_remove'&&_wsCbs.onTokenRemove)_wsCbs.onTokenRemove(data&&data.id);
@@ -22,7 +24,7 @@ function _wsConnect(room,callbacks,onStateLoaded){
     if(type==='char_update'&&_wsCbs.onCharUpdate)_wsCbs.onCharUpdate(data);
     if(type==='walls'&&_wsCbs.onWallsUpdate)_wsCbs.onWallsUpdate(data||[]);
   };
-  _ws.onclose=()=>{setTimeout(()=>{if(_wsRoom)_wsConnect(_wsRoom,_wsCbs,null);},3000);};
+  _ws.onclose=()=>{setTimeout(()=>{if(_wsRoom)_wsConnect(_wsRoom,_wsCbs,null,_wsPid);},3000);};
   _ws.onerror=()=>{};
 }
 
@@ -142,10 +144,10 @@ const MBState={
     }
   },
 
-  startSync(code,callbacks,onStateLoaded){
+  startSync(code,callbacks,onStateLoaded,pid){
     if(!code||code==='LOCAL'){if(onStateLoaded)onStateLoaded({});return;}
-    _wsConnect(code,callbacks,onStateLoaded);
-    console.log('[MB] WS sync:',code);
+    _wsConnect(code,callbacks,onStateLoaded,pid||'');
+    console.log('[MB] WS sync:',code,'pid:',pid||'(none)');
   }
 };
 

@@ -54,6 +54,20 @@ from urllib.parse import parse_qs, urlparse
 
 _WS_MAGIC='258EAFA5-E914-47DA-95CA-C5AB0DC85B11'
 _ws_room_state={};_ws_room_clients={};_ws_hub_lock=threading.Lock()
+
+def _ws_online_pids(code):
+    """Retorna set de pids conectados na sala (exclui GM)."""
+    with _ws_hub_lock:
+        return {c.get('pid','') for c in _ws_room_clients.get(code,[]) if c.get('pid','') and c.get('pid','')!='gm'}
+
+def _ws_kick_pid(code, pid):
+    """Envia 'kicked' para todas as conexões com este pid e as remove."""
+    with _ws_hub_lock:
+        targets = [c for c in _ws_room_clients.get(code,[]) if c.get('pid')==pid]
+        for c in targets:
+            _ws_send(c, '{"type":"kicked"}')
+            try: _ws_room_clients[code].remove(c)
+            except ValueError: pass
 def _ws_ensure_room(c):
     if c not in _ws_room_state:
         # Tenta carregar estado persistido do disco (funções definidas após este bloco)
@@ -99,7 +113,8 @@ def _ws_recv_frame(sock):
     payload=rx(ln) if ln else b''
     if masked:payload=bytes(b^mask[i%4] for i,b in enumerate(payload))
     return op,payload
-PORT = 30000
+DEFAULT_PORT = 30000
+PORT = DEFAULT_PORT
 
 if getattr(sys, 'frozen', False):
     PROJECT_DIR  = Path(sys.executable).parent.resolve()
@@ -389,6 +404,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/load':              self._load()
         elif p == '/api/images/list':       self._images_list()
         elif p.startswith('/api/images/'): self._serve_image_file(p)
+        elif p.startswith('/api/presence/'): self._presence(p)
         elif p.startswith('/api/lobby/'):   self._lobby_public(p)
         elif p.startswith('/api/room/'):    self._room_get(p)
         elif p.startswith('/core/'):        self._serve_static(STATIC_CORE_DIR / p.replace('/core/', '', 1), base_dir=STATIC_CORE_DIR)
@@ -575,6 +591,12 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         self._json_error(404, 'Jogador não encontrado.')
 
     # ── Lobby público ─────────────────────────────────────
+    def _presence(self, path: str):
+        # GET /api/presence/{code} → {"pids": [...]}
+        parts = path.strip('/').split('/')
+        code  = parts[-1].upper() if parts else ''
+        self._json_ok({'pids': list(_ws_online_pids(code))})
+
     def _lobby_public(self, path: str):
         # path = /api/lobby/{code}
         parts = path.strip('/').split('/')
@@ -906,11 +928,16 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                 except:continue
                 mt=msg.get('type','');mr=msg.get('room','');data=msg.get('data')
                 if mt=='join' and mr:
+                    pid_joining = msg.get('pid','')
+                    # Kick qualquer conexão anterior com o mesmo pid na mesma sala
+                    if pid_joining and pid_joining != 'gm':
+                        _ws_kick_pid(mr, pid_joining)
                     with _ws_hub_lock:
                         if room and room in _ws_room_clients:
                             try:_ws_room_clients[room].remove(client)
                             except ValueError:pass
                         room=mr;_ws_ensure_room(room)
+                        client['pid'] = pid_joining
                         if client not in _ws_room_clients[room]:_ws_room_clients[room].append(client)
                     st=_ws_room_state[room]
                     _ws_send(client,json.dumps({'type':'state','room':room,'data':{'map':st['map'],'tokens':list(st['tokens'].values()),'init':st['init'],'init_turn':st['init_turn'],'blind_roll':st['blind_roll']}}))
@@ -1191,7 +1218,28 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
 
 class _ThreadedHTTPServer(socketserver.ThreadingMixIn,http.server.HTTPServer):
     daemon_threads=True
-if __name__=='__main__':
-    server=_ThreadedHTTPServer(('0.0.0.0',PORT),MesaHandler)
+if __name__ == '__main__':
+    server = None
+    for p in range(DEFAULT_PORT, DEFAULT_PORT + 11):
+        try:
+            PORT = p
+            server = _ThreadedHTTPServer(('0.0.0.0', PORT), MesaHandler)
+            break
+        except OSError as e:
+            if e.errno == 98 or e.errno == 10048: # Address already in use
+                print(f'[!] Porta {PORT} ocupada, tentando a próxima...')
+                continue
+            else:
+                print(f'[!] Erro ao iniciar servidor na porta {PORT}: {e}')
+                sys.exit(1)
+
+    if not server:
+        print(f'[!] Não foi possível encontrar uma porta disponível entre {DEFAULT_PORT} e {DEFAULT_PORT+10}.')
+        sys.exit(1)
+
     print(f'[MB] Servidor rodando em http://localhost:{PORT} (WebSocket ativo)')
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print('\n[!] Servidor encerrado pelo usuário.')
+        sys.exit(0)
