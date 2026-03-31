@@ -8,11 +8,14 @@ echo   Tartantis VTT - Build Windows Instalador
 echo   ----------------------------------------
 echo.
 
-python --version >/dev/null 2>&1
+python --version >nul 2>&1
 if errorlevel 1 ( echo ERRO: Python nao encontrado. & exit /b 1 )
 
-python -m PyInstaller --version >/dev/null 2>&1
-if errorlevel 1 ( echo Instalando PyInstaller... & pip install pyinstaller )
+python -m PyInstaller --version >nul 2>&1
+if errorlevel 1 ( 
+  echo Instalando PyInstaller... 
+  python -m pip install pyinstaller 
+)
 
 cd /d "%~dp0"
 set WIN_DIR=%~dp0
