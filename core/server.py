@@ -48,6 +48,7 @@ import sys
 import threading
 import time
 import urllib.request
+from typing import Optional
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -117,7 +118,8 @@ DEFAULT_PORT = 30000
 PORT = DEFAULT_PORT
 
 if getattr(sys, 'frozen', False):
-    PROJECT_DIR  = Path(sys.executable).parent.resolve()
+    # PyInstaller --onefile extrai recursos para _MEIPASS
+    PROJECT_DIR = Path(getattr(sys, '_MEIPASS', sys.executable))
     APP_DIR      = PROJECT_DIR / 'app'
     STATIC_CORE_DIR = PROJECT_DIR / 'core'
 else:
@@ -940,7 +942,20 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                         client['pid'] = pid_joining
                         if client not in _ws_room_clients[room]:_ws_room_clients[room].append(client)
                     st=_ws_room_state[room]
-                    _ws_send(client,json.dumps({'type':'state','room':room,'data':{'map':st['map'],'tokens':list(st['tokens'].values()),'init':st['init'],'init_turn':st['init_turn'],'blind_roll':st['blind_roll']}}))
+                    camp = _get_by_code(room)
+                    lobby_data = _public_lobby(camp) if camp else {'players':[]}
+                    _ws_send(client,json.dumps({
+                        'type':'state',
+                        'room':room,
+                        'data':{
+                            'map':st['map'],
+                            'tokens':list(st['tokens'].values()),
+                            'init':st['init'],
+                            'init_turn':st['init_turn'],
+                            'blind_roll':st['blind_roll'],
+                            'players': lobby_data.get('players', [])
+                        }
+                    }))
                     continue
                 if not mr:continue
                 persist = False
@@ -1219,7 +1234,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
 class _ThreadedHTTPServer(socketserver.ThreadingMixIn,http.server.HTTPServer):
     daemon_threads=True
 if __name__ == '__main__':
-    server = None
+    server: Optional[_ThreadedHTTPServer] = None
     for p in range(DEFAULT_PORT, DEFAULT_PORT + 11):
         try:
             PORT = p
@@ -1239,7 +1254,8 @@ if __name__ == '__main__':
 
     print(f'[MB] Servidor rodando em http://localhost:{PORT} (WebSocket ativo)')
     try:
-        server.serve_forever()
+        if server:
+            server.serve_forever()
     except KeyboardInterrupt:
         print('\n[!] Servidor encerrado pelo usuário.')
         sys.exit(0)

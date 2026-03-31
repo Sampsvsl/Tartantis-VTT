@@ -14,9 +14,12 @@ from pathlib import Path
 
 # --- Configuração de Caminhos ---
 if getattr(sys, 'frozen', False):
-    BASE_DIR = Path(sys.executable).parent
+    # PyInstaller --onefile extrai para um diretório temporário
+    BASE_DIR = Path(getattr(sys, '_MEIPASS', sys.executable))
+    EXE_DIR  = Path(sys.executable).parent
 else:
     BASE_DIR = Path(__file__).parent.parent
+    EXE_DIR  = BASE_DIR
 
 # Adiciona BASE_DIR ao path para que o pacote 'core' seja encontrado
 sys.path.insert(0, str(BASE_DIR))
@@ -30,7 +33,7 @@ except ImportError:
 PORT = 30000
 SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
 APP_DIR       = BASE_DIR / 'app'
-LOG_FILE      = BASE_DIR / '.server.log'
+LOG_FILE      = EXE_DIR / '.server.log'
 
 
 def open_firewall_port(port: int):

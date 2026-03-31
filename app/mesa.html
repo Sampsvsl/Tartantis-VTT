@@ -1080,6 +1080,7 @@ body.is-player .gm-only { display: none !important; }
         <button class="gm-item" onclick="openAddToken(null,null);closeGMPanel()">
           <span class="gm-icon">👤</span> Adicionar Token
         </button>
+        <div id="gm-players-list"></div>
       </div>
 
       <!-- Mapa -->
@@ -1813,6 +1814,7 @@ let measureStartX = 0, measureStartY = 0;
 
 // Context menu state
 let ctxMapX = 0, ctxMapY = 0, ctxTokenId = null;
+let CAMP_PLAYERS = []; // Lista de jogadores da campanha (recebida no state)
 
 // Blind roll state
 let _blindRoll = false;
@@ -1883,6 +1885,10 @@ const TOKEN_COLORS = [
     if(Array.isArray(state.init))INIT_LIST=state.init;
     if(typeof state.init_turn==='number')INIT_TURN=state.init_turn;
     if(typeof state.blind_roll==='boolean')_blindRoll=state.blind_roll;
+    if(Array.isArray(state.players)) {
+      CAMP_PLAYERS = state.players;
+      renderGMPlayers();
+    }
     _loadCharsAndFinalize();
   }, SESSION.pid);
   // Para LOCAL: startSync já chama onStateLoaded({}) internamente — sem double-call
@@ -3121,9 +3127,9 @@ function mapMouseDown(e) {
     e.stopPropagation();
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     const [px, py] = gridSnapXY(mx, my);
-    const fi = _placementMode.fichaIndex;
+    const info = _placementMode;
     _cancelPlacementMode();
-    _doPlaceToken(fi, px, py);
+    _doPlaceToken(info, px, py);
     return;
   }
 
@@ -4948,18 +4954,17 @@ function showFichaCtxMenu(e, index) {
 }
 
 /* ── Modo de posicionamento de token ── */
-function _startPlacementMode(fichaIndex) {
-  _placementMode = { fichaIndex };
+function _startPlacementMode(info) {
+  _cancelPlacementMode();
+  _placementMode = info;
   const cont = document.getElementById('map-container');
   if (cont) cont.style.cursor = 'crosshair';
   showToast('🗺️ Clique na célula do mapa para posicionar o token  |  Esc para cancelar');
-  // Cancela com Esc
-  function onKey(ev) {
-    if (ev.key === 'Escape') { _cancelPlacementMode(); document.removeEventListener('keydown', onKey); }
-  }
+
+  const onKey = e => { if (e.key === 'Escape') _cancelPlacementMode(); };
   document.addEventListener('keydown', onKey);
-  // Guarda ref para remover o listener se cancelado de outro jeito
   _placementMode._escHandler = onKey;
+  updateGMPanelStates();
 }
 
 function _cancelPlacementMode() {
@@ -4968,9 +4973,45 @@ function _cancelPlacementMode() {
   _placementMode = null;
   const cont = document.getElementById('map-container');
   if (cont) cont.style.cursor = '';
+  updateGMPanelStates();
 }
 
-function _doPlaceToken(fichaIndex, px, py) {
+function _doPlaceToken(placementInfo, px, py) {
+  if (placementInfo.type === 'player') {
+    const { pid, name, color } = placementInfo;
+    const charId = 'char_' + pid;
+    const tokenId = 'tok_player_' + pid;
+    const gs = MAP_DATA.gridSize || 50;
+
+    MBState.char.load(charId, charData => {
+      MAP_DATA.tokens = (MAP_DATA.tokens || []).filter(t => t.id !== tokenId);
+      const oldEl = document.querySelector(`.token[data-id="${tokenId}"]`);
+      if (oldEl) oldEl.remove();
+
+      const token = {
+        id:       tokenId,
+        name:     charData.nome || name,
+        icon:     '👤',
+        color:    color,
+        imgSrc:   charData.avatar || null,
+        hp:       charData.pv    || 20,
+        hpMax:    charData.pvMax || 20,
+        x: px, y: py,
+        size: gs,
+        playerId: pid,
+        light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
+      };
+      MAP_DATA.tokens.push(token);
+      createTokenEl(token);
+      saveToken(token);
+      updateVision();
+      showToast('✦ Token de ' + name + ' posicionado!');
+      renderGMPlayers(); // atualiza status no painel
+    });
+    return;
+  }
+
+  const { fichaIndex } = placementInfo;
   const ficha   = ALL_FICHAS[fichaIndex];
   const pid     = SESSION.pid;
   const isMain  = fichaIndex === 0 && SESSION.role !== 'gm';
@@ -4979,7 +5020,6 @@ function _doPlaceToken(fichaIndex, px, py) {
   const gs = MAP_DATA.gridSize || 50;
 
   MBState.char.load(ficha.id, charData => {
-    // Remove token antigo se existir (reposicionamento)
     MAP_DATA.tokens = MAP_DATA.tokens.filter(t => t.id !== tokenId);
     const oldEl = document.querySelector(`.token[data-id="${tokenId}"]`);
     if (oldEl) oldEl.remove();
@@ -5003,11 +5043,10 @@ function _doPlaceToken(fichaIndex, px, py) {
     saveToken(token);
     updateVision();
     showToast('✦ Token "' + (charData.nome || ficha.label || SESSION.name) + '" posicionado!');
-    renderFichasSwitcher(); // atualiza ícone 🗺️ no switcher
+    renderFichasSwitcher();
   });
 }
 
-/* Coloca token da ficha no mapa — entra em modo de seleção de célula */
 function placeTokenFromFicha(fichaIndex) {
   const ficha   = ALL_FICHAS[fichaIndex];
   const pid     = SESSION.pid;
@@ -5016,7 +5055,6 @@ function placeTokenFromFicha(fichaIndex) {
 
   if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
 
-  // Se já existe, destaca mas também oferece reposicionamento
   const existing = MAP_DATA.tokens.find(t => t.id === tokenId);
   if (existing) {
     const el = document.querySelector(`.token[data-id="${tokenId}"]`);
@@ -5024,7 +5062,34 @@ function placeTokenFromFicha(fichaIndex) {
     if (!confirm('Token "' + (ficha.label||'Ficha') + '" já está no mapa.\nDeseja reposicioná-lo?')) return;
   }
 
-  _startPlacementMode(fichaIndex);
+  _startPlacementMode({ type: 'ficha', fichaIndex: fichaIndex });
+}
+
+function renderGMPlayers() {
+  if (SESSION.role !== 'gm') return;
+  const el = document.getElementById('gm-players-list');
+  if (!el) return;
+  el.innerHTML = '';
+
+  CAMP_PLAYERS.forEach(p => {
+    const tokenId = 'tok_player_' + p.id;
+    const jaNoMapa = (MAP_DATA.tokens || []).some(t => t.id === tokenId);
+    const btn = document.createElement('button');
+    btn.className = 'gm-item' + (jaNoMapa ? ' active' : '');
+    btn.innerHTML = `
+      <span class="gm-icon" style="color:${p.color}">👤</span>
+      ${p.name} ${jaNoMapa ? '🗺️' : ''}
+    `;
+    btn.onclick = () => {
+      if (jaNoMapa) {
+        const t = MAP_DATA.tokens.find(x => x.id === tokenId);
+        if (t) centerMapOn(t.x, t.y);
+      }
+      _startPlacementMode({ type: 'player', pid: p.id, name: p.name, color: p.color });
+      closeGMPanel();
+    };
+    el.appendChild(btn);
+  });
 }
 
 /* ── Barra de recursos ── */
