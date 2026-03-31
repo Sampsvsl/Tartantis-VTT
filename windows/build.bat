@@ -9,7 +9,7 @@ echo   ----------------------------------------
 echo.
 
 python --version >/dev/null 2>&1
-if errorlevel 1 ( echo ERRO: Python nao encontrado. & pause & exit /b 1 )
+if errorlevel 1 ( echo ERRO: Python nao encontrado. & exit /b 1 )
 
 python -m PyInstaller --version >/dev/null 2>&1
 if errorlevel 1 ( echo Instalando PyInstaller... & pip install pyinstaller )
@@ -42,7 +42,6 @@ python -m PyInstaller ^
   
 if not exist "%TMP_DIR%\engine\TartantisVTT.exe" (
     echo ERRO: Falha ao compilar Engine.
-    pause
     exit /b 1
 )
 
@@ -50,7 +49,6 @@ echo [2/3] Criando Payload (payload.zip)...
 python "%WIN_DIR%zipper.py" "%ROOT_DIR%" "%TMP_DIR%\engine\TartantisVTT.exe" "%TMP_DIR%\payload.zip"
 if not exist "%TMP_DIR%\payload.zip" (
     echo ERRO: Falha ao gerar payload.zip
-    pause
     exit /b 1
 )
 
@@ -70,4 +68,3 @@ if exist "%ROOT_DIR%\dist\Instalador_TartantisVTT.exe" (
 ) else ( 
   echo ERRO: Falha na geracao do Instalador. 
 )
-pause

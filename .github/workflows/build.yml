@@ -22,8 +22,7 @@ jobs:
           python-version: '3.11'
 
       - name: Build com build.bat
-        run: |
-          powershell -Command "windows\build.bat"
+        run: cmd /c windows\build.bat
 
       - name: Upload artefato
         uses: actions/upload-artifact@v4
