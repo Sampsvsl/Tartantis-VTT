@@ -30,6 +30,11 @@ python -m PyInstaller ^
   --onefile --noconsole ^
   --name "TartantisVTT" ^
   %ICON_OPT% ^
+  --hidden-import=http.server ^
+  --hidden-import=socketserver ^
+  --hidden-import=secrets ^
+  --hidden-import=xmlrpc.server ^
+  --hidden-import=webbrowser ^
   --distpath "%TMP_DIR%\engine" ^
   --workpath "%TMP_DIR%\work" ^
   --specpath "%TMP_DIR%" ^

@@ -118,10 +118,11 @@ DEFAULT_PORT = 30000
 PORT = DEFAULT_PORT
 
 if getattr(sys, 'frozen', False):
-    # PyInstaller --onefile extrai recursos para _MEIPASS
-    PROJECT_DIR = Path(getattr(sys, '_MEIPASS', sys.executable))
-    APP_DIR      = PROJECT_DIR / 'app'
-    STATIC_CORE_DIR = PROJECT_DIR / 'core'
+    # PyInstaller --onefile: arquivos estão junto do executável
+    EXE_DIR = Path(sys.executable).parent.resolve()
+    PROJECT_DIR = EXE_DIR
+    APP_DIR      = EXE_DIR / 'app'
+    STATIC_CORE_DIR = EXE_DIR / 'core'
 else:
     PROJECT_DIR  = Path(__file__).parent.parent.resolve()
     APP_DIR      = PROJECT_DIR / 'app'
@@ -371,9 +372,11 @@ def _start_cloudflared():
     if not shutil.which('cloudflared'):
         return
     try:
+        CREATE_NO_WINDOW = 0x08000000
         proc = subprocess.Popen(
             ['cloudflared', 'tunnel', '--url', f'http://localhost:{PORT}'],
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+            creationflags=CREATE_NO_WINDOW if sys.platform == 'win32' else 0)
         for line in proc.stdout:
             m = re.search(r'https://[a-z0-9\-]+\.trycloudflare\.com', line)
             if m:

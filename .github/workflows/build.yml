@@ -9,7 +9,7 @@ on:
 jobs:
 
   # ─────────────────────────────────────────────
-  #  Windows — .exe
+  #  Windows — Instalador
   # ─────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
@@ -21,30 +21,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar PyInstaller
-        run: pip install pyinstaller
-
-      - name: Build EXE
+      - name: Build com build.bat
         run: |
-          cd windows
-          python -m PyInstaller launcher.py `
-            --onefile `
-            --noconsole `
-            --name TartantisVTT `
-            --add-data "..\app;app" `
-            --add-data "..\core;core" `
-            --add-data "..\assets;assets" `
-            --icon "..\assets\icon.ico" 2>$null; `
-          if (-not (Test-Path "dist\TartantisVTT.exe")) { `
-            python -m PyInstaller launcher.py --onefile --noconsole --name TartantisVTT `
-              --add-data "..\app;app" --add-data "..\core;core" --add-data "..\assets;assets" `
-          }
+          powershell -Command "windows\build.bat"
 
       - name: Upload artefato
         uses: actions/upload-artifact@v4
         with:
           name: TartantisVTT-Windows
-          path: windows/dist/TartantisVTT.exe
+          path: dist/Instalador_TartantisVTT.exe
 
   # ─────────────────────────────────────────────
   #  Linux — AppImage
@@ -99,13 +84,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
+          merge-multiple: true
 
       - name: Criar Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/TartantisVTT-Windows/TartantisVTT.exe
-            dist/TartantisVTT-Linux/TartantisVTT-x86_64.AppImage
-            dist/TartantisVTT-macOS/TartantisVTT-macOS.zip
+            dist/Instalador_TartantisVTT.exe
+            dist/TartantisVTT-x86_64.AppImage
+            dist/TartantisVTT-macOS.zip
           generate_release_notes: false
           draft: true   # cria como rascunho — você edita e publica com o texto no estilo

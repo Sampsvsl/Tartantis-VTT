@@ -10,8 +10,8 @@ def main():
     out_zip = sys.argv[3]
     
     with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        # Adiciona as pastas principais
-        for d in ['app', 'core', 'assets', 'data']:
+        # Adiciona as pastas principais (exceto data que tem dados do usuário)
+        for d in ['app', 'core', 'assets']:
             abs_d = os.path.join(root_dir, d)
             if os.path.exists(abs_d):
                 for root, dirs, files in os.walk(abs_d):

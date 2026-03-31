@@ -14,9 +14,9 @@ from pathlib import Path
 
 # --- Configuração de Caminhos ---
 if getattr(sys, 'frozen', False):
-    # PyInstaller --onefile extrai para um diretório temporário
-    BASE_DIR = Path(getattr(sys, '_MEIPASS', sys.executable))
+    # PyInstaller --onefile: os arquivos extraídos estão junto do .exe
     EXE_DIR  = Path(sys.executable).parent
+    BASE_DIR = EXE_DIR
 else:
     BASE_DIR = Path(__file__).parent.parent
     EXE_DIR  = BASE_DIR
