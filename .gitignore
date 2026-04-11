@@ -1,0 +1,32 @@
+# Runtime — dados locais da aplicação (não vão pro repositório)
+data/*
+!data/.gitkeep
+dist/
+*.AppImage
+*.log
+.tvtt.pid
+.tvtt.log
+.server.pid
+.server.log
+.appimagetool
+.appdir-build/
+.appimagetool-squashfs/
+
+# Build artifacts
+windows/build-tmp/
+windows/*.spec
+windows/*.manifest
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos locais de desenvolvimento (não entram no repositório)
+PLANO.md
+CLAUDE.md
+.claude/
+.claw/

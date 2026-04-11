@@ -1,0 +1,170 @@
+/* ═══════════════════════════════════════════════════════════════
+   Dice Skins - Tartantis VTT
+   Use: DiceAnimator.setSkin('skin-name')
+   
+   Default skin: 'classic' (ivory/wood)
+   Available skins: classic, marble, obsidian, ruby, sapphire, emerald, gold, silver, dragon
+══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Classic (ivory/wood) - default */
+  --dice-bg-1: linear-gradient(145deg, #f9f3e1 0%, #ede1c2 55%, #ddd1aa 100%);
+  --dice-bg-2: linear-gradient(145deg, #f5edd8 0%, #e8d9b0 50%, #d8c890 100%);
+  --dice-border: rgba(140, 100, 40, 0.3);
+  --dice-shadow: inset 0 3px 8px rgba(255,255,255,0.72), inset 0 -3px 7px rgba(100,70,20,0.22);
+  --dice-shadow-2: inset 0 4px 10px rgba(255,255,255,0.6), inset 0 -4px 8px rgba(100,70,20,0.3), 0 6px 20px rgba(0,0,0,0.55);
+  --dice-inner-border: rgba(140, 100, 40, 0.25);
+  --dice-num-color: rgba(80, 40, 10, 0.3);
+  --dice-num-settled: #2a1200;
+  --dice-num-shadow: 0 1px 0 rgba(255,220,100,0.6);
+  --dice-label-color: rgba(100, 60, 10, 0.35);
+  --dice-dot-color: #6b3010;
+  --dice-dot-inner: #1a0808;
+  --dice-glow: rgba(212, 168, 67, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(212,168,67,0.65), 0 0 42px rgba(200,80,20,0.35);
+  --dice-light: rgba(255,255,255,0.22);
+}
+
+/* Marble Skin */
+[data-dice-skin="marble"] {
+  --dice-bg-1: linear-gradient(145deg, #f0f0f0 0%, #e0e0e0 50%, #d0d0d0 100%);
+  --dice-bg-2: linear-gradient(145deg, #f5f5f5 0%, #e5e5e5 50%, #d5d5d5 100%);
+  --dice-border: rgba(80, 80, 80, 0.3);
+  --dice-shadow: inset 0 3px 8px rgba(255,255,255,0.8), inset 0 -3px 7px rgba(60,60,60,0.2);
+  --dice-shadow-2: inset 0 4px 10px rgba(255,255,255,0.7), inset 0 -4px 8px rgba(60,60,60,0.25), 0 6px 20px rgba(0,0,0,0.4);
+  --dice-inner-border: rgba(80, 80, 80, 0.2);
+  --dice-num-color: rgba(40, 40, 40, 0.3);
+  --dice-num-settled: #1a1a1a;
+  --dice-num-shadow: 0 1px 0 rgba(255,255,255,0.6);
+  --dice-label-color: rgba(60, 60, 60, 0.35);
+  --dice-dot-color: #404040;
+  --dice-dot-inner: #1a1a1a;
+  --dice-glow: rgba(180, 180, 180, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(180,180,180,0.6), 0 0 42px rgba(150,150,150,0.3);
+}
+
+/* Obsidian (black) */
+[data-dice-skin="obsidian"] {
+  --dice-bg-1: linear-gradient(145deg, #3a3a3a 0%, #2a2a2a 50%, #1a1a1a 100%);
+  --dice-bg-2: linear-gradient(145deg, #454545 0%, #353535 50%, #252525 100%);
+  --dice-border: rgba(100, 100, 100, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(80,80,80,0.5), inset 0 -3px 7px rgba(20,20,20,0.6);
+  --dice-shadow-2: inset 0 4px 10px rgba(60,60,60,0.5), inset 0 -4px 8px rgba(20,20,20,0.5), 0 6px 20px rgba(0,0,0,0.7);
+  --dice-inner-border: rgba(100, 100, 100, 0.3);
+  --dice-num-color: rgba(200, 200, 200, 0.25);
+  --dice-num-settled: #e0e0e0;
+  --dice-num-shadow: 0 1px 0 rgba(0,0,0,0.8);
+  --dice-label-color: rgba(150, 150, 150, 0.3);
+  --dice-dot-color: #909090;
+  --dice-dot-inner: #303030;
+  --dice-glow: rgba(100, 100, 255, 0.8);
+  --dice-glow-shadow: 0 0 18px rgba(80,80,255,0.6), 0 0 42px rgba(60,60,200,0.4);
+}
+
+/* Ruby (red) */
+[data-dice-skin="ruby"] {
+  --dice-bg-1: linear-gradient(145deg, #e85050 0%, #c84040 50%, #a83030 100%);
+  --dice-bg-2: linear-gradient(145deg, #f05858 0%, #d84848 50%, #b83838 100%);
+  --dice-border: rgba(140, 40, 40, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(255,150,150,0.4), inset 0 -3px 7px rgba(80,20,20,0.4);
+  --dice-shadow-2: inset 0 4px 10px rgba(255,120,120,0.35), inset 0 -4px 8px rgba(80,20,20,0.35), 0 6px 20px rgba(0,0,0,0.5);
+  --dice-inner-border: rgba(160, 60, 60, 0.35);
+  --dice-num-color: rgba(180, 80, 80, 0.35);
+  --dice-num-settled: #fff0f0;
+  --dice-num-shadow: 0 1px 0 rgba(80,0,0,0.6);
+  --dice-label-color: rgba(200, 120, 120, 0.4);
+  --dice-dot-color: #600;
+  --dice-dot-inner: #300;
+  --dice-glow: rgba(255, 100, 100, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(255,80,80,0.65), 0 0 42px rgba(200,50,50,0.4);
+}
+
+/* Sapphire (blue) */
+[data-dice-skin="sapphire"] {
+  --dice-bg-1: linear-gradient(145deg, #4080c8 0%, #3060a0 50%, #204078 100%);
+  --dice-bg-2: linear-gradient(145deg, #5088d0 0%, #4068b0 50%, #305088 100%);
+  --dice-border: rgba(40, 60, 120, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(150,180,255,0.35), inset 0 -3px 7px rgba(20,40,80,0.4);
+  --dice-shadow-2: inset 0 4px 10px rgba(120,160,255,0.3), inset 0 -4px 8px rgba(20,40,80,0.35), 0 6px 20px rgba(0,0,0,0.5);
+  --dice-inner-border: rgba(60, 80, 140, 0.35);
+  --dice-num-color: rgba(150, 180, 220, 0.3);
+  --dice-num-settled: #f0f8ff;
+  --dice-num-shadow: 0 1px 0 rgba(0,20,60,0.7);
+  --dice-label-color: rgba(160, 190, 230, 0.35);
+  --dice-dot-color: #103060;
+  --dice-dot-inner: #081830;
+  --dice-glow: rgba(80, 150, 255, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(60,120,255,0.65), 0 0 42px rgba(40,100,200,0.4);
+}
+
+/* Emerald (green) */
+[data-dice-skin="emerald"] {
+  --dice-bg-1: linear-gradient(145deg, #40a050 0%, #308040 50%, #206030 100%);
+  --dice-bg-2: linear-gradient(145deg, #50b060 0%, #409050 50%, #307040 100%);
+  --dice-border: rgba(30, 80, 40, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(150,220,150,0.35), inset 0 -3px 7px rgba(20,60,30,0.4);
+  --dice-shadow-2: inset 0 4px 10px rgba(120,200,120,0.3), inset 0 -4px 8px rgba(20,60,30,0.35), 0 6px 20px rgba(0,0,0,0.5);
+  --dice-inner-border: rgba(40, 100, 50, 0.35);
+  --dice-num-color: rgba(150, 200, 150, 0.3);
+  --dice-num-settled: #f0fff0;
+  --dice-num-shadow: 0 1px 0 rgba(0,40,20,0.7);
+  --dice-label-color: rgba(150, 210, 150, 0.35);
+  --dice-dot-color: #0a4020;
+  --dice-dot-inner: #052010;
+  --dice-glow: rgba(80, 220, 100, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(50,200,80,0.65), 0 0 42px rgba(30,150,60,0.4);
+}
+
+/* Gold */
+[data-dice-skin="gold"] {
+  --dice-bg-1: linear-gradient(145deg, #d4af37 0%, #c5a028 50%, #b69019 100%);
+  --dice-bg-2: linear-gradient(145deg, #e0bc4a 0%, #d4af37 50%, #c5a028 100%);
+  --dice-border: rgba(160, 120, 20, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(255,230,120,0.5), inset 0 -3px 7px rgba(100,70,10,0.4);
+  --dice-shadow-2: inset 0 4px 10px rgba(255,220,100,0.45), inset 0 -4px 8px rgba(100,70,10,0.4), 0 6px 20px rgba(0,0,0,0.5);
+  --dice-inner-border: rgba(180, 140, 40, 0.4);
+  --dice-num-color: rgba(120, 80, 20, 0.35);
+  --dice-num-settled: #3d2a00;
+  --dice-num-shadow: 0 1px 0 rgba(255,200,50,0.5);
+  --dice-label-color: rgba(150, 110, 30, 0.4);
+  --dice-dot-color: #5a4010;
+  --dice-dot-inner: #2a2000;
+  --dice-glow: rgba(255, 200, 50, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(255,180,40,0.65), 0 0 42px rgba(200,140,20,0.4);
+}
+
+/* Silver */
+[data-dice-skin="silver"] {
+  --dice-bg-1: linear-gradient(145deg, #c0c0c0 0%, #a8a8a8 50%, #909090 100%);
+  --dice-bg-2: linear-gradient(145deg, #d0d0d0 0%, #b8b8b8 50%, #a0a0a0 100%);
+  --dice-border: rgba(100, 100, 100, 0.4);
+  --dice-shadow: inset 0 3px 8px rgba(255,255,255,0.6), inset 0 -3px 7px rgba(70,70,70,0.3);
+  --dice-shadow-2: inset 0 4px 10px rgba(255,255,255,0.5), inset 0 -4px 8px rgba(70,70,70,0.3), 0 6px 20px rgba(0,0,0,0.45);
+  --dice-inner-border: rgba(120, 120, 120, 0.3);
+  --dice-num-color: rgba(60, 60, 60, 0.3);
+  --dice-num-settled: #2a2a2a;
+  --dice-num-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  --dice-label-color: rgba(90, 90, 90, 0.35);
+  --dice-dot-color: #505050;
+  --dice-dot-inner: #252525;
+  --dice-glow: rgba(200, 200, 220, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(180,180,200,0.6), 0 0 42px rgba(150,150,180,0.35);
+}
+
+/* Dragon (custom fantasy) */
+[data-dice-skin="dragon"] {
+  --dice-bg-1: linear-gradient(145deg, #4a1c1c 0%, #3a1010 50%, #2a0808 100%);
+  --dice-bg-2: linear-gradient(145deg, #5a2828 0%, #4a1818 50%, #3a0c0c 100%);
+  --dice-border: rgba(180, 60, 20, 0.5);
+  --dice-shadow: inset 0 3px 8px rgba(255,100,50,0.25), inset 0 -3px 7px rgba(60,10,5,0.5);
+  --dice-shadow-2: inset 0 4px 10px rgba(200,80,40,0.2), inset 0 -4px 8px rgba(60,10,5,0.5), 0 6px 20px rgba(0,0,0,0.6);
+  --dice-inner-border: rgba(200, 80, 30, 0.35);
+  --dice-num-color: rgba(200, 100, 50, 0.3);
+  --dice-num-settled: #ffcc99;
+  --dice-num-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 8px rgba(255,100,30,0.3);
+  --dice-label-color: rgba(200, 120, 60, 0.4);
+  --dice-dot-color: #802010;
+  --dice-dot-inner: #400808;
+  --dice-glow: rgba(255, 100, 30, 0.9);
+  --dice-glow-shadow: 0 0 18px rgba(255,80,20,0.65), 0 0 42px rgba(200,50,10,0.4);
+}

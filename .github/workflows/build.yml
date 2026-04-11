@@ -1,0 +1,96 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'          # dispara em tags como v1.2.0, v1.2.1, etc.
+  workflow_dispatch:  # permite rodar manualmente pela aba Actions
+
+jobs:
+
+  # ─────────────────────────────────────────────
+  #  Windows — Instalador
+  # ─────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build com build.bat
+        run: cmd /c windows\build.bat
+
+      - name: Upload artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: TartantisVTT-Windows
+          path: dist/Instalador_TartantisVTT.exe
+
+  # ─────────────────────────────────────────────
+  #  Linux — AppImage
+  # ─────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar dependências
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y wget file libfuse2
+
+      - name: Build AppImage
+        run: bash build-linux.sh
+
+      - name: Upload artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: TartantisVTT-Linux
+          path: TartantisVTT-x86_64.AppImage
+
+  # ─────────────────────────────────────────────
+  #  macOS — .app (zip)
+  # ─────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build .app
+        run: bash build-macos.sh
+
+      - name: Upload artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: TartantisVTT-macOS
+          path: TartantisVTT-macOS.zip
+
+  # ─────────────────────────────────────────────
+  #  Release — publica os três no GitHub Releases
+  # ─────────────────────────────────────────────
+  release:
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar artefatos
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Criar Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('release-{0}', github.run_number) }}
+          files: |
+            dist/Instalador_TartantisVTT.exe
+            dist/TartantisVTT-x86_64.AppImage
+            dist/TartantisVTT-macOS.zip
+          generate_release_notes: false
+          draft: true
