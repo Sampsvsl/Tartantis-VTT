@@ -12,14 +12,17 @@ python --version >nul 2>&1
 if errorlevel 1 ( echo ERRO: Python nao encontrado. & exit /b 1 )
 
 python -m PyInstaller --version >nul 2>&1
-if errorlevel 1 ( 
-  echo Instalando PyInstaller... 
-  python -m pip install pyinstaller 
+if errorlevel 1 (
+  echo Instalando PyInstaller...
+  python -m pip install pyinstaller
 )
 
 cd /d "%~dp0"
 set WIN_DIR=%~dp0
 set ROOT_DIR=%WIN_DIR%..
+
+echo Instalando dependencias Python...
+python -m pip install -r "%ROOT_DIR%\requirements.txt" --quiet
 set TMP_DIR=%WIN_DIR%build-tmp
 
 if exist "%TMP_DIR%" rmdir /s /q "%TMP_DIR%"

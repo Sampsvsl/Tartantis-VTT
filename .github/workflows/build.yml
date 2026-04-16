@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Instalar dependências Python
+        run: pip install -r requirements.txt
+
       - name: Build com build.bat
         run: cmd /c windows\build.bat
 
@@ -41,7 +44,8 @@ jobs:
       - name: Instalar dependências
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y wget file libfuse2
+          sudo apt-get install -y wget file libfuse2 python3-pip
+          pip3 install -r requirements.txt
 
       - name: Build AppImage
         run: bash build-linux.sh
@@ -59,6 +63,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Instalar dependências Python
+        run: pip3 install -r requirements.txt
 
       - name: Build .app
         run: bash build-macos.sh

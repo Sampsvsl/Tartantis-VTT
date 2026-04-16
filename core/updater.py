@@ -2,7 +2,16 @@ import urllib.request
 import json
 from pathlib import Path
 from typing import Tuple, Optional
-from packaging.version import Version
+
+try:
+    from packaging.version import Version
+    def _is_newer(latest: str, current: str) -> bool:
+        return Version(latest) > Version(current)
+except ImportError:
+    def _is_newer(latest: str, current: str) -> bool:
+        def parse(v):
+            return tuple(int(x) for x in v.strip().split('.') if x.isdigit())
+        return parse(latest) > parse(current)
 
 REPO_OWNER = "Sampsvsl"
 REPO_NAME = "Tartantis-VTT"
@@ -37,7 +46,7 @@ def check_for_updates(base_dir: Path) -> Tuple[bool, Optional[str], Optional[str
     current = get_current_version(base_dir)
     latest, url = get_latest_version()
     
-    if latest and Version(latest) > Version(current):
+    if latest and _is_newer(latest, current):
         return True, latest, url
     
     return False, current, url
