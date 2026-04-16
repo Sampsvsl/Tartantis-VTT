@@ -2,6 +2,7 @@ import urllib.request
 import json
 from pathlib import Path
 from typing import Tuple, Optional
+from packaging.version import Version
 
 REPO_OWNER = "Sampsvsl"
 REPO_NAME = "Tartantis-VTT"
@@ -36,9 +37,7 @@ def check_for_updates(base_dir: Path) -> Tuple[bool, Optional[str], Optional[str
     current = get_current_version(base_dir)
     latest, url = get_latest_version()
     
-    if latest and latest != current:
-        # Simple comparison for now, can be improved to handle semver
-        # Assuming latest is always "newer" if different
+    if latest and Version(latest) > Version(current):
         return True, latest, url
     
     return False, current, url
