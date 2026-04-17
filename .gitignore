@@ -1,24 +1,54 @@
 # Runtime — dados locais da aplicação (não vão pro repositório)
 data/*
 !data/.gitkeep
-dist/
-*.AppImage
+*.pid
 *.log
 .tvtt.pid
 .tvtt.log
 .server.pid
 .server.log
+
+# Build/output
+build/
+dist/
+*.AppImage
+*.exe
+*.zip
+*.tar
+*.gz
+*.7z
 .appimagetool
 .appdir-build/
 .appimagetool-squashfs/
-
-# Build artifacts
 windows/build-tmp/
 windows/*.spec
 windows/*.manifest
+
+# Python cache/ambiente
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # OS
 .DS_Store
