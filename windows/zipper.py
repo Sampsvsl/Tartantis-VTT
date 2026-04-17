@@ -22,6 +22,11 @@ def main():
                         # Caminho relativo para dentro do zip
                         rp = os.path.relpath(ap, root_dir)
                         zipf.write(ap, rp)
+
+        # VERSION é usado pelo updater para comparar a versão instalada.
+        version_file = os.path.join(root_dir, 'VERSION')
+        if os.path.exists(version_file):
+            zipf.write(version_file, 'VERSION')
         
         # Adiciona o executável do engine na raiz do zip
         zipf.write(exe_file, 'TartantisVTT.exe')

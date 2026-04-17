@@ -20,7 +20,7 @@ GITHUB_API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/release
 def get_current_version(base_dir: Path) -> str:
     version_file = base_dir / 'VERSION'
     if version_file.exists():
-        return version_file.read_text().strip()
+        return version_file.read_text(encoding='utf-8').strip()
     return "0.0.0"
 
 def get_latest_version() -> Tuple[Optional[str], Optional[str]]:
@@ -32,7 +32,8 @@ def get_latest_version() -> Tuple[Optional[str], Optional[str]]:
         req.add_header('User-Agent', 'TartantisVTT-Updater')
         with urllib.request.urlopen(req, timeout=5) as response:
             data = json.loads(response.read().decode())
-            tag = data.get('tag_name', '').replace('v', '')
+            raw_tag = data.get('tag_name', '').strip()
+            tag = raw_tag[1:] if raw_tag.lower().startswith('v') else raw_tag
             url = data.get('html_url', f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/latest")
             return tag, url
     except Exception as e:
