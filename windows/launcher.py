@@ -23,6 +23,7 @@ import platform
 import http.server
 import socketserver
 import xmlrpc.server
+import tempfile
 from pathlib import Path
 
 # --- Configuração de Caminhos ---
@@ -157,6 +158,7 @@ def main():
 
     def run_gui():
         import tkinter as tk
+        from tkinter import messagebox
         BG, GOLD, EMBER, FG, DIM = '#12100e', '#c8a84b', '#e07b39', '#e8ddc8', '#666655'
         root = tk.Tk()
         root.title("Tartantis VTT")
@@ -181,14 +183,56 @@ def main():
         update_label = tk.Label(root, text='', fg=GOLD, bg=BG, cursor='hand2', font=('', 8, 'underline'))
         update_label.pack(pady=(0, 8))
 
+        def _download_with_progress(url: str, out_path: Path):
+            def _hook(blocks, block_size, total_size):
+                if total_size <= 0:
+                    return
+                pct = int(min(100, (blocks * block_size * 100) / total_size))
+                root.after(0, lambda: update_label.config(text=f'Baixando atualização... {pct}%'))
+            urllib.request.urlretrieve(url, str(out_path), reporthook=_hook)
+
+        def _start_auto_update(ver: str, url: str):
+            try:
+                if not url or not url.lower().endswith('.exe'):
+                    webbrowser.open(url)
+                    return
+                update_label.config(text='Preparando atualização automática...')
+                tmp_dir = Path(tempfile.gettempdir()) / 'TartantisVTT-updater'
+                tmp_dir.mkdir(parents=True, exist_ok=True)
+                installer_path = tmp_dir / f'Instalador_TartantisVTT_v{ver}.exe'
+                _download_with_progress(url, installer_path)
+                update_label.config(text='Atualizando... fechando app atual')
+                subprocess.Popen([
+                    str(installer_path),
+                    '--update-dir', str(EXE_DIR),
+                    '--wait-pid', str(os.getpid()),
+                ], creationflags=0x08000000)
+                root.after(150, root.destroy)
+            except Exception:
+                update_label.config(text='Falha no auto-update. Abrindo página do release...')
+                try:
+                    webbrowser.open('https://github.com/Sampsvsl/Tartantis-VTT/releases/latest')
+                except Exception:
+                    pass
+
         def check_updates_task():
             if not updater:
                 return
             try:
-                available, ver, uurl = updater.check_for_updates(BASE_DIR)
+                available, ver, uurl = updater.check_for_updates(BASE_DIR, platform_hint='windows')
                 if available:
-                    update_label.config(text=f'Nova versão: v{ver} — Clique para baixar')
-                    update_label.bind('<Button-1>', lambda e: webbrowser.open(uurl))
+                    def _ask_and_handle():
+                        update_label.config(text=f'Nova versão: v{ver} disponível')
+                        ok = messagebox.askyesno(
+                            'Atualização disponível',
+                            f'Nova versão v{ver} encontrada.\n\nDeseja atualizar agora automaticamente?'
+                        )
+                        if ok:
+                            threading.Thread(target=_start_auto_update, args=(ver, uurl), daemon=True).start()
+                        else:
+                            update_label.config(text=f'Nova versão: v{ver} — Clique para baixar')
+                            update_label.bind('<Button-1>', lambda e: webbrowser.open(uurl))
+                    root.after(0, _ask_and_handle)
             except:
                 pass
 

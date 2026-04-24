@@ -112,6 +112,28 @@ body { overflow: hidden; user-select: none; }
   width: 3000px; height: 3000px;
   pointer-events: none; z-index: 15;
 }
+#pin-layer {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  pointer-events: none; z-index: 16;
+}
+#ping-layer {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  pointer-events: none; z-index: 30;
+}
+.weather-canvas, #weather-canvas {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  pointer-events: none; z-index: 17;
+  display: none;
+}
+.draw-canvas, #draw-canvas {
+  position: absolute; top: 0; left: 0;
+  width: 3000px; height: 3000px;
+  pointer-events: none; z-index: 14;
+  display: none;
+}
 .fog-canvas, #fog-canvas {
   position: absolute; top: 0; left: 0;
   width: 3000px; height: 3000px;
@@ -132,22 +154,70 @@ body { overflow: hidden; user-select: none; }
 
 /* ── Abas direitas ── */
 .right-tabs {
-  display: flex; border-bottom: 1px solid var(--border);
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.3); flex-shrink: 0;
 }
+.right-tabs-track {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+}
+.rtab-nav {
+  flex: 0 0 18px;
+  width: 18px;
+  border: none;
+  border-right: 1px solid var(--border);
+  background: rgba(0,0,0,0.35);
+  color: var(--dim);
+  font-family: 'Cinzel', serif;
+  font-size: 0.58rem;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.rtab-nav:hover { background: rgba(200,113,42,0.18); color: var(--pale); }
+.rtab-next { display: inline-flex; border-right: none; border-left: 1px solid var(--border); }
+.right-tabs.show-extra .rtab-next { display: none; }
+.right-tabs.show-extra .rtab-prev { display: inline-flex; }
+.right-tabs .rtab[data-tab-page="extra"] { display: none; }
+.right-tabs.show-extra .rtab[data-tab-page="main"] { display: none; }
+.right-tabs.show-extra .rtab[data-tab-page="extra"] { display: inline-block; }
+.right-tabs .rtab[data-tab-page="main"] { display: inline-block; }
+.right-tabs .rtab[data-tab-page="main"],
+.right-tabs .rtab[data-tab-page="extra"] {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .rtab {
-  flex: 1; padding: 9px 4px;
+  padding: 9px 4px;
   background: transparent; border: none;
   color: var(--dim); font-family: 'Cinzel', serif;
-  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  font-size: 0.58rem; letter-spacing: 0.07em; text-transform: uppercase;
   cursor: pointer; transition: all 0.2s;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 .rtab:hover { color: var(--pale); }
 .rtab.active { color: var(--gold); border-bottom-color: var(--ember); }
 
 .rtab-content { display: none; flex: 1; flex-direction: column; overflow: hidden; }
 .rtab-content.active { display: flex; }
+
+.scene-list-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 4px 6px 10px;
+}
 
 /* ── Chat ── */
 .chat-log {
@@ -260,6 +330,204 @@ body { overflow: hidden; user-select: none; }
 }
 .dice-result-detail { font-size: 0.8rem; color: var(--dim); }
 
+/* ── Roll Tables ── */
+.rt-wrap {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+}
+.rt-head {
+  font-family: 'Cinzel', serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.rt-create {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  align-items: stretch;
+}
+.rt-create input {
+  flex: 1;
+  min-width: 0;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--pale);
+  padding: 6px;
+  font-size: 0.82rem;
+}
+.rt-create button {
+  flex: 0 0 auto;
+  min-width: 92px;
+  white-space: nowrap;
+  background: rgba(200,113,42,0.18);
+  border: 1px solid var(--border-h);
+  border-radius: 2px;
+  color: var(--gold);
+  padding: 6px 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.rt-create button:hover { background: rgba(200,113,42,0.3); }
+.rt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rt-card {
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0,0,0,0.24);
+  padding: 6px;
+}
+.rt-row-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.rt-title {
+  flex: 1;
+  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  color: var(--pale);
+  letter-spacing: 0.08em;
+}
+.rt-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--dim);
+  padding: 4px 6px;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+.rt-btn.roll { color: var(--gold); border-color: var(--border-h); }
+.rt-btn.del  { color: #d86f6f; }
+.rt-entry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.rt-entry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--dim);
+}
+.rt-entry-text {
+  flex: 1;
+  color: var(--pale);
+}
+.rt-entry-w {
+  font-size: 0.68rem;
+  color: var(--dim);
+}
+.rt-add-row {
+  display: flex;
+  gap: 4px;
+}
+.rt-add-row input {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--pale);
+  padding: 5px;
+  font-size: 0.78rem;
+}
+.rt-add-row .rt-entry-in { flex: 1; }
+.rt-add-row .rt-weight-in { width: 56px; text-align: center; }
+.rt-empty {
+  color: var(--dim);
+  font-size: 0.78rem;
+  text-align: center;
+  padding: 8px;
+}
+
+/* ── Audio / Playlist ── */
+.audio-wrap {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+}
+.audio-head {
+  font-family: 'Cinzel', serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  color: var(--dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.audio-now {
+  color: var(--pale);
+  font-size: 0.78rem;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: rgba(0,0,0,0.25);
+  margin-bottom: 6px;
+}
+.audio-gm-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.audio-gm-row select,
+.audio-gm-row input[type='range'] {
+  flex: 1;
+}
+.audio-gm-row select {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--pale);
+  padding: 5px;
+  font-size: 0.78rem;
+}
+.audio-pl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.audio-pl-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  font-size: 0.76rem;
+}
+.audio-pl-item.active .audio-pl-name {
+  color: var(--gold);
+}
+.audio-pl-name {
+  flex: 1;
+  color: var(--pale);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.audio-controls .rt-btn {
+  padding: 4px 7px;
+}
+
 /* ── Iniciativa ── */
 .init-panel {
   flex: 1;
@@ -338,6 +606,7 @@ body { overflow: hidden; user-select: none; }
   font-family: 'Cinzel', serif; font-size: 0.5rem; letter-spacing: 0.04em;
   color: var(--pale); text-align: center;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+  line-clamp: 3;
   overflow: hidden; white-space: normal; word-break: break-word;
   width: 76px; line-height: 1.4;
 }
@@ -385,6 +654,7 @@ body { overflow: hidden; user-select: none; }
 .init-add-row .init-num-in {
   flex: none; width: 52px; text-align: center;
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 .init-add-row .init-num-in::-webkit-inner-spin-button,
 .init-add-row .init-num-in::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -589,6 +859,159 @@ body { overflow: hidden; user-select: none; }
 .token.dead .token-hp-bg   { stroke: #5a1010 !important; }
 .token.dead .token-hp-circle { stroke: #8b1a1a !important; }
 .token.dead .token-body { box-shadow: 0 0 14px rgba(180,0,0,0.5), 0 2px 8px rgba(0,0,0,0.7) !important; }
+
+/* ── Condições do token ── */
+.token-conditions {
+  position: absolute; top: 3px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; flex-wrap: nowrap; gap: 2px; z-index: 6;
+  pointer-events: none; justify-content: center;
+  max-width: calc(100% - 8px);
+  overflow: hidden;
+  padding: 1px;
+  border-radius: 4px;
+  background: rgba(8, 8, 8, 0.35);
+}
+.token-conditions[data-size="1"] {
+  max-width: calc(100% - 12px);
+  gap: 1px;
+}
+.token-cond-badge {
+  flex: 0 0 auto;
+  min-width: 16px;
+  font-size: 7px; font-weight: 800; line-height: 1;
+  color: #fff; border-radius: 2px;
+  padding: 2px;
+  font-family: Arial, sans-serif;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+.token-conditions[data-size="1"] .token-cond-badge {
+  min-width: 14px;
+  font-size: 6px;
+  padding: 1px 2px;
+}
+.token-cond-badge.more {
+  background: rgba(20,16,10,0.92) !important;
+  border: 1px solid rgba(212,168,67,0.5);
+  color: var(--gold);
+}
+/* Grid de condições no modal */
+.cond-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;
+  margin: 12px 0;
+}
+.cond-btn {
+  display: flex; align-items: center; gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.03);
+  font-size: 0.6rem; font-family: 'Cinzel', serif; letter-spacing: 0.04em;
+  color: var(--dim); transition: all 0.15s;
+}
+.cond-btn:hover { border-color: var(--border-h); color: var(--pale); background: rgba(255,255,255,0.06); }
+.cond-btn.active { border-color: var(--gold); background: rgba(212,168,67,0.10); color: var(--pale); }
+.cond-btn.active .cond-badge-prev { box-shadow: 0 0 6px rgba(212,168,67,0.6); }
+.cond-badge-prev {
+  flex-shrink: 0; width: 22px; height: 16px;
+  border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 800; color: #fff; font-family: Arial, sans-serif;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+@media (min-width: 440px) {
+  .cond-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── Pins de Journal no mapa ── */
+.map-pin {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  transform: translate(-50%, -100%) rotate(-45deg);
+  pointer-events: auto;
+  cursor: pointer;
+  border: 1px solid rgba(212,168,67,0.8);
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(145deg, rgba(212,168,67,0.95), rgba(159,114,36,0.96));
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+.map-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 7px; height: 7px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  border-radius: 50%;
+  background: rgba(45,32,14,0.95);
+}
+.map-pin:hover {
+  filter: brightness(1.12);
+}
+.pin-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+.pin-modal-field label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+
+/* ── Ping de mapa (hold click) ── */
+.map-ping {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+}
+.map-ping::before,
+.map-ping::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(212,168,67,0.95);
+  box-shadow: 0 0 10px rgba(212,168,67,0.55);
+  animation: pingRipple 0.9s ease-out forwards;
+}
+.map-ping::after {
+  animation-delay: 0.18s;
+}
+.map-ping-core {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 9px; height: 9px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #d4a843;
+  box-shadow: 0 0 10px rgba(212,168,67,0.85);
+}
+.map-ping-label {
+  position: absolute;
+  left: 50%; top: -12px;
+  transform: translate(-50%, -100%);
+  font-family: 'Cinzel', serif;
+  font-size: 0.54rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(212,168,67,0.45);
+  border-radius: 3px;
+  padding: 2px 5px;
+  white-space: nowrap;
+}
+@keyframes pingRipple {
+  0% { transform: scale(0.2); opacity: 1; }
+  100% { transform: scale(4); opacity: 0; }
+}
 
 /* ── Menu de contexto ── */
 .ctx-menu {
@@ -1080,7 +1503,8 @@ body { overflow: hidden; user-select: none; }
   max-height: 310px; grid-template-columns: repeat(auto-fill, minmax(90px,1fr));
 }
 /* Thumbs de bg têm aspect-ratio 16/9 */
-.bg-fex-wrap .fex-card img { aspect-ratio: 16/9; }
+.bg-fex-wrap .fex-card img,
+.bg-fex-wrap .fex-card video { aspect-ratio: 16/9; width: 100%; object-fit: cover; display: block; }
 .bg-fex-wrap .fex-card.active-bg { border-color: var(--ember); border-width: 2px; }
 .bg-upload-progress {
   height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px;
@@ -1093,6 +1517,7 @@ body { overflow: hidden; user-select: none; }
 .bg-empty-msg { color: var(--dim); font-size: 0.82rem; text-align: center; padding: 20px 0; }
 /* Restrições para jogadores */
 body.is-player .gm-only { display: none !important; }
+body.is-player .player-only { display: block !important; }
 
 /* ── Painel GM Tools ── */
 .gm-panel-wrap {
@@ -1220,20 +1645,44 @@ body.is-player .gm-only { display: none !important; }
         <button class="gm-item" onclick="clearAllFog();closeGMPanel()">
           <span class="gm-icon">♻</span> Restaurar Tudo
         </button>
-        <button class="gm-item" onclick="openBgImageModal();closeGMPanel()">
-          <span class="gm-icon">🖼</span> Imagem de Fundo
-        </button>
         <button class="gm-item" onclick="openGridSettings();closeGMPanel()">
           <span class="gm-icon">⚙</span> Calibrar Grade
         </button>
-      </div>
-
-      <!-- Cenas -->
-      <div class="gm-panel-section">
-        <div class="gm-panel-label">Cenas</div>
-        <button class="gm-item" onclick="openSceneManager();closeGMPanel()">
-          <span class="gm-icon">🗺</span> Gerenciar Cenas
+        <button class="gm-item" id="gm-weather-rain" onclick="setWeatherType('rain')">
+          <span class="gm-icon">🌧</span> Chuva
         </button>
+        <button class="gm-item" id="gm-weather-snow" onclick="setWeatherType('snow')">
+          <span class="gm-icon">❄</span> Neve
+        </button>
+        <button class="gm-item" id="gm-weather-mist" onclick="setWeatherType('mist')">
+          <span class="gm-icon">🌫</span> Neblina
+        </button>
+        <button class="gm-item" id="gm-weather-clear" onclick="setWeatherType('none')">
+          <span class="gm-icon">☀</span> Desligar Clima
+          <span class="gm-state" id="gm-weather-state">OFF</span>
+        </button>
+        <button class="gm-item" id="gm-weather-intensity" onclick="cycleWeatherIntensity()">
+          <span class="gm-icon">≋</span> Intensidade
+          <span class="gm-state" id="gm-weather-intensity-state">1x</span>
+        </button>
+        <button class="gm-item" id="gm-draw-toggle" onclick="toggleDrawMode()">
+          <span class="gm-icon">✎</span> Desenho no Mapa
+          <span class="gm-state" id="gm-draw-state">OFF</span>
+        </button>
+        <div id="gm-draw-controls" style="display:none;padding-left:20px">
+          <button class="gm-item" id="gm-draw-pencil" onclick="setDrawTool('pencil')"><span class="gm-icon">✎</span> Lápis</button>
+          <button class="gm-item" id="gm-draw-line" onclick="setDrawTool('line')"><span class="gm-icon">／</span> Linha</button>
+          <button class="gm-item" id="gm-draw-rect" onclick="setDrawTool('rect')"><span class="gm-icon">▭</span> Retângulo</button>
+          <button class="gm-item" id="gm-draw-circle" onclick="setDrawTool('circle')"><span class="gm-icon">◯</span> Círculo</button>
+          <button class="gm-item" id="gm-draw-eraser" onclick="setDrawTool('eraser')"><span class="gm-icon">⌫</span> Borracha</button>
+          <div class="gm-item" style="cursor:default;display:flex;gap:8px;align-items:center">
+            <span class="gm-icon">🎨</span>
+            <input type="color" id="gm-draw-color" value="#d4a843" onchange="setDrawColor(this.value)">
+            <input type="range" id="gm-draw-size" min="1" max="20" value="3" oninput="setDrawSize(this.value)">
+            <span class="gm-state" id="gm-draw-size-state">3px</span>
+          </div>
+          <button class="gm-item" onclick="clearAllDrawings()"><span class="gm-icon">🗑</span> Limpar Desenhos</button>
+        </div>
       </div>
 
       <!-- Avançado -->
@@ -1589,7 +2038,11 @@ body.is-player .gm-only { display: none !important; }
     <div class="map-stage" id="map-stage">
       <canvas id="grid-canvas" width="3000" height="3000"></canvas>
       <canvas id="fog-canvas" width="3000" height="3000"></canvas>
+      <canvas id="draw-canvas" width="3000" height="3000"></canvas>
+      <canvas id="weather-canvas" width="3000" height="3000"></canvas>
       <div id="token-layer"></div>
+      <div id="pin-layer"></div>
+      <div id="ping-layer"></div>
       <!-- Régua -->
       <svg id="ruler-layer" width="3000" height="3000" style="position:absolute;top:0;left:0;pointer-events:none;z-index:900;overflow:visible;">
         <line id="ruler-line" x1="0" y1="0" x2="0" y2="0" stroke="#d4a843" stroke-width="5" stroke-dasharray="10 6" opacity="0.9" style="display:none"></line>
@@ -1612,18 +2065,25 @@ body.is-player .gm-only { display: none !important; }
     <div class="collapse-tab collapse-tab-right" onclick="togglePanel('right')" id="collapse-right" title="Recolher painel">▶</div>
 
     <!-- Abas -->
-    <div class="right-tabs">
-      <button class="rtab active" onclick="switchRTab('chat')">💬 Chat</button>
-      <button class="rtab" onclick="switchRTab('dice')">🎲 Dados</button>
-      <button class="rtab" onclick="switchRTab('init')">🗡 Turno</button>
-      <button class="rtab gm-only" onclick="switchRTab('toklib')" id="tab-toklib" style="display:none">🗃 Tokens</button>
+    <div class="right-tabs" id="right-tabs">
+      <button class="rtab-nav rtab-prev" onclick="setRightTabsPage('main')" title="Mostrar abas principais">◀</button>
+      <div class="right-tabs-track">
+        <button class="rtab active" data-tab-page="main" onclick="switchRTab('chat')">💬 Chat</button>
+        <button class="rtab" data-tab-page="main" onclick="switchRTab('dice')">🎲 Dados</button>
+        <button class="rtab" data-tab-page="main" onclick="switchRTab('init')">🗡 Turno</button>
+        <button class="rtab" data-tab-page="main" onclick="switchRTab('scenes')">🗺 Cenas</button>
+        <button class="rtab" data-tab-page="extra" onclick="switchRTab('rolltables')">🎴 Roll Tables</button>
+        <button class="rtab" data-tab-page="extra" onclick="switchRTab('audio')">🎵 Audio</button>
+        <button class="rtab gm-only" data-tab-page="extra" onclick="switchRTab('toklib')" id="tab-toklib" style="display:none">🗃 Tokens</button>
+      </div>
+      <button class="rtab-nav rtab-next" onclick="setRightTabsPage('extra')" title="Mostrar mais abas">▶</button>
     </div>
 
     <!-- Chat -->
     <div class="rtab-content active" id="rtab-chat">
       <div class="chat-log" id="chat-log"></div>
       <div class="chat-input-row">
-        <input type="text" id="chat-input" placeholder="/r 2d6+3 · /me ação · /lc limpar · mensagem…"
+        <input type="text" id="chat-input" placeholder="/r 2d6+3 · /m help · /me ação · /lc limpar · mensagem…"
                onkeydown="if(event.key==='Enter') sendChat()">
         <button class="send-btn" onclick="sendChat()" title="Enviar">↵</button>
       </div>
@@ -1695,6 +2155,79 @@ body.is-player .gm-only { display: none !important; }
           <button class="skin-btn" onclick="DiceAnimator.setSkin('gold')" title="Ouro" style="background:linear-gradient(145deg,#d4af37,#8b7500);color:#3a2010;">🟨</button>
           <button class="skin-btn" onclick="DiceAnimator.setSkin('silver')" title="Prata" style="background:linear-gradient(145deg,#d0d0d0,#707070);color:#303030;">⬜</button>
           <button class="skin-btn" onclick="DiceAnimator.setSkin('dragon')" title="Dragão" style="background:linear-gradient(145deg,#5a2828,#2a0808);color:#ffaa77;">🐉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roll Tables -->
+    <div class="rtab-content" id="rtab-rolltables">
+      <div class="dice-panel">
+        <div class="rt-wrap" style="margin-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
+          <div class="rt-head">Roll Tables (Encontros, Loot, Eventos)</div>
+          <div class="rt-create" id="rt-create-row">
+            <input type="text" id="rt-new-name" placeholder="Nova tabela...">
+            <button class="roll-custom-btn" onclick="createRollTable()">+ Tabela</button>
+          </div>
+          <div class="rt-list" id="rt-list" style="flex:1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio -->
+    <div class="rtab-content" id="rtab-audio">
+      <div class="dice-panel">
+        <div class="audio-wrap" style="margin-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
+          <div class="audio-head">Audio / Playlist</div>
+          <div class="audio-now" id="audio-now">Nenhuma faixa selecionada.</div>
+
+          <div id="audio-gm-controls">
+            <div class="audio-gm-row" id="audio-upload-row">
+              <label class="rt-btn" style="display:inline-flex;align-items:center;justify-content:center;cursor:pointer">
+                ⬆ Upload
+                <input type="file" id="audio-upload" accept="audio/*" style="display:none" onchange="uploadAudioTrack(this)">
+              </label>
+              <button class="rt-btn" onclick="loadAudioLibrary()">↺ Biblioteca</button>
+            </div>
+            <div class="audio-gm-row">
+              <select id="audio-lib-select"></select>
+              <button class="rt-btn" onclick="addAudioTrackToPlaylist()">+ Playlist</button>
+            </div>
+          </div>
+
+          <div class="audio-pl-list" id="audio-playlist"></div>
+
+          <div class="audio-controls">
+            <button class="rt-btn" id="audio-prev-btn" onclick="audioPrevTrack()">⏮</button>
+            <button class="rt-btn roll" id="audio-play-btn" onclick="audioTogglePlay()">▶</button>
+            <button class="rt-btn" id="audio-next-btn" onclick="audioNextTrack()">⏭</button>
+            <input type="range" id="audio-volume" min="0" max="1" step="0.05" value="0.6" oninput="audioSetVolume(this.value)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cenas -->
+    <div class="rtab-content" id="rtab-scenes">
+      <div class="dice-panel" style="gap:10px;overflow-y:auto">
+        <div class="rt-wrap" style="margin-top:8px">
+          <div class="rt-head">Cenas e Fundo do Mapa</div>
+          <div style="padding:8px 6px 10px;color:var(--dim);font-size:0.8rem;line-height:1.5">
+            Organize aqui a mídia do mapa e o gerenciamento de cenas da mesa.
+          </div>
+          <div class="gm-only" style="display:flex;flex-direction:column;gap:7px;padding:0 6px 10px">
+            <button class="rt-btn" onclick="openBgImageModal()">🖼 Mídia de Fundo</button>
+            <button class="rt-btn" onclick="openGridSettings()">⚙ Calibrar Grade</button>
+            <button class="rt-btn" onclick="sceneCreateFromCurrent()">✦ Salvar Cena Atual</button>
+            <button class="rt-btn" onclick="sceneCreateBlank()">+ Nova Cena Vazia</button>
+            <button class="rt-btn" onclick="_loadSceneList()">↺ Atualizar Lista</button>
+            <div id="scene-list-side" class="scene-list-inline">
+              <div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:14px">Carregando cenas…</div>
+            </div>
+            <button class="rt-btn roll" onclick="openSceneManager()">🗺 Abrir em Modal</button>
+          </div>
+          <div class="player-only" style="padding:0 6px 10px;color:var(--dim);font-size:0.82rem;display:none">
+            Apenas o Mestre pode criar e trocar cenas.
+          </div>
         </div>
       </div>
     </div>
@@ -1795,6 +2328,15 @@ body.is-player .gm-only { display: none !important; }
       </div>
     </div>
     <div class="ficha-field" style="margin-bottom:12px">
+      <label>Tamanho no Grid</label>
+      <select id="tok-size-cells" class="mb-input">
+        <option value="1">1x1 (Médio)</option>
+        <option value="2">2x2 (Grande)</option>
+        <option value="3">3x3 (Enorme)</option>
+        <option value="4">4x4 (Colossal)</option>
+      </select>
+    </div>
+    <div class="ficha-field" style="margin-bottom:12px">
       <label>Cor do Token</label>
       <div class="color-picker-row" id="color-picker"></div>
     </div>
@@ -1834,6 +2376,15 @@ body.is-player .gm-only { display: none !important; }
         <input type="number" id="edit-tok-hpmax" class="mb-input" min="1">
       </div>
     </div>
+    <div class="ficha-field" style="margin-bottom:12px">
+      <label>Tamanho no Grid</label>
+      <select id="edit-tok-size-cells" class="mb-input">
+        <option value="1">1x1 (Médio)</option>
+        <option value="2">2x2 (Grande)</option>
+        <option value="3">3x3 (Enorme)</option>
+        <option value="4">4x4 (Colossal)</option>
+      </select>
+    </div>
     <div class="ficha-field" style="margin-bottom:16px">
       <label>Foto do Token <span style="color:var(--dim);font-size:0.75rem">(opcional)</span></label>
       <div style="display:flex;align-items:center;gap:10px">
@@ -1855,18 +2406,53 @@ body.is-player .gm-only { display: none !important; }
   </div>
 </div>
 
+<!-- ═══════════════ MODAL — Condições do Token ═══════════════ -->
+<div class="modal-overlay" id="modal-conditions" style="display:none" onclick="if(event.target===this) closeModal('modal-conditions')">
+  <div class="modal-box" style="max-width:440px;width:min(95vw,440px)">
+    <button class="modal-close" onclick="closeModal('modal-conditions')">✕</button>
+    <div class="modal-title">🔖 Condições — <span id="cond-tok-name"></span></div>
+    <input type="hidden" id="cond-tok-id">
+    <div class="cond-grid" id="cond-grid"></div>
+    <div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">
+      <button class="cta-btn" style="flex:1 1 160px" onclick="confirmConditions()">✦ Salvar</button>
+      <button class="cta-btn sm" style="flex:1 1 160px;background:rgba(255,255,255,0.05)" onclick="document.querySelectorAll('.cond-btn').forEach(b=>b.classList.remove('active'))">✕ Limpar todas</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL — Pin de Journal ═══════════════ -->
+<div class="modal-overlay" id="modal-map-pin" style="display:none" onclick="if(event.target===this) closeModal('modal-map-pin')">
+  <div class="modal-box" style="max-width:430px">
+    <button class="modal-close" onclick="closeModal('modal-map-pin')">✕</button>
+    <div class="modal-title">📌 Pin de Journal</div>
+    <input type="hidden" id="pin-id">
+    <div class="pin-modal-field">
+      <label>Título</label>
+      <input type="text" id="pin-title" class="mb-input" maxlength="80" placeholder="Ex.: Entrada da caverna">
+    </div>
+    <div class="pin-modal-field">
+      <label>Texto</label>
+      <textarea id="pin-text" class="mb-input" rows="7" maxlength="3000" placeholder="Detalhes do local, dica, lore..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="cta-btn" id="pin-save-btn" onclick="saveMapPinFromModal()">✦ Salvar</button>
+      <button class="cta-btn danger sm" id="pin-delete-btn" onclick="deleteMapPinFromModal()" style="display:none">🗑 Remover</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════ MODAL — Fundo do Mapa ═══════════════ -->
 <div class="modal-overlay" id="modal-bg-image" style="display:none" onclick="if(event.target===this) closeModal('modal-bg-image')">
   <div class="modal-box" style="max-width:520px">
     <button class="modal-close" onclick="closeModal('modal-bg-image')">✕</button>
-    <div class="modal-title">🖼 Imagens de Fundo do Mapa</div>
+    <div class="modal-title">🖼 Fundo do Mapa (Imagem ou Vídeo)</div>
     <div style="margin-bottom:6px; color:var(--dim); font-size:0.8rem">
-      Qualquer formato e resolução — salva em qualidade máxima no computador do Mestre.
+      Imagem ou vídeo em loop (opcional) — salva em qualidade máxima no computador do Mestre.
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
       <label class="cta-btn sm" style="cursor:pointer;margin:0">
-        ⬆ Enviar nova imagem
-        <input type="file" id="bg-img-file" accept="image/*" style="display:none" onchange="uploadBgImage(this)">
+        ⬆ Enviar imagem/vídeo
+        <input type="file" id="bg-img-file" accept="image/*,video/*" style="display:none" onchange="uploadBgImage(this)">
       </label>
       <button class="cta-btn sm danger" onclick="removeBgImage()" id="btn-remove-bg" style="display:none">✕ Remover fundo</button>
     </div>
@@ -2023,6 +2609,27 @@ let CHAR_DATA  = {};
 let CHAR_ID    = 'char_default';
 let INIT_LIST  = [];
 let INIT_TURN  = 0;
+let ROLL_TABLES = [];
+let _pendingPinPos = null;
+let AUDIO_LIBRARY = [];
+let _audioEl = null;
+let _lastAudioSig = '';
+let _drawCanvas = null;
+let _drawCtx = null;
+let _drawTool = 'pencil';
+let _drawColor = '#d4a843';
+let _drawSize = 3;
+let _drawDraft = null;
+let _weatherCanvas = null;
+let _weatherCtx = null;
+let _weatherAnimId = null;
+let _weatherParticles = [];
+let _weatherSignature = '';
+let _weatherLastTs = 0;
+let _pingHoldTimer = null;
+let _pingHoldTriggered = false;
+let _pingHoldStartX = 0;
+let _pingHoldStartY = 0;
 let ACTIVE_TOOL = 'select';
 let SELECTED_TOKEN = null;
 
@@ -2065,6 +2672,33 @@ const TOKEN_COLORS = [
   '#c87040','#40c8b8','#c84090','#8090a0','#d4a843'
 ];
 
+const TOKEN_CONDITIONS = [
+  { id: 'stunned',       code: 'AT', color: '#e67e22', label: 'Atordoado'    },
+  { id: 'poisoned',      code: 'PO', color: '#27ae60', label: 'Envenenado'   },
+  { id: 'frightened',    code: 'AP', color: '#9b59b6', label: 'Apavorado'    },
+  { id: 'burning',       code: 'FO', color: '#e74c3c', label: 'Em Chamas'    },
+  { id: 'bleeding',      code: 'SA', color: '#c0392b', label: 'Sangrando'    },
+  { id: 'paralyzed',     code: 'PA', color: '#2980b9', label: 'Paralisado'   },
+  { id: 'invisible',     code: 'IN', color: '#7f8c8d', label: 'Invisível'    },
+  { id: 'prone',         code: 'CA', color: '#d4a843', label: 'Caído'        },
+  { id: 'blessed',       code: 'AB', color: '#16a085', label: 'Abençoado'    },
+  { id: 'cursed',        code: 'AM', color: '#4a235a', label: 'Amaldiçoado'  },
+  { id: 'concentrating', code: 'CO', color: '#1abc9c', label: 'Concentração' },
+  { id: 'shielded',      code: 'PR', color: '#566573', label: 'Protegido'    },
+];
+
+const TOKEN_SIZE_CELLS_ALLOWED = [1, 2, 3, 4];
+
+function _tokenSizeCells(token) {
+  const raw = parseInt((token && token.sizeCells) || 1, 10);
+  return TOKEN_SIZE_CELLS_ALLOWED.includes(raw) ? raw : 1;
+}
+
+function _tokenSizePx(token) {
+  const gs = MAP_DATA.gridSize || 50;
+  return Math.round(gs * _tokenSizeCells(token) * 0.95);
+}
+
 /* ══════════════════════════════════════════════════════════════
    BOOT — Inicialização completa
 ══════════════════════════════════════════════════════════════ */
@@ -2089,7 +2723,7 @@ const TOKEN_COLORS = [
 
   MAP_DATA = MBState.map.default(); INIT_LIST = [];
   MBState.startSync(code,{
-    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_bgImageCache=null;renderGrid();if(bgChanged)centerMapOnBg();_initFogFromMapData();renderFog();renderWalls();updateGMPanelStates();},
+    onMapUpdate(settings){const prevBg=MAP_DATA.bgImageURL;MAP_DATA={...MAP_DATA,...settings};_ensureAudioState();_ensureWeatherState();_ensureDrawingState();const bgChanged=MAP_DATA.bgImageURL!==prevBg;if(bgChanged)_clearBgMediaCache();renderGrid();if(bgChanged)centerMapOnBg();_initFogFromMapData();renderFog();renderDrawings();renderWeather();renderWalls();renderMapPins();renderAudioUI();_applyAudioState();updateGMPanelStates();},
     onWallsUpdate(walls){if(!MAP_DATA.walls)MAP_DATA.walls=[];MAP_DATA.walls=walls||[];renderWalls();},
     onTokenSet(token){if(!token||!token.id)return;if(!MAP_DATA.tokens)MAP_DATA.tokens=[];const idx=MAP_DATA.tokens.findIndex(t=>t.id===token.id);if(idx>=0)MAP_DATA.tokens[idx]=token;else MAP_DATA.tokens.push(token);renderTokens();_syncTokenHpToFicha(token);},
     onTokenRemove(id){if(!id)return;MAP_DATA.tokens=(MAP_DATA.tokens||[]).filter(t=>t.id!==id);renderTokens();},
@@ -2097,6 +2731,8 @@ const TOKEN_COLORS = [
     onInitUpdate(list){INIT_LIST=list;renderInitList();renderInitCarousel();},
     onInitTurnUpdate(n){if(typeof n==='number'&&n!==INIT_TURN){INIT_TURN=n;renderInitList();renderInitCarousel();}},
     onBlindRollUpdate(val){_blindRoll=!!val;_updateBlindRollUI();},
+    onRollTablesUpdate(list){ROLL_TABLES=Array.isArray(list)?list:[];renderRollTables();},
+    onMapPing(data){_showMapPing(data);},
     onCharUpdate(charData){
       // Atualiza ficha em memória se for a ficha ativa (p.ex. GM vê edição do player)
       if(charData&&charData.id===CHAR_ID){CHAR_DATA={...CHAR_DATA,...charData};loadFicha();}
@@ -2112,15 +2748,24 @@ const TOKEN_COLORS = [
       const tokens      = data.tokens || [];
       const prevBg      = MAP_DATA.bgImageURL;
       MAP_DATA = { ...MBState.map.default(), ...mapSettings };
-      if (MAP_DATA.bgImageURL !== prevBg) _bgImageCache = null;
+      if (MAP_DATA.bgImageURL !== prevBg) _clearBgMediaCache();
       MAP_DATA.tokens = tokens;
-      _bgImageCache = null; // força reload da imagem
+      _clearBgMediaCache(); // força reload da mídia
       renderGrid();
       centerMapOnBg();
       _initFogFromMapData();
       renderFog();
+      _ensureDrawingState();
+      renderDrawings();
+      renderWeather();
       renderWalls();
       renderTokens();
+      renderMapPins();
+      _ensureAudioState();
+      _ensureWeatherState();
+      renderAudioUI();
+      _applyAudioState();
+      renderWeather();
       updateGMPanelStates();
       showToast('🗺 Cena "' + (data.name || 'Cena') + '" ativada');
     }
@@ -2130,6 +2775,10 @@ const TOKEN_COLORS = [
     if(Array.isArray(state.init))INIT_LIST=state.init;
     if(typeof state.init_turn==='number')INIT_TURN=state.init_turn;
     if(typeof state.blind_roll==='boolean')_blindRoll=state.blind_roll;
+    if(Array.isArray(state.rolltables))ROLL_TABLES=state.rolltables;
+    _ensureAudioState();
+    _ensureWeatherState();
+    _ensureDrawingState();
     if(Array.isArray(state.players)) {
       CAMP_PLAYERS = state.players;
       renderGMPlayers();
@@ -2159,7 +2808,12 @@ const TOKEN_COLORS = [
     loadFicha();
     renderGrid();
     renderTokens();
+    renderMapPins();
     renderInitList();
+    renderRollTables();
+    renderAudioUI();
+    loadAudioLibrary();
+    _applyAudioState();
     loadChatHistory();
 
     // Switcher de fichas: disponível para TODOS (GM e players)
@@ -2176,6 +2830,10 @@ const TOKEN_COLORS = [
       if (tabTl) tabTl.remove();
       const tokContent = document.getElementById('rtab-toklib');
       if (tokContent) tokContent.remove();
+      const rtCreate = document.getElementById('rt-create-row');
+      if (rtCreate) rtCreate.style.display = 'none';
+      const audioGm = document.getElementById('audio-gm-controls');
+      if (audioGm) audioGm.style.display = 'none';
     }
 
     setupFichaAutosave();
@@ -2183,6 +2841,8 @@ const TOKEN_COLORS = [
 
     _initFogFromMapData();
     renderFog();
+    renderDrawings();
+    renderWeather();
     renderMapComplete();
     updateVision();
     updateGMPanelStates();
@@ -2195,7 +2855,21 @@ const TOKEN_COLORS = [
       if (tabTl) tabTl.style.display = '';
       // blindRoll via WS onBlindRollUpdate
     }
+    _restoreRightTabState();
     addSysMsg('⚔ Mesa carregada. Bem-vindo, ' + (role === 'gm' ? 'Mestre' : name) + '!');
+
+    // Popula grid de condições no modal
+    const condGrid = document.getElementById('cond-grid');
+    if (condGrid) {
+      TOKEN_CONDITIONS.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'cond-btn';
+        btn.dataset.cond = c.id;
+        btn.onclick = () => toggleCondition(btn);
+        btn.innerHTML = `<span class="cond-badge-prev" style="background:${c.color}">${c.code}</span>${c.label}`;
+        condGrid.appendChild(btn);
+      });
+    }
   }
 })();
 
@@ -2216,19 +2890,152 @@ function showToast(msg) {
 ══════════════════════════════════════════════════════════════ */
 function setTool(tool) {
   ACTIVE_TOOL = tool;
-  document.querySelectorAll('#tool-select, #tool-move, #tool-ruler').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#tool-select, #tool-move, #tool-ruler, #tool-draw').forEach(b => b.classList.remove('active'));
   const el = document.getElementById('tool-' + tool);
   if (el) el.classList.add('active');
   document.getElementById('map-stage').style.cursor =
-    tool === 'move' ? 'grab' : tool === 'addtoken' ? 'cell' : tool === 'ruler' ? 'crosshair' : 'default';
+    tool === 'move' ? 'grab' : tool === 'addtoken' ? 'cell' : tool === 'ruler' ? 'crosshair' : tool === 'draw' ? 'crosshair' : 'default';
+  if (tool !== 'draw') {
+    _drawDraft = null;
+    renderDrawings();
+  }
   if (tool !== 'ruler' && typeof clearRuler === 'function') clearRuler();
+  if (typeof updateGMPanelStates === 'function') updateGMPanelStates();
 }
 
 /* ══════════════════════════════════════════════════════════════
     GRADE (CANVAS)
 ══════════════════════════════════════════════════════════════ */
-let _bgImageCache = null; // { url, img } — imagem de fundo em cache
+let _bgImageCache = null; // { url, kind: 'image'|'video', img?, video? }
 let _bgImgBounds  = null; // { dx, dy, dw, dh } — área da imagem no canvas
+const _BG_VIDEO_MAX_FPS = 24;
+let _bgVideoRaf = 0;
+let _bgVideoLoopOn = false;
+let _bgVideoLastTs = 0;
+
+function _isVideoUrl(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(url || '');
+}
+
+function _stopBgVideoLoop() {
+  _bgVideoLoopOn = false;
+  if (_bgVideoRaf) {
+    cancelAnimationFrame(_bgVideoRaf);
+    _bgVideoRaf = 0;
+  }
+  _bgVideoLastTs = 0;
+}
+
+function _startBgVideoLoop() {
+  if (_bgVideoLoopOn) return;
+  _bgVideoLoopOn = true;
+  const frameInterval = 1000 / _BG_VIDEO_MAX_FPS;
+  const step = (now) => {
+    if (!_bgVideoLoopOn) return;
+    if (!document.hidden && now - _bgVideoLastTs >= frameInterval) {
+      _bgVideoLastTs = now;
+      renderMapComplete();
+    }
+    _bgVideoRaf = requestAnimationFrame(step);
+  };
+  _bgVideoRaf = requestAnimationFrame(step);
+}
+
+function _clearBgMediaCache() {
+  _stopBgVideoLoop();
+  if (_bgImageCache && _bgImageCache.video) {
+    try {
+      _bgImageCache.video.pause();
+      _bgImageCache.video.src = '';
+    } catch (e) {}
+  }
+  _bgImageCache = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!_bgImageCache || !_bgImageCache.video) return;
+  if (document.hidden) {
+    try { _bgImageCache.video.pause(); } catch (e) {}
+  } else {
+    try { _bgImageCache.video.play().catch(() => {}); } catch (e) {}
+  }
+});
+
+function _drawBgFromCache(ctx, cssSize) {
+  if (!MAP_DATA.bgImageURL || !_bgImageCache) return false;
+
+  const media = _bgImageCache.kind === 'video' ? _bgImageCache.video : _bgImageCache.img;
+  if (!media) return false;
+
+  const iw = _bgImageCache.kind === 'video' ? (media.videoWidth || media.width || 0) : (media.naturalWidth || media.width || 0);
+  const ih = _bgImageCache.kind === 'video' ? (media.videoHeight || media.height || 0) : (media.naturalHeight || media.height || 0);
+  if (!iw || !ih) return false;
+
+  const scale = Math.min(cssSize / iw, cssSize / ih);
+  const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
+  const dx = Math.floor((cssSize - dw) / 2), dy = Math.floor((cssSize - dh) / 2);
+  _bgImgBounds = { dx, dy, dw, dh };
+
+  ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
+  ctx.fillRect(0, 0, cssSize, cssSize);
+  ctx.drawImage(media, dx, dy, dw, dh);
+  return true;
+}
+
+function _ensureBgMediaLoaded() {
+  const url = MAP_DATA.bgImageURL || '';
+  if (!url) {
+    _clearBgMediaCache();
+    return;
+  }
+  if (_bgImageCache && _bgImageCache.url === url) return;
+
+  _clearBgMediaCache();
+  const isVideo = _isVideoUrl(url);
+  _bgImageCache = { url, kind: isVideo ? 'video' : 'image', img: null, video: null };
+
+  if (!isVideo) {
+    const imgEl = new Image();
+    imgEl.crossOrigin = 'anonymous';
+    imgEl.onload = () => {
+      if (_bgImageCache && _bgImageCache.url === url) {
+        _bgImageCache.img = imgEl;
+        renderMapComplete();
+      }
+    };
+    imgEl.onerror = () => {
+      if (_bgImageCache && _bgImageCache.url === url) {
+        _clearBgMediaCache();
+        _bgImgBounds = null;
+        renderMapComplete();
+      }
+    };
+    imgEl.src = url;
+    return;
+  }
+
+  const videoEl = document.createElement('video');
+  videoEl.crossOrigin = 'anonymous';
+  videoEl.muted = true;
+  videoEl.loop = true;
+  videoEl.playsInline = true;
+  videoEl.preload = 'auto';
+  videoEl.onloadeddata = () => {
+    if (!_bgImageCache || _bgImageCache.url !== url) return;
+    _bgImageCache.video = videoEl;
+    videoEl.play().catch(() => {});
+    _startBgVideoLoop();
+    renderMapComplete();
+  };
+  videoEl.onerror = () => {
+    if (_bgImageCache && _bgImageCache.url === url) {
+      _clearBgMediaCache();
+      _bgImgBounds = null;
+      renderMapComplete();
+    }
+  };
+  videoEl.src = url;
+}
 
 /* ══════════════════════════════════════════════════════════════
     NÉVOA DE GUERRA (FASE 2)
@@ -2238,6 +3045,366 @@ let _fogCtx    = null;
 let _fogDirty  = true;
 let _fogTool   = null; // 'clear' | 'restore' | null — ferramenta ativa do GM
 let _fogDragging = false;
+
+/* ══════════════════════════════════════════════════════════════
+   CLIMA (FASE 5) — Chuva / Neve / Neblina
+══════════════════════════════════════════════════════════════ */
+function _ensureWeatherState() {
+  if (!MAP_DATA.weather || typeof MAP_DATA.weather !== 'object') {
+    MAP_DATA.weather = { type: 'none', intensity: 1 };
+  }
+  const t = String(MAP_DATA.weather.type || 'none');
+  MAP_DATA.weather.type = (t === 'rain' || t === 'snow' || t === 'mist') ? t : 'none';
+  const i = parseInt(MAP_DATA.weather.intensity, 10);
+  MAP_DATA.weather.intensity = Math.max(1, Math.min(3, Number.isFinite(i) ? i : 1));
+  return MAP_DATA.weather;
+}
+
+function _initWeatherCanvas() {
+  if (_weatherCanvas && _weatherCtx) return;
+  _weatherCanvas = document.getElementById('weather-canvas');
+  _weatherCtx = _weatherCanvas ? _weatherCanvas.getContext('2d') : null;
+}
+
+function _weatherParticleTarget(type, intensity) {
+  if (type === 'rain') return 140 * intensity;
+  if (type === 'snow') return 85 * intensity;
+  if (type === 'mist') return 26 * intensity;
+  return 0;
+}
+
+function _resetWeatherParticles() {
+  const weather = _ensureWeatherState();
+  const type = weather.type;
+  const intensity = weather.intensity;
+  const count = _weatherParticleTarget(type, intensity);
+  _weatherParticles = [];
+  for (let i = 0; i < count; i++) {
+    if (type === 'rain') {
+      _weatherParticles.push({
+        x: Math.random() * 3000,
+        y: Math.random() * 3000,
+        len: 10 + Math.random() * 18,
+        speed: 460 + Math.random() * 360,
+        drift: 80 + Math.random() * 70,
+        alpha: 0.18 + Math.random() * 0.2,
+      });
+    } else if (type === 'snow') {
+      _weatherParticles.push({
+        x: Math.random() * 3000,
+        y: Math.random() * 3000,
+        r: 1 + Math.random() * 2.8,
+        speed: 18 + Math.random() * 42,
+        drift: -18 + Math.random() * 36,
+        phase: Math.random() * Math.PI * 2,
+        alpha: 0.32 + Math.random() * 0.4,
+      });
+    } else if (type === 'mist') {
+      _weatherParticles.push({
+        x: Math.random() * 3000,
+        y: Math.random() * 3000,
+        r: 80 + Math.random() * 160,
+        speed: 5 + Math.random() * 14,
+        drift: -8 + Math.random() * 16,
+        alpha: 0.03 + Math.random() * 0.06,
+      });
+    }
+  }
+}
+
+function _drawWeatherFrame(dtSec) {
+  if (!_weatherCanvas || !_weatherCtx) return;
+  const weather = _ensureWeatherState();
+  const type = weather.type;
+  const intensity = weather.intensity;
+  const ctx = _weatherCtx;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  if (ctx.canvas.width !== 3000 * dpr || ctx.canvas.height !== 3000 * dpr) {
+    ctx.canvas.width = 3000 * dpr;
+    ctx.canvas.height = 3000 * dpr;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, 3000, 3000);
+
+  if (type === 'none') return;
+
+  if (type === 'rain') {
+    ctx.lineWidth = 1.4;
+    for (const p of _weatherParticles) {
+      p.x += p.drift * dtSec;
+      p.y += p.speed * dtSec;
+      if (p.y > 3050) { p.y = -60; p.x = Math.random() * 3000; }
+      if (p.x > 3050) p.x = -50;
+      ctx.strokeStyle = `rgba(170,205,255,${p.alpha + intensity * 0.03})`;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.drift * 0.03, p.y - p.len);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (type === 'snow') {
+    for (const p of _weatherParticles) {
+      p.phase += dtSec;
+      p.x += (p.drift + Math.sin(p.phase * 1.7) * 10) * dtSec;
+      p.y += p.speed * dtSec;
+      if (p.y > 3040) { p.y = -40; p.x = Math.random() * 3000; }
+      if (p.x > 3040) p.x = -40;
+      if (p.x < -40) p.x = 3040;
+      ctx.fillStyle = `rgba(245,250,255,${p.alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  if (type === 'mist') {
+    const tint = 0.05 + intensity * 0.03;
+    ctx.fillStyle = `rgba(180,190,205,${tint})`;
+    ctx.fillRect(0, 0, 3000, 3000);
+    for (const p of _weatherParticles) {
+      p.x += p.drift * dtSec;
+      p.y += p.speed * dtSec;
+      if (p.y > 3200) { p.y = -220; p.x = Math.random() * 3000; }
+      if (p.x > 3200) p.x = -220;
+      if (p.x < -220) p.x = 3200;
+      const g = ctx.createRadialGradient(p.x, p.y, p.r * 0.15, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(215,225,235,${p.alpha})`);
+      g.addColorStop(1, 'rgba(215,225,235,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function _weatherLoop(ts) {
+  if (!_weatherCanvas || !_weatherCtx) {
+    _weatherAnimId = null;
+    return;
+  }
+  const weather = _ensureWeatherState();
+  if (weather.type === 'none') {
+    _weatherAnimId = null;
+    return;
+  }
+  const dtSec = _weatherLastTs ? Math.min(0.05, (ts - _weatherLastTs) / 1000) : 0.016;
+  _weatherLastTs = ts;
+  _drawWeatherFrame(dtSec);
+  _weatherAnimId = requestAnimationFrame(_weatherLoop);
+}
+
+function renderWeather() {
+  _ensureWeatherState();
+  _initWeatherCanvas();
+  if (!_weatherCanvas || !_weatherCtx) return;
+
+  const w = MAP_DATA.weather;
+  if (w.type === 'none') {
+    _weatherCanvas.style.display = 'none';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    _weatherCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    _weatherCtx.clearRect(0, 0, 3000, 3000);
+    if (_weatherAnimId) {
+      cancelAnimationFrame(_weatherAnimId);
+      _weatherAnimId = null;
+    }
+    _weatherSignature = '';
+    _weatherParticles = [];
+    return;
+  }
+
+  _weatherCanvas.style.display = 'block';
+  const sig = `${w.type}:${w.intensity}`;
+  if (_weatherSignature !== sig || !_weatherParticles.length) {
+    _weatherSignature = sig;
+    _resetWeatherParticles();
+  }
+  if (!_weatherAnimId) {
+    _weatherLastTs = 0;
+    _weatherAnimId = requestAnimationFrame(_weatherLoop);
+  }
+}
+
+function setWeatherType(type) {
+  if (SESSION.role !== 'gm') return;
+  const w = _ensureWeatherState();
+  const next = (type === 'rain' || type === 'snow' || type === 'mist') ? type : 'none';
+  if (w.type === next) return;
+  w.type = next;
+  renderWeather();
+  saveMap();
+  updateGMPanelStates();
+  if (next === 'none') showToast('☀ Clima desativado');
+  else if (next === 'rain') showToast('🌧 Chuva ativada');
+  else if (next === 'snow') showToast('❄ Neve ativada');
+  else showToast('🌫 Neblina ativada');
+}
+
+function cycleWeatherIntensity() {
+  if (SESSION.role !== 'gm') return;
+  const w = _ensureWeatherState();
+  w.intensity = (w.intensity % 3) + 1;
+  if (w.type !== 'none') renderWeather();
+  saveMap();
+  updateGMPanelStates();
+  showToast('≋ Intensidade do clima: ' + w.intensity + 'x');
+}
+
+function _ensureDrawingState() {
+  if (!Array.isArray(MAP_DATA.drawings)) MAP_DATA.drawings = [];
+}
+
+function _initDrawCanvas() {
+  if (_drawCanvas && _drawCtx) return;
+  _drawCanvas = document.getElementById('draw-canvas');
+  _drawCtx = _drawCanvas ? _drawCanvas.getContext('2d') : null;
+}
+
+function _drawOneShape(ctx, d, alphaMul = 1) {
+  if (!d) return;
+  const color = d.color || '#d4a843';
+  const size = Math.max(1, parseFloat(d.size) || 2);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.globalAlpha = 0.95 * alphaMul;
+
+  if (d.type === 'pencil' && Array.isArray(d.points) && d.points.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(d.points[0].x, d.points[0].y);
+    for (let i = 1; i < d.points.length; i++) ctx.lineTo(d.points[i].x, d.points[i].y);
+    ctx.stroke();
+  } else if (d.type === 'line') {
+    ctx.beginPath();
+    ctx.moveTo(d.x1, d.y1);
+    ctx.lineTo(d.x2, d.y2);
+    ctx.stroke();
+  } else if (d.type === 'rect') {
+    const x = Math.min(d.x1, d.x2);
+    const y = Math.min(d.y1, d.y2);
+    const w = Math.abs(d.x2 - d.x1);
+    const h = Math.abs(d.y2 - d.y1);
+    ctx.strokeRect(x, y, w, h);
+  } else if (d.type === 'circle') {
+    const r = Math.hypot((d.x2 - d.x1), (d.y2 - d.y1));
+    ctx.beginPath();
+    ctx.arc(d.x1, d.y1, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function renderDrawings() {
+  _ensureDrawingState();
+  _initDrawCanvas();
+  if (!_drawCanvas || !_drawCtx) return;
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (_drawCtx.canvas.width !== 3000 * dpr || _drawCtx.canvas.height !== 3000 * dpr) {
+    _drawCtx.canvas.width = 3000 * dpr;
+    _drawCtx.canvas.height = 3000 * dpr;
+  }
+
+  _drawCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  _drawCtx.clearRect(0, 0, 3000, 3000);
+
+  const hasDraw = (MAP_DATA.drawings && MAP_DATA.drawings.length) || _drawDraft;
+  _drawCanvas.style.display = hasDraw ? 'block' : 'none';
+  if (!hasDraw) return;
+
+  (MAP_DATA.drawings || []).forEach(d => _drawOneShape(_drawCtx, d, 1));
+  if (_drawDraft) _drawOneShape(_drawCtx, _drawDraft, 0.65);
+}
+
+function _isNearRectEdge(px, py, x1, y1, x2, y2, threshold) {
+  const rx1 = Math.min(x1, x2), ry1 = Math.min(y1, y2);
+  const rx2 = Math.max(x1, x2), ry2 = Math.max(y1, y2);
+  if (px < rx1 - threshold || px > rx2 + threshold || py < ry1 - threshold || py > ry2 + threshold) return false;
+  const onL = _pointToSegmentDistance(px, py, rx1, ry1, rx1, ry2) <= threshold;
+  const onR = _pointToSegmentDistance(px, py, rx2, ry1, rx2, ry2) <= threshold;
+  const onT = _pointToSegmentDistance(px, py, rx1, ry1, rx2, ry1) <= threshold;
+  const onB = _pointToSegmentDistance(px, py, rx1, ry2, rx2, ry2) <= threshold;
+  return onL || onR || onT || onB;
+}
+
+function _drawingHitTest(d, x, y, threshold) {
+  if (!d) return false;
+  const pad = threshold + (Math.max(1, parseFloat(d.size) || 2) / 2);
+  if (d.type === 'pencil' && Array.isArray(d.points)) {
+    for (let i = 1; i < d.points.length; i++) {
+      if (_pointToSegmentDistance(x, y, d.points[i - 1].x, d.points[i - 1].y, d.points[i].x, d.points[i].y) <= pad) return true;
+    }
+    return false;
+  }
+  if (d.type === 'line') return _pointToSegmentDistance(x, y, d.x1, d.y1, d.x2, d.y2) <= pad;
+  if (d.type === 'rect') return _isNearRectEdge(x, y, d.x1, d.y1, d.x2, d.y2, pad);
+  if (d.type === 'circle') {
+    const r = Math.hypot((d.x2 - d.x1), (d.y2 - d.y1));
+    const dist = Math.hypot(x - d.x1, y - d.y1);
+    return Math.abs(dist - r) <= pad;
+  }
+  return false;
+}
+
+function _eraseDrawingAt(x, y) {
+  _ensureDrawingState();
+  const before = MAP_DATA.drawings.length;
+  const threshold = Math.max(6, _drawSize + 2);
+  for (let i = MAP_DATA.drawings.length - 1; i >= 0; i--) {
+    if (_drawingHitTest(MAP_DATA.drawings[i], x, y, threshold)) {
+      MAP_DATA.drawings.splice(i, 1);
+      renderDrawings();
+      saveMap();
+      return true;
+    }
+  }
+  return before !== MAP_DATA.drawings.length;
+}
+
+function toggleDrawMode() {
+  if (SESSION.role !== 'gm') return;
+  if (ACTIVE_TOOL === 'draw') setTool('select');
+  else setTool('draw');
+  updateGMPanelStates();
+}
+
+function setDrawTool(tool) {
+  if (SESSION.role !== 'gm') return;
+  _drawTool = ['pencil', 'line', 'rect', 'circle', 'eraser'].includes(tool) ? tool : 'pencil';
+  if (ACTIVE_TOOL !== 'draw') setTool('draw');
+  updateGMPanelStates();
+}
+
+function setDrawColor(color) {
+  if (SESSION.role !== 'gm') return;
+  _drawColor = color || '#d4a843';
+}
+
+function setDrawSize(size) {
+  if (SESSION.role !== 'gm') return;
+  const n = Math.max(1, Math.min(20, parseInt(size, 10) || 3));
+  _drawSize = n;
+  const st = document.getElementById('gm-draw-size-state');
+  if (st) st.textContent = n + 'px';
+}
+
+function clearAllDrawings() {
+  if (SESSION.role !== 'gm') return;
+  if (!confirm('Limpar todos os desenhos do mapa?')) return;
+  MAP_DATA.drawings = [];
+  _drawDraft = null;
+  renderDrawings();
+  saveMap();
+  showToast('🧹 Desenhos removidos.');
+}
 
 /* ══════════════════════════════════════════════════════════════
     PAREDES, PORTAS E JANELAS (FASE 3)
@@ -2607,17 +3774,7 @@ function renderMapComplete() {
 
   ctx.clearRect(0, 0, CSS_SIZE, CSS_SIZE);
 
-  if (MAP_DATA.bgImageURL && _bgImageCache && _bgImageCache.img) {
-    const img = _bgImageCache.img;
-    const iw = img.naturalWidth || img.width;
-    const ih = img.naturalHeight || img.height;
-    const scale = Math.min(CSS_SIZE / iw, CSS_SIZE / ih);
-    const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
-    const dx = Math.floor((CSS_SIZE - dw) / 2);
-    const dy = Math.floor((CSS_SIZE - dh) / 2);
-    ctx.drawImage(img, dx, dy, dw, dh);
-    _bgImgBounds = { dx, dy, dw, dh };
-  } else {
+  if (!_drawBgFromCache(ctx, CSS_SIZE)) {
     ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
     ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
     _bgImgBounds = null;
@@ -2965,36 +4122,9 @@ function renderGrid() {
 
   ctx.clearRect(0, 0, CSS_SIZE, CSS_SIZE);
 
-  // ── Fundo: imagem ou cor sólida ──
-  if (MAP_DATA.bgImageURL) {
-    if (!_bgImageCache || _bgImageCache.url !== MAP_DATA.bgImageURL) {
-      // Carrega imagem e re-renderiza quando pronta
-      _bgImageCache = { url: MAP_DATA.bgImageURL, img: null };
-      const imgEl = new Image();
-      imgEl.crossOrigin = 'anonymous';
-      imgEl.onload = () => { _bgImageCache.img = imgEl; renderMapComplete(); };
-      imgEl.onerror = () => { _bgImageCache = null; _bgImgBounds = null; renderMapComplete(); };
-      imgEl.src = MAP_DATA.bgImageURL;
-    }
-    if (_bgImageCache && _bgImageCache.img) {
-      const img = _bgImageCache.img;
-      const iw = img.naturalWidth  || img.width;
-      const ih = img.naturalHeight || img.height;
-      // "contain": escala uniforme para caber inteira sem distorcer
-      const scale = Math.min(CSS_SIZE / iw, CSS_SIZE / ih);
-      const dw = Math.floor(iw * scale), dh = Math.floor(ih * scale);
-      const dx = Math.floor((CSS_SIZE - dw) / 2), dy = Math.floor((CSS_SIZE - dh) / 2);
-      _bgImgBounds = { dx, dy, dw, dh };
-      // Cor sólida nas bordas que sobram
-      ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
-      ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
-      ctx.drawImage(img, dx, dy, dw, dh);
-    } else {
-      _bgImgBounds = null;
-      ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
-      ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
-    }
-  } else {
+  // ── Fundo: imagem, vídeo (opcional) ou cor sólida ──
+  _ensureBgMediaLoaded();
+  if (!_drawBgFromCache(ctx, CSS_SIZE)) {
     _bgImgBounds = null;
     ctx.fillStyle = MAP_DATA.bgColor || '#1c1712';
     ctx.fillRect(0, 0, CSS_SIZE, CSS_SIZE);
@@ -3061,7 +4191,25 @@ function toggleGrid() {
 function updateGMPanelStates() {
   const gridState = document.getElementById('gm-grid-state');
   const fogState  = document.getElementById('gm-fog-state');
+  const weatherState = document.getElementById('gm-weather-state');
+  const weatherIntensityState = document.getElementById('gm-weather-intensity-state');
+  const weatherRain = document.getElementById('gm-weather-rain');
+  const weatherSnow = document.getElementById('gm-weather-snow');
+  const weatherMist = document.getElementById('gm-weather-mist');
+  const weatherClear = document.getElementById('gm-weather-clear');
+  const drawState = document.getElementById('gm-draw-state');
+  const drawToggle = document.getElementById('gm-draw-toggle');
+  const drawControls = document.getElementById('gm-draw-controls');
+  const drawPencil = document.getElementById('gm-draw-pencil');
+  const drawLine = document.getElementById('gm-draw-line');
+  const drawRect = document.getElementById('gm-draw-rect');
+  const drawCircle = document.getElementById('gm-draw-circle');
+  const drawEraser = document.getElementById('gm-draw-eraser');
+  const drawColor = document.getElementById('gm-draw-color');
+  const drawSize = document.getElementById('gm-draw-size');
+  const drawSizeState = document.getElementById('gm-draw-size-state');
   const fogEnabled = MAP_DATA.fog ? MAP_DATA.fog.enabled : false;
+  const weather = _ensureWeatherState();
   if (gridState) {
     gridState.textContent = MAP_DATA.showGrid ? 'ON' : 'OFF';
     gridState.classList.toggle('on', !!MAP_DATA.showGrid);
@@ -3070,6 +4218,32 @@ function updateGMPanelStates() {
     fogState.textContent = fogEnabled ? 'ON' : 'OFF';
     fogState.classList.toggle('on', fogEnabled);
   }
+  if (weatherState) {
+    weatherState.textContent = weather.type === 'none' ? 'OFF' : weather.type.toUpperCase();
+    weatherState.classList.toggle('on', weather.type !== 'none');
+  }
+  if (weatherIntensityState) {
+    weatherIntensityState.textContent = weather.intensity + 'x';
+    weatherIntensityState.classList.toggle('on', weather.type !== 'none');
+  }
+  if (weatherRain) weatherRain.classList.toggle('on', weather.type === 'rain');
+  if (weatherSnow) weatherSnow.classList.toggle('on', weather.type === 'snow');
+  if (weatherMist) weatherMist.classList.toggle('on', weather.type === 'mist');
+  if (weatherClear) weatherClear.classList.toggle('on', weather.type === 'none');
+  if (drawState) {
+    drawState.textContent = ACTIVE_TOOL === 'draw' ? _drawTool.toUpperCase() : 'OFF';
+    drawState.classList.toggle('on', ACTIVE_TOOL === 'draw');
+  }
+  if (drawToggle) drawToggle.classList.toggle('on', ACTIVE_TOOL === 'draw');
+  if (drawControls) drawControls.style.display = ACTIVE_TOOL === 'draw' ? '' : 'none';
+  if (drawPencil) drawPencil.classList.toggle('on', _drawTool === 'pencil');
+  if (drawLine) drawLine.classList.toggle('on', _drawTool === 'line');
+  if (drawRect) drawRect.classList.toggle('on', _drawTool === 'rect');
+  if (drawCircle) drawCircle.classList.toggle('on', _drawTool === 'circle');
+  if (drawEraser) drawEraser.classList.toggle('on', _drawTool === 'eraser');
+  if (drawColor) drawColor.value = _drawColor;
+  if (drawSize) drawSize.value = String(_drawSize);
+  if (drawSizeState) drawSizeState.textContent = _drawSize + 'px';
   if (_wallEditMode) {
     updateWallsUI();
   }
@@ -3143,9 +4317,7 @@ function resetGridCalibration() {
 function updateMapInfo() { /* info de grade removida */ }
 
 /* ══════════════════════════════════════════════════════════════
-   IMAGEM DE FUNDO DO MAPA
-   A imagem é comprimida no browser para ~1280px, JPEG 78%,
-   ficando entre 80-180 KB como base64.
+  MÍDIA DE FUNDO DO MAPA (imagem ou vídeo opcional)
 ══════════════════════════════════════════════════════════════ */
 
 function openBgImageModal() {
@@ -3203,7 +4375,7 @@ async function uploadBgImage(input) {
     const data = await resp.json();
     if (!data.ok) throw new Error(data.error || 'Erro no upload');
     progressBar.style.width = '100%';
-    statusEl.textContent = `✦ Salvo! (${data.sizeKB} KB — qualidade máxima)`;
+    statusEl.textContent = `✦ Mídia salva! (${data.sizeKB} KB — qualidade máxima)`;
     setTimeout(() => { progressWrap.style.display = 'none'; statusEl.style.display = 'none'; }, 2500);
     input.value = '';
     loadBgGallery();
@@ -3216,7 +4388,7 @@ async function uploadBgImage(input) {
 
 function setBgImage(url) {
   MAP_DATA.bgImageURL = url;
-  _bgImageCache = null;
+  _clearBgMediaCache();
   _bgImgBounds  = null;
   saveMap();
   renderGrid();
@@ -3228,7 +4400,7 @@ function setBgImage(url) {
 
 function removeBgImage() {
   MAP_DATA.bgImageURL = '';
-  _bgImageCache = null;
+  _clearBgMediaCache();
   _bgImgBounds  = null;
   saveMap();
   renderGrid();
@@ -3238,13 +4410,13 @@ function removeBgImage() {
 }
 
 function deleteBgImageServer(filename, url) {
-  if (!confirm('Deletar esta imagem do disco?\nEssa ação não pode ser desfeita.')) return;
+  if (!confirm('Deletar esta mídia do disco?\nEssa ação não pode ser desfeita.')) return;
   const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
   fetch('/api/images/delete?type=bg&name=' + encodeURIComponent(filename), {
     method: 'POST', headers: { 'X-GM-Token': tok }
   }).then(() => {
     if (MAP_DATA.bgImageURL === url) removeBgImage();
-    showToast('🗑 Imagem deletada.');
+    showToast('🗑 Mídia deletada.');
     loadBgGallery();
   }).catch(() => showToast('⚠ Erro ao deletar.'));
 }
@@ -3276,14 +4448,63 @@ function mapContextMenu(e) {
   e.preventDefault();
   e.stopPropagation();
   // Se o evento veio de um token, ele já se registrou — não abre o menu do mapa
-  if (e.target.closest('.token')) return;
+  if (e.target.closest('.token') || e.target.closest('.map-pin')) return;
   const [mx, my] = clientToMap(e.clientX, e.clientY);
   ctxMapX = mx; ctxMapY = my; ctxTokenId = null;
   showCtxMenu(e.clientX, e.clientY, 'map');
 }
 
+function _cancelPingHold() {
+  if (_pingHoldTimer) {
+    clearTimeout(_pingHoldTimer);
+    _pingHoldTimer = null;
+  }
+}
+
+function _sendMapPing(x, y) {
+  const payload = {
+    x: Math.round(x),
+    y: Math.round(y),
+    by: SESSION.role === 'gm' ? 'Mestre' : (SESSION.name || 'Jogador'),
+    pid: SESSION.pid,
+    ts: Date.now(),
+  };
+  _showMapPing(payload);
+  if (SESSION.code && SESSION.code !== 'LOCAL') {
+    _wsSend({ type: 'ping', room: SESSION.code, data: payload });
+  }
+}
+
+function _showMapPing(data) {
+  if (!data || typeof data.x !== 'number' || typeof data.y !== 'number') return;
+  const layer = document.getElementById('ping-layer');
+  if (!layer) return;
+  const ping = document.createElement('div');
+  ping.className = 'map-ping';
+  ping.style.left = data.x + 'px';
+  ping.style.top  = data.y + 'px';
+
+  const core = document.createElement('div');
+  core.className = 'map-ping-core';
+  ping.appendChild(core);
+
+  const label = document.createElement('div');
+  label.className = 'map-ping-label';
+  label.textContent = data.by || 'Ping';
+  ping.appendChild(label);
+
+  layer.appendChild(ping);
+  setTimeout(() => { if (ping.parentNode) ping.remove(); }, 1200);
+}
+
 function mapMouseDown(e) {
   closeCtxMenu();
+
+  if (e.button === 0) {
+    _pingHoldTriggered = false;
+    _pingHoldStartX = e.clientX;
+    _pingHoldStartY = e.clientY;
+  }
 
   // Clique em porta — disponível para todos (GM fora do modo edição e players)
   if (e.button === 0 && !_wallEditMode && !_fogTool) {
@@ -3346,6 +4567,38 @@ function mapMouseDown(e) {
     return;
   }
 
+  // Ferramenta de desenho (GM)
+  if (ACTIVE_TOOL === 'draw' && SESSION.role === 'gm' && e.button === 0) {
+    e.stopPropagation();
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    if (_drawTool === 'eraser') {
+      if (_eraseDrawingAt(mx, my)) showToast('🧽 Traço removido');
+      return;
+    }
+    if (_drawTool === 'pencil') {
+      _drawDraft = {
+        id: 'draw_' + Date.now(),
+        type: 'pencil',
+        color: _drawColor,
+        size: _drawSize,
+        points: [{ x: mx, y: my }],
+      };
+    } else {
+      _drawDraft = {
+        id: 'draw_' + Date.now(),
+        type: _drawTool,
+        color: _drawColor,
+        size: _drawSize,
+        x1: mx,
+        y1: my,
+        x2: mx,
+        y2: my,
+      };
+    }
+    renderDrawings();
+    return;
+  }
+
   // Régua
   if (ACTIVE_TOOL === 'ruler' && e.button === 0) {
     e.stopPropagation();
@@ -3380,6 +4633,7 @@ function mapMouseDown(e) {
 
   // Clique do meio = pan sempre
   if (e.button === 1) {
+    _cancelPingHold();
     isPanning = true;
     panStartX = e.clientX - panOfsX;
     panStartY = e.clientY - panOfsY;
@@ -3389,6 +4643,7 @@ function mapMouseDown(e) {
 
   // Botão direito: inicia pan (drag) — contextmenu cuida do click sem arrastar
   if (e.button === 2) {
+    _cancelPingHold();
     isRightPanning  = true;
     panStartX       = e.clientX - panOfsX;
     panStartY       = e.clientY - panOfsY;
@@ -3402,6 +4657,7 @@ function mapMouseDown(e) {
 
   // Move tool = pan com botão esquerdo
   if (ACTIVE_TOOL === 'move') {
+    _cancelPingHold();
     isPanning = true;
     panStartX = e.clientX - panOfsX;
     panStartY = e.clientY - panOfsY;
@@ -3411,6 +4667,7 @@ function mapMouseDown(e) {
 
   // Add token tool
   if (ACTIVE_TOOL === 'addtoken') {
+    _cancelPingHold();
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     openAddToken(mx, my);
     return;
@@ -3419,10 +4676,24 @@ function mapMouseDown(e) {
   // Select: click no vazio desseleciona
   if (ACTIVE_TOOL === 'select') {
     deselectToken();
+    // Ping estilo Foundry: segurar clique no mapa
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    _cancelPingHold();
+    _pingHoldTimer = setTimeout(() => {
+      _pingHoldTriggered = true;
+      _sendMapPing(mx, my);
+      _pingHoldTimer = null;
+    }, 360);
   }
 }
 
 function mapMouseMove(e) {
+  if (_pingHoldTimer) {
+    const dx = e.clientX - _pingHoldStartX;
+    const dy = e.clientY - _pingHoldStartY;
+    if ((dx * dx + dy * dy) > 64) _cancelPingHold();
+  }
+
   if (_fogDragging && _fogTool && SESSION.role === 'gm') {
     const [mx, my] = clientToMap(e.clientX, e.clientY);
     _handleFogTool(mx, my);
@@ -3457,6 +4728,20 @@ function mapMouseMove(e) {
       _wallHover = wallId;
       renderWalls();
     }
+    return;
+  }
+
+  if (_drawDraft && SESSION.role === 'gm') {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    if (_drawDraft.type === 'pencil') {
+      const pts = _drawDraft.points;
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(mx - last.x, my - last.y) >= 1.5) pts.push({ x: mx, y: my });
+    } else {
+      _drawDraft.x2 = mx;
+      _drawDraft.y2 = my;
+    }
+    renderDrawings();
     return;
   }
 
@@ -3528,7 +4813,7 @@ function clearRuler() {
   });
 }
 
-function _checkWallCollision(newX, newY, gs, oldX, oldY) {
+function _checkWallCollision(newX, newY, token, oldX, oldY) {
   // Filtra apenas paredes e portas fechadas (janelas não bloqueiam movimento)
   const walls = (MAP_DATA.walls || []).filter(w =>
     w.type === 'wall' || (w.type === 'door' && w.open !== true)
@@ -3537,7 +4822,7 @@ function _checkWallCollision(newX, newY, gs, oldX, oldY) {
 
   // Verifica se o caminho do centro do token (old→new) cruza alguma parede
   // Também verifica as 4 arestas do bounding box do token para movimentos diagonais
-  const h = gs * 0.45; // metade do tamanho do token
+  const h = _tokenSizePx(token) / 2;
   const corners = [
     [oldX - h, oldY - h, newX - h, newY - h],
     [oldX + h, oldY - h, newX + h, newY - h],
@@ -3575,6 +4860,8 @@ function _lineIntersectsLine(x1, y1, x2, y2, x3, y3, x4, y4) {
 }
 
 function mapMouseUp(e) {
+  _cancelPingHold();
+
   if (_fogDragging) {
     _fogDragging = false;
     saveMap();
@@ -3587,9 +4874,37 @@ function mapMouseUp(e) {
     return;
   }
 
+  if (_drawDraft && SESSION.role === 'gm' && e.button === 0) {
+    const [mx, my] = clientToMap(e.clientX, e.clientY);
+    if (_drawDraft.type === 'pencil') {
+      const pts = _drawDraft.points;
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(mx - last.x, my - last.y) >= 1.5) pts.push({ x: mx, y: my });
+    } else {
+      _drawDraft.x2 = mx;
+      _drawDraft.y2 = my;
+    }
+    const draft = _drawDraft;
+    _drawDraft = null;
+    _ensureDrawingState();
+    if (draft.type === 'pencil') {
+      if (Array.isArray(draft.points) && draft.points.length > 1) MAP_DATA.drawings.push(draft);
+    } else {
+      const len = Math.hypot((draft.x2 - draft.x1), (draft.y2 - draft.y1));
+      if (len >= 2) MAP_DATA.drawings.push(draft);
+    }
+    renderDrawings();
+    saveMap();
+    return;
+  }
+
   if (isMeasuring && e.button === 0) {
     isMeasuring = false;
     clearRuler();
+  }
+
+  if (_pingHoldTriggered && e.button === 0) {
+    _pingHoldTriggered = false;
   }
 
   if (isPanning) {
@@ -3604,12 +4919,11 @@ function mapMouseUp(e) {
     const tid = dragToken.dataset.id;
     const token = (MAP_DATA.tokens || []).find(t => t.id === tid);
     if (token) {
-      const gs = MAP_DATA.gridSize || 50;
       const oldX = token.x;
       const oldY = token.y;
-      let [newX, newY] = gridSnapXY(parseFloat(dragToken.style.left), parseFloat(dragToken.style.top));
+      let [newX, newY] = gridSnapXY(parseFloat(dragToken.style.left), parseFloat(dragToken.style.top), _tokenSizeCells(token));
       
-      if (_checkWallCollision(newX, newY, gs, oldX, oldY)) {
+      if (_checkWallCollision(newX, newY, token, oldX, oldY)) {
         newX = oldX;
         newY = oldY;
         showToast('🚫 Movimento bloqueado por parede!', 1500);
@@ -3663,11 +4977,17 @@ function clientToMap(cx, cy) {
 function gridSnap(val, gs, offset) {
   return Math.floor((val - offset) / gs) * gs + offset + gs / 2;
 }
-function gridSnapXY(mx, my) {
+function _gridSnapForSize(val, gs, offset, sizeCells) {
+  const isEven = (sizeCells % 2) === 0;
+  const base = isEven ? offset : (offset + gs / 2);
+  return Math.round((val - base) / gs) * gs + base;
+}
+function gridSnapXY(mx, my, sizeCells = 1) {
   const gs  = MAP_DATA.gridSize || 50;
   const ox  = ((_bgImgBounds && _bgImgBounds.dx) || 0) + ((MAP_DATA.gridOffsetX || 0) % gs);
   const oy  = ((_bgImgBounds && _bgImgBounds.dy) || 0) + ((MAP_DATA.gridOffsetY || 0) % gs);
-  return [gridSnap(mx, gs, ox), gridSnap(my, gs, oy)];
+  const sc = TOKEN_SIZE_CELLS_ALLOWED.includes(parseInt(sizeCells, 10)) ? parseInt(sizeCells, 10) : 1;
+  return [_gridSnapForSize(mx, gs, ox, sc), _gridSnapForSize(my, gs, oy, sc)];
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -3697,6 +5017,7 @@ function openAddToken(mapX, mapY) {
   document.getElementById('tok-icon').value = '👤';
   document.getElementById('tok-hp').value = '10';
   document.getElementById('tok-hpmax').value = '10';
+  document.getElementById('tok-size-cells').value = '1';
   // Reset cor
   document.querySelectorAll('#color-picker .color-dot').forEach((d, i) => d.classList.toggle('selected', i === 0));
   // Reset preview de foto
@@ -3714,23 +5035,24 @@ function confirmAddToken() {
   const icon = document.getElementById('tok-icon').value.trim() || '👤';
   const hp   = parseInt(document.getElementById('tok-hp').value) || 10;
   const hpMax = parseInt(document.getElementById('tok-hpmax').value) || 10;
+  const sizeCells = _tokenSizeCells({ sizeCells: parseInt(document.getElementById('tok-size-cells').value, 10) || 1 });
   const colEl = document.querySelector('#color-picker .color-dot.selected');
   const color = colEl ? colEl.dataset.color : TOKEN_COLORS[0];
 
   let px, py;
   if (pendingTokenPos) {
-    [px, py] = gridSnapXY(pendingTokenPos.x, pendingTokenPos.y);
+    [px, py] = gridSnapXY(pendingTokenPos.x, pendingTokenPos.y, sizeCells);
   } else {
     // Centro do mapa visível
     const cont = document.getElementById('map-container').getBoundingClientRect();
     const [mx, my] = clientToMap(cont.left + cont.width / 2, cont.top + cont.height / 2);
-    [px, py] = gridSnapXY(mx, my);
+    [px, py] = gridSnapXY(mx, my, sizeCells);
   }
 
   const imgSrc = _pendingAddTokenImg || null;
   const token = { 
     id: 'tok_' + Date.now(), name, icon, color, hp, hpMax, 
-    x: px, y: py, size: gs, imgSrc,
+    x: px, y: py, sizeCells, size: gs * sizeCells, imgSrc,
     light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
   };
   if (!Array.isArray(MAP_DATA.tokens)) MAP_DATA.tokens = [];
@@ -3761,8 +5083,7 @@ function renderTokens() {
 }
 
 function updateTokenEl(el, token) {
-  const gs = MAP_DATA.gridSize || 50;
-  const size = Math.round(gs * 0.95);
+  const size = _tokenSizePx(token);
   
   el.style.width = size + 'px';
   el.style.height = size + 'px';
@@ -3797,6 +5118,11 @@ function updateTokenEl(el, token) {
 
   // Atualiza anel SVG de HP
   _updateHpRing(el, token);
+
+  // Atualiza condições
+  const oldConds = el.querySelector('.token-conditions');
+  if (oldConds) oldConds.remove();
+  el.appendChild(_makeConditionsEl(token));
 
   const isDead = token.hp <= 0 && token.hpMax > 0;
   el.classList.toggle('dead', isDead);
@@ -3844,6 +5170,40 @@ function _makeHpRingSVG(size, token) {
   return svg;
 }
 
+function _makeConditionsEl(token) {
+  const div = document.createElement('div');
+  div.className = 'token-conditions';
+  const sizeCells = _tokenSizeCells(token);
+  div.dataset.size = String(sizeCells);
+  const conds = token.conditions || [];
+  const maxBadges = sizeCells >= 2 ? 3 : 2;
+  const hasOverflow = conds.length > maxBadges;
+  const visibleCount = hasOverflow ? Math.max(1, maxBadges - 1) : maxBadges;
+  const visibleConds = conds.slice(0, visibleCount);
+  visibleConds.forEach(id => {
+    const c = TOKEN_CONDITIONS.find(x => x.id === id);
+    if (!c) return;
+    const span = document.createElement('span');
+    span.className = 'token-cond-badge';
+    span.textContent = c.code;
+    span.title = c.label;
+    span.style.background = c.color;
+    div.appendChild(span);
+  });
+  if (hasOverflow) {
+    const extra = document.createElement('span');
+    extra.className = 'token-cond-badge more';
+    extra.textContent = '+' + (conds.length - visibleConds.length);
+    extra.title = conds
+      .slice(visibleConds.length)
+      .map(id => TOKEN_CONDITIONS.find(x => x.id === id)?.label)
+      .filter(Boolean)
+      .join(', ');
+    div.appendChild(extra);
+  }
+  return div;
+}
+
 function _updateHpRing(el, token) {
   const svg = el.querySelector('.token-hp-ring');
   if (!svg) return;
@@ -3872,8 +5232,7 @@ function _updateHpRing(el, token) {
 }
 
 function createTokenEl(token) {
-  const gs = MAP_DATA.gridSize || 50;
-  const size = Math.round(gs * 0.95);
+  const size = _tokenSizePx(token);
 
   const el = document.createElement('div');
   el.className = 'token';
@@ -3918,6 +5277,7 @@ function createTokenEl(token) {
 
   el.appendChild(body);
   el.appendChild(hpRing);
+  el.appendChild(_makeConditionsEl(token));
 
   // Eventos
   // dblclick esquerdo = abre menu do token (substituiu o clique direito)
@@ -3986,6 +5346,7 @@ function openEditToken(id) {
   document.getElementById('edit-tok-name').value  = token.name;
   document.getElementById('edit-tok-hp').value    = token.hp;
   document.getElementById('edit-tok-hpmax').value = token.hpMax;
+  document.getElementById('edit-tok-size-cells').value = String(_tokenSizeCells(token));
   // Popula preview de foto
   const prevImg = document.getElementById('edit-tok-img-prev');
   const prevIco = document.getElementById('edit-tok-img-ico');
@@ -4008,6 +5369,9 @@ function confirmEditToken() {
   token.name  = document.getElementById('edit-tok-name').value.trim() || token.name;
   token.hp    = parseInt(document.getElementById('edit-tok-hp').value) || 0;
   token.hpMax = parseInt(document.getElementById('edit-tok-hpmax').value) || token.hpMax;
+  token.sizeCells = _tokenSizeCells({ sizeCells: parseInt(document.getElementById('edit-tok-size-cells').value, 10) || _tokenSizeCells(token) });
+  token.size = (MAP_DATA.gridSize || 50) * token.sizeCells;
+  [token.x, token.y] = gridSnapXY(token.x, token.y, token.sizeCells);
   if (_pendingEditTokenImg !== undefined) token.imgSrc = _pendingEditTokenImg; // null = remover, string = nova foto
   renderTokens();
   saveToken(token);
@@ -4028,6 +5392,7 @@ function showCtxMenu(cx, cy, type) {
   if (type === 'map') {
     if (isGM) {
       addCtxItem('👤 Adicionar Token aqui', () => openAddToken(ctxMapX, ctxMapY));
+      addCtxItem('📌 Novo Pin de Journal', () => openNewMapPinAt(ctxMapX, ctxMapY));
       addCtxItem('▦ Alternar Grade', toggleGrid);
       addCtxItem('🌫 Alternar Névoa', toggleFog);
     }
@@ -4061,6 +5426,7 @@ function showCtxMenu(cx, cy, type) {
       const sep2 = document.createElement('hr');
       sep2.style.cssText = 'border:none;border-top:1px solid #3a2e1e;margin:3px 0;';
       menu.appendChild(sep2);
+      addCtxItem('🔖 Condições', () => openConditionsModal(ctxTokenId));
       addCtxItem('✏ Editar Token', () => openEditToken(ctxTokenId));
       addCtxItem('🗑 Remover Token', () => removeToken(ctxTokenId), true);
     }
@@ -4090,6 +5456,137 @@ function addCtxItem(label, fn, danger = false) {
 
 function closeCtxMenu() {
   document.getElementById('ctx-menu').style.display = 'none';
+}
+
+/* ── Pins de Journal no mapa ── */
+function _ensureMapPins() {
+  if (!Array.isArray(MAP_DATA.journalPins)) MAP_DATA.journalPins = [];
+  return MAP_DATA.journalPins;
+}
+
+function renderMapPins() {
+  const layer = document.getElementById('pin-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const pins = _ensureMapPins();
+  pins.forEach(pin => {
+    const btn = document.createElement('button');
+    btn.className = 'map-pin';
+    btn.type = 'button';
+    btn.style.left = (pin.x || 0) + 'px';
+    btn.style.top  = (pin.y || 0) + 'px';
+    btn.title = pin.title || 'Pin';
+    btn.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openMapPinModal(pin.id);
+    };
+    layer.appendChild(btn);
+  });
+}
+
+function openNewMapPinAt(x, y) {
+  if (SESSION.role !== 'gm') return;
+  _pendingPinPos = { x: x || 0, y: y || 0 };
+  openMapPinModal('');
+}
+
+function openMapPinModal(pinId) {
+  const isGM = SESSION.role === 'gm';
+  const pins = _ensureMapPins();
+  const pin = pinId ? pins.find(p => p.id === pinId) : null;
+
+  const idEl = document.getElementById('pin-id');
+  const titleEl = document.getElementById('pin-title');
+  const textEl = document.getElementById('pin-text');
+  const saveBtn = document.getElementById('pin-save-btn');
+  const delBtn = document.getElementById('pin-delete-btn');
+
+  idEl.value = pin ? pin.id : '';
+  titleEl.value = pin ? (pin.title || '') : '';
+  textEl.value = pin ? (pin.text || '') : '';
+
+  titleEl.disabled = !isGM;
+  textEl.disabled = !isGM;
+  saveBtn.style.display = isGM ? '' : 'none';
+  delBtn.style.display = (isGM && pin) ? '' : 'none';
+
+  openModal('modal-map-pin');
+}
+
+function saveMapPinFromModal() {
+  if (SESSION.role !== 'gm') return;
+  const pins = _ensureMapPins();
+  const idEl = document.getElementById('pin-id');
+  const title = (document.getElementById('pin-title').value || '').trim();
+  const text = (document.getElementById('pin-text').value || '').trim();
+  if (!title && !text) {
+    showToast('Preencha título ou texto.');
+    return;
+  }
+
+  if (idEl.value) {
+    const pin = pins.find(p => p.id === idEl.value);
+    if (!pin) return;
+    pin.title = title || 'Pin';
+    pin.text = text;
+  } else {
+    const pos = _pendingPinPos || { x: 1500, y: 1500 };
+    pins.push({
+      id: 'pin_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      x: pos.x,
+      y: pos.y,
+      title: title || 'Pin',
+      text: text,
+    });
+  }
+
+  _pendingPinPos = null;
+  renderMapPins();
+  saveMap();
+  closeModal('modal-map-pin');
+  showToast('📌 Pin salvo');
+}
+
+function deleteMapPinFromModal() {
+  if (SESSION.role !== 'gm') return;
+  const id = document.getElementById('pin-id').value;
+  if (!id) return;
+  MAP_DATA.journalPins = _ensureMapPins().filter(p => p.id !== id);
+  _pendingPinPos = null;
+  renderMapPins();
+  saveMap();
+  closeModal('modal-map-pin');
+  showToast('🗑 Pin removido');
+}
+
+/* ── Modal de condições ── */
+function openConditionsModal(tokenId) {
+  const tok = (MAP_DATA.tokens || []).find(t => t.id === tokenId);
+  if (!tok) return;
+  document.getElementById('cond-tok-id').value = tokenId;
+  document.getElementById('cond-tok-name').textContent = tok.name;
+  const conds = tok.conditions || [];
+  document.querySelectorAll('.cond-btn').forEach(btn => {
+    btn.classList.toggle('active', conds.includes(btn.dataset.cond));
+  });
+  openModal('modal-conditions');
+}
+
+function toggleCondition(btn) {
+  btn.classList.toggle('active');
+}
+
+function confirmConditions() {
+  const id = document.getElementById('cond-tok-id').value;
+  const tok = (MAP_DATA.tokens || []).find(t => t.id === id);
+  if (!tok) return;
+  tok.conditions = Array.from(document.querySelectorAll('.cond-btn.active'))
+    .map(btn => btn.dataset.cond);
+  renderTokens();
+  saveToken(tok);
+  closeModal('modal-conditions');
+  showToast('🔖 Condições atualizadas');
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -4208,6 +5705,166 @@ function loadChatHistory() {
   });
 }
 
+function _emitLocalChatEntry(entry) {
+  MBState.chat.add(SESSION.code, entry);
+  renderChatMsg(entry, true);
+}
+
+function _macroSystemMsg(text, broadcast = false) {
+  const entry = { type: 'system', text };
+  if (broadcast) _emitLocalChatEntry(entry);
+  else renderChatMsg(entry, true);
+}
+
+function _parseOnOffToggle(input) {
+  const v = String(input || '').toLowerCase();
+  if (v === 'on' || v === '1' || v === 'true') return 'on';
+  if (v === 'off' || v === '0' || v === 'false') return 'off';
+  return 'toggle';
+}
+
+function _parseWeatherType(input) {
+  const v = String(input || '').toLowerCase();
+  if (v === 'rain' || v === 'chuva') return 'rain';
+  if (v === 'snow' || v === 'neve') return 'snow';
+  if (v === 'mist' || v === 'fog' || v === 'neblina') return 'mist';
+  if (v === 'off' || v === 'none' || v === 'clear' || v === 'desligar') return 'none';
+  return null;
+}
+
+function _selectedTokenForMacro() {
+  if (!SELECTED_TOKEN) return null;
+  return (MAP_DATA.tokens || []).find(t => t.id === SELECTED_TOKEN) || null;
+}
+
+function executeChatMacro(raw, author) {
+  const m = String(raw || '').match(/^\/(?:macro|m)\s*(.*)$/i);
+  if (!m) return false;
+
+  const cmdLine = (m[1] || '').trim();
+  if (!cmdLine || /^help$/i.test(cmdLine)) {
+    _macroSystemMsg('Macros: /m roll 2d6+3 | /m grid on|off|toggle | /m fog on|off|toggle | /m weather chuva|neve|neblina|off | /m intensity 1|2|3 | /m ping | /m hp +5|-3');
+    return true;
+  }
+
+  const parts = cmdLine.split(/\s+/);
+  const action = (parts.shift() || '').toLowerCase();
+  const arg = parts.join(' ').trim();
+
+  if (action === 'roll' || action === 'r') {
+    if (!arg) {
+      _macroSystemMsg('Uso: /m roll 2d6+3');
+      return true;
+    }
+    const result = Dice.parse(arg);
+    if (!result.ok) {
+      showToast('⚠ ' + (result.error || 'Expressão inválida'));
+      return true;
+    }
+    if (_blindRoll) {
+      _sendBlindRoll(arg, result);
+      return true;
+    }
+    showDiceResult(result, arg);
+    sendRollToChat(arg, result);
+    return true;
+  }
+
+  if (action === 'ping') {
+    const cont = document.getElementById('map-container');
+    if (!cont) return true;
+    const rect = cont.getBoundingClientRect();
+    const [mx, my] = clientToMap(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    _sendMapPing(mx, my);
+    _macroSystemMsg(author + ' executou macro: ping no centro da tela.', true);
+    return true;
+  }
+
+  if (action === 'hp') {
+    const tok = _selectedTokenForMacro();
+    if (!tok) {
+      _macroSystemMsg('Selecione um token para usar /m hp +N|-N.');
+      return true;
+    }
+    const canEdit = SESSION.role === 'gm' || tok.playerId === SESSION.pid;
+    if (!canEdit) {
+      _macroSystemMsg('Sem permissão para alterar HP desse token.');
+      return true;
+    }
+    const delta = parseInt(arg, 10);
+    if (!Number.isFinite(delta) || delta === 0) {
+      _macroSystemMsg('Uso: /m hp +5 ou /m hp -3');
+      return true;
+    }
+    const oldHp = tok.hp || 0;
+    const maxHp = Math.max(1, tok.hpMax || 1);
+    tok.hp = Math.max(0, Math.min(maxHp, oldHp + delta));
+    renderTokens();
+    saveToken(tok);
+    updateVision();
+    _macroSystemMsg(author + ' ajustou HP de ' + tok.name + ': ' + oldHp + ' -> ' + tok.hp + '.', true);
+    return true;
+  }
+
+  if (SESSION.role !== 'gm') {
+    _macroSystemMsg('Esse macro requer permissão de GM.');
+    return true;
+  }
+
+  if (action === 'grid') {
+    const mode = _parseOnOffToggle(arg);
+    MAP_DATA.showGrid = (mode === 'toggle') ? !MAP_DATA.showGrid : (mode === 'on');
+    renderGrid();
+    saveMap();
+    updateMapInfo();
+    updateGMPanelStates();
+    _macroSystemMsg('Macro GM: grade ' + (MAP_DATA.showGrid ? 'ON' : 'OFF') + '.', true);
+    return true;
+  }
+
+  if (action === 'fog' || action === 'nevoa') {
+    if (!MAP_DATA.fog) MAP_DATA.fog = { enabled: false, cleared: {} };
+    const mode = _parseOnOffToggle(arg);
+    MAP_DATA.fog.enabled = (mode === 'toggle') ? !MAP_DATA.fog.enabled : (mode === 'on');
+    _fogDirty = true;
+    renderFog();
+    saveMap();
+    updateGMPanelStates();
+    _macroSystemMsg('Macro GM: névoa ' + (MAP_DATA.fog.enabled ? 'ON' : 'OFF') + '.', true);
+    return true;
+  }
+
+  if (action === 'weather' || action === 'clima') {
+    const w = _parseWeatherType(arg);
+    if (!w) {
+      _macroSystemMsg('Uso: /m weather chuva|neve|neblina|off');
+      return true;
+    }
+    setWeatherType(w);
+    const label = w === 'none' ? 'OFF' : w.toUpperCase();
+    _macroSystemMsg('Macro GM: clima ' + label + '.', true);
+    return true;
+  }
+
+  if (action === 'intensity' || action === 'weatherint') {
+    const n = parseInt(arg, 10);
+    const weather = _ensureWeatherState();
+    if (Number.isFinite(n) && n >= 1 && n <= 3) {
+      weather.intensity = n;
+      if (weather.type !== 'none') renderWeather();
+      saveMap();
+      updateGMPanelStates();
+      _macroSystemMsg('Macro GM: intensidade do clima ' + n + 'x.', true);
+      return true;
+    }
+    cycleWeatherIntensity();
+    return true;
+  }
+
+  _macroSystemMsg('Macro desconhecido. Use /m help para listar comandos.');
+  return true;
+}
+
 function sendChat() {
   const input = document.getElementById('chat-input');
   const raw   = input.value.trim();
@@ -4215,6 +5872,10 @@ function sendChat() {
   input.value = '';
 
   const author = SESSION.role === 'gm' ? 'Mestre' : SESSION.name;
+
+  if (executeChatMacro(raw, author)) {
+    return;
+  }
 
   // Comando de dado: /r <expr>
   if (raw.match(/^\/r\s+/i)) {
@@ -4296,13 +5957,13 @@ function renderChatMsg(entry, scroll = true) {
       </div>`;
   } else if (entry.type === 'action') {
     div.className = 'chat-msg system';
-    div.innerHTML = `<em>★ ${entry.author} ${entry.text}</em>`;
+    div.innerHTML = `<em>★ ${escHtml(entry.author)} ${escHtml(entry.text)}</em>`;
   } else if (entry.type === 'system') {
     div.className = 'chat-msg system';
-    div.innerHTML = `<em>${entry.text}</em>`;
+    div.innerHTML = `<em>${escHtml(entry.text)}</em>`;
   } else {
     div.className = `chat-msg ${roleClass}`;
-    div.innerHTML = `<span class="chat-author">${entry.author}</span>${escHtml(entry.text)}`;
+    div.innerHTML = `<span class="chat-author">${escHtml(entry.author)}</span>${escHtml(entry.text)}`;
   }
 
   log.appendChild(div);
@@ -4344,6 +6005,469 @@ function rollCustom() {
   if (_blindRoll) { _sendBlindRoll(expr, result); return; }
   showDiceResult(result, expr);
   sendRollToChat(expr, result);
+}
+
+/* ── Roll Tables ── */
+function _saveRollTables() {
+  if (SESSION.role !== 'gm') return;
+  if (SESSION.code && SESSION.code !== 'LOCAL') {
+    MBState.rolltables.save(SESSION.code, ROLL_TABLES);
+  }
+}
+
+function createRollTable() {
+  if (SESSION.role !== 'gm') { showToast('Apenas o Mestre pode criar tabelas.'); return; }
+  const input = document.getElementById('rt-new-name');
+  if (!input) return;
+  const name = (input.value || '').trim();
+  if (!name) { showToast('Digite um nome para a tabela.'); return; }
+  ROLL_TABLES.push({
+    id: 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    name: name,
+    entries: []
+  });
+  input.value = '';
+  renderRollTables();
+  _saveRollTables();
+}
+
+function deleteRollTable(tableId) {
+  if (SESSION.role !== 'gm') return;
+  ROLL_TABLES = (ROLL_TABLES || []).filter(t => t.id !== tableId);
+  renderRollTables();
+  _saveRollTables();
+}
+
+function addRollTableEntry(tableId, text, weight) {
+  if (SESSION.role !== 'gm') return;
+  const t = (ROLL_TABLES || []).find(x => x.id === tableId);
+  if (!t) return;
+  const trimmed = (text || '').trim();
+  const w = parseInt(weight, 10);
+  if (!trimmed) { showToast('Entrada vazia.'); return; }
+  if (isNaN(w) || w < 1) { showToast('Peso deve ser >= 1.'); return; }
+  if (!Array.isArray(t.entries)) t.entries = [];
+  t.entries.push({ text: trimmed, weight: w });
+  renderRollTables();
+  _saveRollTables();
+}
+
+function removeRollTableEntry(tableId, idx) {
+  if (SESSION.role !== 'gm') return;
+  const t = (ROLL_TABLES || []).find(x => x.id === tableId);
+  if (!t || !Array.isArray(t.entries)) return;
+  t.entries.splice(idx, 1);
+  renderRollTables();
+  _saveRollTables();
+}
+
+function _weightedPick(entries) {
+  const pool = (entries || []).filter(e => e && e.text && Number(e.weight) > 0);
+  if (!pool.length) return null;
+  const total = pool.reduce((acc, e) => acc + Number(e.weight), 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < pool.length; i++) {
+    r -= Number(pool[i].weight);
+    if (r <= 0) return pool[i];
+  }
+  return pool[pool.length - 1];
+}
+
+function rollOnTable(tableId) {
+  const t = (ROLL_TABLES || []).find(x => x.id === tableId);
+  if (!t) return;
+  const pick = _weightedPick(t.entries || []);
+  if (!pick) { showToast('Tabela sem entradas válidas.'); return; }
+
+  const text = '🎲 [' + t.name + '] ' + pick.text;
+  const entry = { type: 'system', text: text, role: SESSION.role };
+  MBState.chat.add(SESSION.code, entry);
+  renderChatMsg(entry, true);
+  document.getElementById('dice-result-total').textContent = 'RT';
+  document.getElementById('dice-result-detail').textContent = t.name + ': ' + pick.text;
+}
+
+function renderRollTables() {
+  const root = document.getElementById('rt-list');
+  if (!root) return;
+  root.innerHTML = '';
+
+  if (!Array.isArray(ROLL_TABLES) || !ROLL_TABLES.length) {
+    const empty = document.createElement('div');
+    empty.className = 'rt-empty';
+    empty.textContent = 'Nenhuma tabela criada.';
+    root.appendChild(empty);
+    return;
+  }
+
+  ROLL_TABLES.forEach(table => {
+    const card = document.createElement('div');
+    card.className = 'rt-card';
+
+    const top = document.createElement('div');
+    top.className = 'rt-row-top';
+
+    const title = document.createElement('div');
+    title.className = 'rt-title';
+    title.textContent = table.name || 'Tabela';
+    top.appendChild(title);
+
+    const rollBtn = document.createElement('button');
+    rollBtn.className = 'rt-btn roll';
+    rollBtn.textContent = 'Rolar';
+    rollBtn.onclick = () => rollOnTable(table.id);
+    top.appendChild(rollBtn);
+
+    if (SESSION.role === 'gm') {
+      const delBtn = document.createElement('button');
+      delBtn.className = 'rt-btn del';
+      delBtn.textContent = 'Excluir';
+      delBtn.onclick = () => deleteRollTable(table.id);
+      top.appendChild(delBtn);
+    }
+
+    card.appendChild(top);
+
+    const list = document.createElement('div');
+    list.className = 'rt-entry-list';
+    const entries = Array.isArray(table.entries) ? table.entries : [];
+    if (!entries.length) {
+      const e = document.createElement('div');
+      e.className = 'rt-empty';
+      e.textContent = 'Sem entradas.';
+      list.appendChild(e);
+    } else {
+      entries.forEach((en, idx) => {
+        const row = document.createElement('div');
+        row.className = 'rt-entry';
+
+        const txt = document.createElement('div');
+        txt.className = 'rt-entry-text';
+        txt.textContent = en.text || '';
+        row.appendChild(txt);
+
+        const wt = document.createElement('div');
+        wt.className = 'rt-entry-w';
+        wt.textContent = 'peso ' + (parseInt(en.weight, 10) || 1);
+        row.appendChild(wt);
+
+        if (SESSION.role === 'gm') {
+          const rm = document.createElement('button');
+          rm.className = 'rt-btn del';
+          rm.textContent = 'x';
+          rm.onclick = () => removeRollTableEntry(table.id, idx);
+          row.appendChild(rm);
+        }
+        list.appendChild(row);
+      });
+    }
+
+    card.appendChild(list);
+
+    if (SESSION.role === 'gm') {
+      const addRow = document.createElement('div');
+      addRow.className = 'rt-add-row';
+
+      const inputText = document.createElement('input');
+      inputText.className = 'rt-entry-in';
+      inputText.type = 'text';
+      inputText.placeholder = 'Nova entrada...';
+
+      const inputWeight = document.createElement('input');
+      inputWeight.className = 'rt-weight-in';
+      inputWeight.type = 'number';
+      inputWeight.min = '1';
+      inputWeight.value = '1';
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'rt-btn';
+      addBtn.textContent = '+ Item';
+      addBtn.onclick = () => {
+        addRollTableEntry(table.id, inputText.value, inputWeight.value);
+      };
+
+      inputText.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter') addRollTableEntry(table.id, inputText.value, inputWeight.value);
+      });
+
+      addRow.appendChild(inputText);
+      addRow.appendChild(inputWeight);
+      addRow.appendChild(addBtn);
+      card.appendChild(addRow);
+    }
+
+    root.appendChild(card);
+  });
+}
+
+/* ── Audio / Playlist ── */
+function _ensureAudioEl() {
+  if (_audioEl) return _audioEl;
+  _audioEl = document.createElement('audio');
+  _audioEl.preload = 'auto';
+  _audioEl.style.display = 'none';
+  _audioEl.addEventListener('ended', () => {
+    if (SESSION.role === 'gm') audioNextTrack();
+  });
+  document.body.appendChild(_audioEl);
+  return _audioEl;
+}
+
+function _ensureAudioState() {
+  if (!MAP_DATA.audio || typeof MAP_DATA.audio !== 'object') {
+    MAP_DATA.audio = { playlist: [], currentId: null, playing: false, volume: 0.6, startedAt: 0, pausedAt: 0 };
+  }
+  if (!Array.isArray(MAP_DATA.audio.playlist)) MAP_DATA.audio.playlist = [];
+  if (typeof MAP_DATA.audio.volume !== 'number') MAP_DATA.audio.volume = 0.6;
+  if (typeof MAP_DATA.audio.pausedAt !== 'number') MAP_DATA.audio.pausedAt = 0;
+  if (typeof MAP_DATA.audio.startedAt !== 'number') MAP_DATA.audio.startedAt = 0;
+  return MAP_DATA.audio;
+}
+
+function _audioCurrentTrack() {
+  const a = _ensureAudioState();
+  return (a.playlist || []).find(t => t.id === a.currentId) || null;
+}
+
+function _audioSyncSave() {
+  if (SESSION.role !== 'gm') return;
+  saveMap();
+  renderAudioUI();
+  _applyAudioState();
+}
+
+function loadAudioLibrary() {
+  fetch('/api/images/list?type=audio')
+    .then(r => r.ok ? r.json() : null)
+    .then(d => {
+      AUDIO_LIBRARY = d && Array.isArray(d.images) ? d.images : [];
+      const sel = document.getElementById('audio-lib-select');
+      if (!sel) return;
+      sel.innerHTML = '';
+      if (!AUDIO_LIBRARY.length) {
+        const op = document.createElement('option');
+        op.value = '';
+        op.textContent = 'Sem áudio na biblioteca';
+        sel.appendChild(op);
+        return;
+      }
+      AUDIO_LIBRARY.forEach(item => {
+        const op = document.createElement('option');
+        op.value = item.url;
+        op.textContent = item.filename;
+        sel.appendChild(op);
+      });
+    })
+    .catch(() => {
+      const sel = document.getElementById('audio-lib-select');
+      if (sel) sel.innerHTML = '<option value="">Erro ao carregar biblioteca</option>';
+    });
+}
+
+function uploadAudioTrack(input) {
+  if (SESSION.role !== 'gm') return;
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  fetch('/api/images/upload?type=audio&name=' + encodeURIComponent(file.name), {
+    method: 'POST',
+    headers: { 'X-GM-Token': tok },
+    body: file,
+  })
+    .then(r => r.ok ? r.json() : null)
+    .then(() => {
+      showToast('🔊 Áudio enviado para biblioteca');
+      if (input) input.value = '';
+      loadAudioLibrary();
+    })
+    .catch(() => showToast('⚠ Erro ao enviar áudio'));
+}
+
+function addAudioTrackToPlaylist() {
+  if (SESSION.role !== 'gm') return;
+  const sel = document.getElementById('audio-lib-select');
+  if (!sel || !sel.value) return;
+  const item = AUDIO_LIBRARY.find(x => x.url === sel.value);
+  if (!item) return;
+  const a = _ensureAudioState();
+  a.playlist.push({
+    id: 'aud_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    name: item.filename,
+    url: item.url,
+  });
+  if (!a.currentId) a.currentId = a.playlist[0].id;
+  _audioSyncSave();
+}
+
+function removeAudioTrack(trackId) {
+  if (SESSION.role !== 'gm') return;
+  const a = _ensureAudioState();
+  a.playlist = (a.playlist || []).filter(t => t.id !== trackId);
+  if (a.currentId === trackId) {
+    a.currentId = a.playlist.length ? a.playlist[0].id : null;
+    a.playing = false;
+    a.pausedAt = 0;
+  }
+  _audioSyncSave();
+}
+
+function audioPlayTrack(trackId) {
+  if (SESSION.role !== 'gm') return;
+  const a = _ensureAudioState();
+  if (!(a.playlist || []).some(t => t.id === trackId)) return;
+  a.currentId = trackId;
+  a.pausedAt = 0;
+  a.startedAt = Date.now();
+  a.playing = true;
+  _audioSyncSave();
+}
+
+function audioTogglePlay() {
+  if (SESSION.role !== 'gm') return;
+  const a = _ensureAudioState();
+  if (!a.currentId && a.playlist.length) a.currentId = a.playlist[0].id;
+  if (!a.currentId) { showToast('Adicione uma faixa na playlist.'); return; }
+
+  if (a.playing) {
+    const el = _ensureAudioEl();
+    a.pausedAt = Number.isFinite(el.currentTime) ? el.currentTime : a.pausedAt;
+    a.playing = false;
+  } else {
+    const pauseAt = Math.max(0, a.pausedAt || 0);
+    a.startedAt = Date.now() - Math.floor(pauseAt * 1000);
+    a.playing = true;
+  }
+  _audioSyncSave();
+}
+
+function _audioMove(delta) {
+  const a = _ensureAudioState();
+  const pl = a.playlist || [];
+  if (!pl.length) return;
+  let idx = pl.findIndex(t => t.id === a.currentId);
+  if (idx < 0) idx = 0;
+  idx = (idx + delta + pl.length) % pl.length;
+  a.currentId = pl[idx].id;
+  a.pausedAt = 0;
+  a.startedAt = Date.now();
+  a.playing = true;
+  _audioSyncSave();
+}
+
+function audioNextTrack() {
+  if (SESSION.role !== 'gm') return;
+  _audioMove(1);
+}
+
+function audioPrevTrack() {
+  if (SESSION.role !== 'gm') return;
+  _audioMove(-1);
+}
+
+function audioSetVolume(v) {
+  if (SESSION.role !== 'gm') return;
+  const a = _ensureAudioState();
+  const vol = Math.max(0, Math.min(1, parseFloat(v)));
+  a.volume = Number.isFinite(vol) ? vol : 0.6;
+  _audioSyncSave();
+}
+
+function renderAudioUI() {
+  const a = _ensureAudioState();
+  const now = document.getElementById('audio-now');
+  const list = document.getElementById('audio-playlist');
+  const playBtn = document.getElementById('audio-play-btn');
+  const vol = document.getElementById('audio-volume');
+  if (!now || !list || !playBtn || !vol) return;
+
+  const cur = _audioCurrentTrack();
+  now.textContent = cur ? ((a.playing ? '🔊 Tocando: ' : '⏸ Pausado: ') + cur.name) : 'Nenhuma faixa selecionada.';
+  playBtn.textContent = a.playing ? '⏸' : '▶';
+  vol.value = String(a.volume || 0.6);
+
+  list.innerHTML = '';
+  if (!a.playlist.length) {
+    list.innerHTML = '<div class="rt-empty">Playlist vazia.</div>';
+    return;
+  }
+
+  a.playlist.forEach(track => {
+    const row = document.createElement('div');
+    row.className = 'audio-pl-item' + (track.id === a.currentId ? ' active' : '');
+
+    const name = document.createElement('div');
+    name.className = 'audio-pl-name';
+    name.textContent = track.name;
+    row.appendChild(name);
+
+    if (SESSION.role === 'gm') {
+      const play = document.createElement('button');
+      play.className = 'rt-btn';
+      play.textContent = '▶';
+      play.onclick = () => audioPlayTrack(track.id);
+      row.appendChild(play);
+
+      const rm = document.createElement('button');
+      rm.className = 'rt-btn del';
+      rm.textContent = 'x';
+      rm.onclick = () => removeAudioTrack(track.id);
+      row.appendChild(rm);
+    }
+
+    list.appendChild(row);
+  });
+}
+
+function _applyAudioState() {
+  const a = _ensureAudioState();
+  const cur = _audioCurrentTrack();
+  const el = _ensureAudioEl();
+
+  const sig = [
+    cur ? cur.id : 'none',
+    a.playing ? '1' : '0',
+    Math.round((a.startedAt || 0) / 100),
+    Math.round((a.pausedAt || 0) * 10),
+    Math.round((a.volume || 0.6) * 100),
+  ].join('|');
+  if (sig === _lastAudioSig) return;
+  _lastAudioSig = sig;
+
+  if (!cur || !cur.url) {
+    el.pause();
+    el.removeAttribute('src');
+    return;
+  }
+
+  const absUrl = cur.url.startsWith('http') ? cur.url : cur.url;
+  if (!el.src || !el.src.endsWith(absUrl)) {
+    el.src = absUrl;
+    try { el.load(); } catch (_) {}
+  }
+  el.volume = Math.max(0, Math.min(1, a.volume || 0.6));
+
+  const targetTime = a.playing
+    ? Math.max(0, (Date.now() - (a.startedAt || Date.now())) / 1000)
+    : Math.max(0, a.pausedAt || 0);
+
+  const seekApply = () => {
+    if (Number.isFinite(targetTime)) {
+      try {
+        const maxDur = Number.isFinite(el.duration) ? Math.max(0, el.duration - 0.25) : targetTime;
+        el.currentTime = Math.min(targetTime, maxDur);
+      } catch (_) {}
+    }
+    if (a.playing) {
+      el.play().catch(() => {
+        if (SESSION.role !== 'gm') showToast('🔈 Clique na tela para habilitar áudio do navegador.');
+      });
+    } else {
+      el.pause();
+    }
+  };
+
+  if (el.readyState >= 1) seekApply();
+  else el.onloadedmetadata = () => seekApply();
 }
 
 /* ── Popup Vantagem / Desvantagem ── */
@@ -5650,6 +7774,7 @@ function _doPlaceToken(placementInfo, px, py) {
         hp:       charData.pv    || 20,
         hpMax:    charData.pvMax || 20,
         x: px, y: py,
+        sizeCells: 1,
         size: gs,
         playerId: pid,
         light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
@@ -5686,6 +7811,7 @@ function _doPlaceToken(placementInfo, px, py) {
       hp:       charData.pv    || 20,
       hpMax:    charData.pvMax || 20,
       x: px, y: py,
+      sizeCells: 1,
       size: gs,
       playerId: pid,
       light: { enabled: false, radius: 6, dimRadius: 9, color: '#fffbe6' }
@@ -5806,8 +7932,26 @@ function setupFichaAutosave() {
     if (ind) { ind.textContent = 'Salvando…'; ind.classList.remove('saved'); }
     saveTimer = setTimeout(saveFicha, 1200);
   });
-  // Garante salvamento mesmo se o jogador fechar/navegar antes do debounce
-  window.addEventListener('beforeunload', () => { if (SESSION.role !== 'gm') saveFicha(); });
+  // Garante salvamento mesmo se o usuário fechar/navegar antes do debounce
+  window.addEventListener('beforeunload', () => {
+    if (CHAR_ID === 'char_default' || !SESSION.code || SESSION.code === 'LOCAL') return;
+    saveFicha(); // atualiza CHAR_DATA
+    // keepalive: true garante que o browser entrega a requisição mesmo fechando a aba
+    // (fetch normal seria cancelado pelo browser no unload)
+    try {
+      const gt = sessionStorage.getItem('tvtt_gm_tok') || '';
+      const pt = sessionStorage.getItem('tvtt_plr_tok') || '';
+      const pi = sessionStorage.getItem('tvtt_plr_id') || SESSION.pid || '';
+      const h  = { 'Content-Type': 'application/json' };
+      if (gt) h['X-GM-Token'] = gt;
+      if (pt) { h['X-Player-Token'] = pt; h['X-Player-Id'] = pi; }
+      fetch(`/api/room/${SESSION.code}/char/${CHAR_ID}`, {
+        method: 'POST', headers: h,
+        body: JSON.stringify(CHAR_DATA),
+        keepalive: true
+      });
+    } catch(e) {}
+  });
 }
 
 /* ── Salva ficha ── */
@@ -5901,12 +8045,28 @@ function toggleSection(header) {
   if (icon) icon.textContent = collapsed ? '▸' : '▾';
 }
 
+function setRightTabsPage(page) {
+  const el = document.getElementById('right-tabs');
+  if (!el) return;
+  el.classList.toggle('show-extra', page === 'extra');
+  try {
+    const code = (SESSION && SESSION.code) ? SESSION.code : 'LOCAL';
+    localStorage.setItem('tvtt_right_tab_page_' + code, page === 'extra' ? 'extra' : 'main');
+  } catch (_) {}
+}
+
 /* ══════════════════════════════════════════════════════════════
    ABAS DO PAINEL DIREITO
 ══════════════════════════════════════════════════════════════ */
-function switchRTab(tab) {
+function switchRTab(tab, opts) {
+  const persist = !opts || opts.persist !== false;
   // Aba administrativa: só GM pode acessar
   if (tab === 'toklib' && SESSION.role !== 'gm') return;
+  if (['rolltables', 'audio', 'toklib'].includes(tab)) {
+    setRightTabsPage('extra');
+  } else {
+    setRightTabsPage('main');
+  }
   document.querySelectorAll('.rtab').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.rtab-content').forEach(c => c.classList.remove('active'));
   const tabEl = document.getElementById('rtab-' + tab);
@@ -5918,8 +8078,32 @@ function switchRTab(tab) {
       b.classList.add('active');
     }
   });
+  if (persist) {
+    try {
+      const code = (SESSION && SESSION.code) ? SESSION.code : 'LOCAL';
+      localStorage.setItem('tvtt_right_tab_' + code, tab);
+    } catch (_) {}
+  }
   // Carrega biblioteca de tokens ao abrir aba
   if (tab === 'toklib') loadTokenLibrary();
+  if (tab === 'scenes' && SESSION.role === 'gm') _loadSceneList();
+}
+
+function _restoreRightTabState() {
+  try {
+    const code = (SESSION && SESSION.code) ? SESSION.code : 'LOCAL';
+    const savedTab = localStorage.getItem('tvtt_right_tab_' + code) || 'chat';
+    const page = localStorage.getItem('tvtt_right_tab_page_' + code) || 'main';
+    const allowed = ['chat', 'dice', 'init', 'scenes', 'rolltables', 'audio', 'toklib'];
+    let tab = allowed.includes(savedTab) ? savedTab : 'chat';
+    if (tab === 'toklib' && SESSION.role !== 'gm') tab = 'chat';
+    const tabEl = document.getElementById('rtab-' + tab);
+    if (!tabEl) tab = 'chat';
+    setRightTabsPage(page === 'extra' ? 'extra' : 'main');
+    switchRTab(tab, { persist: false });
+  } catch (_) {
+    switchRTab('chat', { persist: false });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -6049,7 +8233,7 @@ function _renderBgExplorer() {
 
   const showImgs = (imgs) => {
     if (imgs.length === 0) {
-      grid.innerHTML = '<div style="color:var(--dim);font-size:0.78rem;grid-column:1/-1;text-align:center;padding:16px">Nenhuma imagem aqui.</div>';
+      grid.innerHTML = '<div style="color:var(--dim);font-size:0.78rem;grid-column:1/-1;text-align:center;padding:16px">Nenhuma mídia aqui.</div>';
       return;
     }
     imgs.forEach(entry => {
@@ -6058,9 +8242,21 @@ function _renderBgExplorer() {
       card.className = 'fex-card' + (isActive ? ' active-bg' : '');
       card.title = (entry.filename || '').replace(/^\d+_/, '') + (entry.sizeKB ? ' · ' + entry.sizeKB + ' KB' : '');
       card.onclick = () => { setBgImage(entry.url); closeModal('modal-bg-image'); };
-      const img = document.createElement('img');
-      img.src = entry.url; img.loading = 'lazy';
-      card.appendChild(img);
+      if (/\.(mp4|webm|ogg|mov|m4v)$/i.test(entry.filename || '')) {
+        const vid = document.createElement('video');
+        vid.src = entry.url;
+        vid.muted = true;
+        vid.loop = true;
+        vid.playsInline = true;
+        vid.preload = 'metadata';
+        vid.autoplay = true;
+        card.appendChild(vid);
+      } else {
+        const img = document.createElement('img');
+        img.src = entry.url;
+        img.loading = 'lazy';
+        card.appendChild(img);
+      }
       const lbl = document.createElement('div');
       lbl.className = 'fex-name';
       lbl.textContent = (isActive ? '✓ ' : '') + (entry.filename || '').replace(/^\d+_/, '').replace(/\.[^.]+$/, '');
@@ -6135,92 +8331,98 @@ function openSceneManager() {
   _loadSceneList();
 }
 
+function _sceneListTargets() {
+  const ids = ['scene-list', 'scene-list-side'];
+  return ids
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+}
+
 /* Busca cenas do servidor e renderiza */
 function _loadSceneList() {
-  const list = document.getElementById('scene-list');
-  if (!list) return;
-  list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Carregando…</div>';
+  const targets = _sceneListTargets();
+  if (targets.length === 0) return;
+  targets.forEach(list => {
+    list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Carregando…</div>';
+  });
   const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
   fetch('/api/room/' + SESSION.code + '/scenes', { headers: { 'X-GM-Token': tok } })
     .then(r => r.json())
     .then(data => { _renderSceneList(data.scenes || []); })
     .catch(() => {
-      list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Erro ao carregar cenas.</div>';
+      targets.forEach(list => {
+        list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Erro ao carregar cenas.</div>';
+      });
     });
 }
 
 /* Renderiza os cards de cena */
 function _renderSceneList(scenes) {
-  const list = document.getElementById('scene-list');
-  if (!list) return;
-  if (scenes.length === 0) {
-    list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Nenhuma cena criada ainda.<br>Use "Salvar Cena Atual" para criar a primeira.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  scenes.forEach(scene => {
-    const card = document.createElement('div');
-    card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;';
-
-    // Thumbnail / ícone
-    const thumb = document.createElement('div');
-    thumb.style.cssText = 'width:54px;height:38px;border-radius:3px;overflow:hidden;flex-shrink:0;background:#111;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;';
-    if (scene.bgImageURL) {
-      const img = document.createElement('img');
-      img.src = scene.bgImageURL;
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
-      img.onerror = () => { thumb.innerHTML = '<span style="font-size:1.2rem">🗺</span>'; };
-      thumb.appendChild(img);
-    } else {
-      thumb.innerHTML = '<span style="font-size:1.2rem">🗺</span>';
+  const targets = _sceneListTargets();
+  if (targets.length === 0) return;
+  targets.forEach(list => {
+    if (scenes.length === 0) {
+      list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Nenhuma cena criada ainda.<br>Use "Salvar Cena Atual" para criar a primeira.</div>';
+      return;
     }
-    card.appendChild(thumb);
+    list.innerHTML = '';
+    scenes.forEach(scene => {
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;';
 
-    // Nome
-    const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'flex:1;font-size:0.9rem;color:var(--pale);font-weight:500;';
-    nameEl.textContent = scene.name || 'Cena sem nome';
-    card.appendChild(nameEl);
+      const thumb = document.createElement('div');
+      thumb.style.cssText = 'width:54px;height:38px;border-radius:3px;overflow:hidden;flex-shrink:0;background:#111;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;';
+      if (scene.bgImageURL) {
+        const img = document.createElement('img');
+        img.src = scene.bgImageURL;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        img.onerror = () => { thumb.innerHTML = '<span style="font-size:1.2rem">🗺</span>'; };
+        thumb.appendChild(img);
+      } else {
+        thumb.innerHTML = '<span style="font-size:1.2rem">🗺</span>';
+      }
+      card.appendChild(thumb);
 
-    // Botões de ação
-    const actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:5px;flex-shrink:0;';
+      const nameEl = document.createElement('div');
+      nameEl.style.cssText = 'flex:1;font-size:0.9rem;color:var(--pale);font-weight:500;';
+      nameEl.textContent = scene.name || 'Cena sem nome';
+      card.appendChild(nameEl);
 
-    // Ativar
-    const btnActivate = document.createElement('button');
-    btnActivate.className = 'cta-btn sm';
-    btnActivate.style.cssText = 'font-size:0.75rem;padding:4px 8px;';
-    btnActivate.title = 'Ativar esta cena (substitui mapa atual)';
-    btnActivate.textContent = '▶ Ativar';
-    btnActivate.onclick = () => _activateScene(scene.id, scene.name);
-    actions.appendChild(btnActivate);
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:5px;flex-shrink:0;';
 
-    // Salvar estado atual nesta cena
-    const btnSave = document.createElement('button');
-    btnSave.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
-    btnSave.title = 'Sobrescrever esta cena com o estado atual da mesa';
-    btnSave.textContent = '💾';
-    btnSave.onclick = () => _saveCurrentToScene(scene.id, scene.name);
-    actions.appendChild(btnSave);
+      const btnActivate = document.createElement('button');
+      btnActivate.className = 'cta-btn sm';
+      btnActivate.style.cssText = 'font-size:0.75rem;padding:4px 8px;';
+      btnActivate.title = 'Ativar esta cena (substitui mapa atual)';
+      btnActivate.textContent = '▶ Ativar';
+      btnActivate.onclick = () => _activateScene(scene.id, scene.name);
+      actions.appendChild(btnActivate);
 
-    // Renomear
-    const btnRename = document.createElement('button');
-    btnRename.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
-    btnRename.title = 'Renomear cena';
-    btnRename.textContent = '✏';
-    btnRename.onclick = () => _renameScene(scene.id, scene.name);
-    actions.appendChild(btnRename);
+      const btnSave = document.createElement('button');
+      btnSave.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnSave.title = 'Sobrescrever esta cena com o estado atual da mesa';
+      btnSave.textContent = '💾';
+      btnSave.onclick = () => _saveCurrentToScene(scene.id, scene.name);
+      actions.appendChild(btnSave);
 
-    // Deletar
-    const btnDel = document.createElement('button');
-    btnDel.style.cssText = 'background:none;border:1px solid rgba(139,26,26,0.5);color:#c87070;cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
-    btnDel.title = 'Deletar cena';
-    btnDel.textContent = '🗑';
-    btnDel.onclick = () => _deleteScene(scene.id, scene.name);
-    actions.appendChild(btnDel);
+      const btnRename = document.createElement('button');
+      btnRename.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnRename.title = 'Renomear cena';
+      btnRename.textContent = '✏';
+      btnRename.onclick = () => _renameScene(scene.id, scene.name);
+      actions.appendChild(btnRename);
 
-    card.appendChild(actions);
-    list.appendChild(card);
+      const btnDel = document.createElement('button');
+      btnDel.style.cssText = 'background:none;border:1px solid rgba(139,26,26,0.5);color:#c87070;cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnDel.title = 'Deletar cena';
+      btnDel.textContent = '🗑';
+      btnDel.onclick = () => _deleteScene(scene.id, scene.name);
+      actions.appendChild(btnDel);
+
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
   });
 }
 
@@ -6238,7 +8440,15 @@ function sceneCreateFromCurrent() {
 function sceneCreateBlank() {
   const name = prompt('Nome da nova cena vazia:', 'Cena Vazia');
   if (!name || !name.trim()) return;
-  _postScene('/api/room/' + SESSION.code + '/scenes', { name: name.trim(), walls: [], tokens: [] }, () => {
+  _postScene('/api/room/' + SESSION.code + '/scenes', {
+    name: name.trim(),
+    walls: [],
+    tokens: [],
+    journalPins: [],
+    drawings: [],
+    weather: { type: 'none', intensity: 1 },
+    audio: { playlist: [], currentId: null, playing: false, volume: 0.6, startedAt: 0, pausedAt: 0 },
+  }, () => {
     showToast('✦ Cena "' + name.trim() + '" criada!');
     _loadSceneList();
   });
@@ -6256,7 +8466,11 @@ function _buildScenePayload(name) {
     gridOffsetY: MAP_DATA.gridOffsetY  || 0,
     gridColor:   MAP_DATA.gridColor    || 'gold',
     fog:         JSON.parse(JSON.stringify(MAP_DATA.fog || { enabled: false, cleared: {} })),
+    drawings:    JSON.parse(JSON.stringify(MAP_DATA.drawings || [])),
+    weather:     JSON.parse(JSON.stringify(MAP_DATA.weather || { type: 'none', intensity: 1 })),
     walls:       JSON.parse(JSON.stringify(MAP_DATA.walls  || [])),
+    journalPins: JSON.parse(JSON.stringify(MAP_DATA.journalPins || [])),
+    audio:       JSON.parse(JSON.stringify(MAP_DATA.audio || { playlist: [], currentId: null, playing: false, volume: 0.6, startedAt: 0, pausedAt: 0 })),
     tokens:      JSON.parse(JSON.stringify(MAP_DATA.tokens || [])),
     panX:        MAP_DATA.panX  || 0,
     panY:        MAP_DATA.panY  || 0,
@@ -6344,6 +8558,7 @@ function openModal(id) {
 }
 function closeModal(id) {
   document.getElementById(id).style.display = 'none';
+  if (id === 'modal-map-pin') _pendingPinPos = null;
 }
 
 /* ══════════════════════════════════════════════════════════════

@@ -54,7 +54,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TartantisVTT-Linux
-          path: TartantisVTT-x86_64.AppImage
+          path: |
+            TartantisVTT-x86_64.AppImage
+            TartantisVTT-x86_64.AppImage.zsync
 
   # ─────────────────────────────────────────────
   #  macOS — .app (zip)
@@ -90,6 +92,20 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolver tag da release
+        id: rel
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          else
+            VER="$(tr -d '[:space:]' < VERSION)"
+            TAG="v${VER}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
       - name: Baixar artefatos
         uses: actions/download-artifact@v4
         with:
@@ -99,10 +115,12 @@ jobs:
       - name: Criar Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('release-{0}', github.run_number) }}
+          tag_name: ${{ steps.rel.outputs.tag }}
+          name: Release ${{ steps.rel.outputs.tag }}
           files: |
             dist/Instalador_TartantisVTT.exe
             dist/TartantisVTT-x86_64.AppImage
+            dist/TartantisVTT-x86_64.AppImage.zsync
             dist/TartantisVTT-macOS.zip
           generate_release_notes: false
           draft: true

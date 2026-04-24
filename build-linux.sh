@@ -39,6 +39,7 @@ echo -e "${DIM}  → Copiando arquivos…${RESET}"
 cp -r "$DIR/app"  "$SHARE/"
 cp -r "$DIR/core" "$SHARE/"
 cp -r "$DIR/assets" "$SHARE/" 2>/dev/null || true
+cp "$DIR/VERSION" "$SHARE/VERSION" 2>/dev/null || true
 mkdir -p "$SHARE/data"
 
 # ── AppRun ───────────────────────────────────────────────────────
@@ -66,6 +67,31 @@ if [ -n "$APPIMAGE" ]; then
   export TARTANTIS_APP_DIR="$(dirname "$APPIMAGE")"
 else
   export TARTANTIS_APP_DIR="$(pwd)"
+fi
+
+# Auto-update via AppImageUpdate (pergunta ao usuário antes de iniciar servidor)
+if [ -n "$APPIMAGE" ]; then
+  UPDATE_INFO=$(python3 -c "import sys; sys.path.insert(0, '$APP'); from core import updater; from pathlib import Path; a,v,u=updater.check_for_updates(Path('$APP'), platform_hint='linux'); print(f'{a}|{v}|{u}')" 2>/dev/null)
+  if [[ "$UPDATE_INFO" == "True|"* ]]; then
+    VER=$(echo "$UPDATE_INFO" | cut -d'|' -f2)
+    if command -v AppImageUpdate >/dev/null 2>&1; then
+      ASK=1
+      if command -v zenity >/dev/null 2>&1; then
+        zenity --question --title="Tartantis VTT" --text="Nova versão disponível: v${VER}\n\nDeseja atualizar agora automaticamente?" --ok-label="Atualizar" --cancel-label="Depois"
+        ASK=$?
+      fi
+      if [ "$ASK" -eq 0 ]; then
+        if AppImageUpdate "$APPIMAGE"; then
+          notify-send "Tartantis VTT" "Atualizado para v${VER}. Reiniciando..." 2>/dev/null || true
+          exec "$APPIMAGE"
+        else
+          notify-send "Tartantis VTT" "Falha na atualização automática." 2>/dev/null || true
+        fi
+      fi
+    else
+      notify-send "Tartantis VTT" "Nova versão v${VER} disponível. Instale o AppImageUpdate para atualizar automaticamente." 2>/dev/null || true
+    fi
+  fi
 fi
 
 cd "$APP"
@@ -206,7 +232,8 @@ if [ ! -d "$TOOL_SQUASH" ]; then
   popd > /dev/null
   rm -rf "$_TMP"
 fi
-ARCH=x86_64 "$TOOL_SQUASH/AppRun" "$(realpath "$APPDIR")" "$(realpath "$OUTPUT")" 2>/dev/null
+UPDATE_INFO="gh-releases-zsync|Sampsvsl|Tartantis-VTT|latest|TartantisVTT-x86_64.AppImage.zsync"
+ARCH=x86_64 "$TOOL_SQUASH/AppRun" -u "$UPDATE_INFO" "$(realpath "$APPDIR")" "$(realpath "$OUTPUT")" 2>/dev/null
 rm -rf "$APPDIR"
 
 if [ -f "$OUTPUT" ]; then

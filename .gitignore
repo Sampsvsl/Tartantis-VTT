@@ -12,6 +12,7 @@ data/*
 build/
 dist/
 *.AppImage
+*.zsync
 *.exe
 *.zip
 *.tar

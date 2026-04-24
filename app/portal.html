@@ -610,7 +610,7 @@ async function enterAsGM() {
   const r=await fetch('/api/gm/status',{headers:{'X-GM-Token':_gmTok}});
   const s=await r.json();
   if(!s.authenticated){toast('Sessão expirada. Faça login novamente.');clearGM();show('s-gm-login');return;}
-  location.href=`mesa.html?role=gm&sala=${_camp.code}&name=Mestre&tok=${_gmTok}`;
+  location.href=`mesa.html?role=gm&sala=${_camp.code}&name=Mestre`;
 }
 
 /* ── Adicionar aventureiro ── */
@@ -796,7 +796,7 @@ async function confirmPlayerLogin() {
       const p=(_camp.players||[]).find(x=>x.id===_ploginPid);
       const name=p?p.name:'Jogador';
       const col=p?p.color:'#C8712A';
-      location.href=`mesa.html?role=player&sala=${_ploginCode}&name=${encodeURIComponent(name)}&color=${encodeURIComponent(col)}&pid=${_ploginPid}&tok=${d.token}`;
+      location.href=`mesa.html?role=player&sala=${_ploginCode}&name=${encodeURIComponent(name)}&color=${encodeURIComponent(col)}&pid=${_ploginPid}`;
     }else{
       err.textContent=d.error||'Senha incorreta.';
       document.getElementById('plogin-pwd').value='';

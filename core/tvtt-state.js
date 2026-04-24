@@ -8,12 +8,18 @@ function _wsConnect(room,callbacks,onStateLoaded,pid){
   const wsPort = location.port || (proto === 'wss:' ? '443' : '80');
   const url=`${proto}//${location.hostname}:${wsPort}/ws`;
   _ws=new WebSocket(url);
-  _ws.onopen=()=>{_ws.send(JSON.stringify({type:'join',room,pid:_wsPid}));_wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];};
+  _ws.onopen=()=>{
+    var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
+    var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
+    _ws.send(JSON.stringify({type:'join',room,pid:_wsPid,token:gt||pt}));
+    _wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];
+  };
   _ws.onmessage=evt=>{
     let msg;try{msg=JSON.parse(evt.data);}catch(e){return;}
     const{type,data}=msg;
     if(type==='state'){if(_wsStateOnce){_wsStateOnce(data||{});_wsStateOnce=null;}return;}
     if(type==='kicked'){if(_wsCbs.onKicked)_wsCbs.onKicked();return;}
+    if(type==='error'&&data==='auth_failed'){window.location.href='portal.html';return;}
     if(type==='map'&&_wsCbs.onMapUpdate)_wsCbs.onMapUpdate(data||{});
     if(type==='token_set'&&_wsCbs.onTokenSet)_wsCbs.onTokenSet(data);
     if(type==='token_remove'&&_wsCbs.onTokenRemove)_wsCbs.onTokenRemove(data&&data.id);
@@ -21,6 +27,8 @@ function _wsConnect(room,callbacks,onStateLoaded,pid){
     if(type==='init'&&_wsCbs.onInitUpdate)_wsCbs.onInitUpdate(data||[]);
     if(type==='init_turn'&&_wsCbs.onInitTurnUpdate)_wsCbs.onInitTurnUpdate(data);
     if(type==='blind_roll'&&_wsCbs.onBlindRollUpdate)_wsCbs.onBlindRollUpdate(data);
+    if(type==='rolltables'&&_wsCbs.onRollTablesUpdate)_wsCbs.onRollTablesUpdate(data||[]);
+    if(type==='ping'&&_wsCbs.onMapPing)_wsCbs.onMapPing(data||{});
     if(type==='char_update'&&_wsCbs.onCharUpdate)_wsCbs.onCharUpdate(data);
     if(type==='walls'&&_wsCbs.onWallsUpdate)_wsCbs.onWallsUpdate(data||[]);
     if(type==='scene_loaded'&&_wsCbs.onSceneLoaded)_wsCbs.onSceneLoaded(data||{});
@@ -31,10 +39,22 @@ function _wsConnect(room,callbacks,onStateLoaded,pid){
 
 // ── Helpers internos ──────────────────────────────────────
 function _apiGet(url,cb,fallback){
-  fetch(url).then(r=>r.ok?r.json():null).then(d=>cb(d!=null?d:fallback)).catch(()=>cb(fallback));
+  var h={};
+  var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
+  var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
+  var pi=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_id')||_wsPid||'':'';
+  if(gt)h['X-GM-Token']=gt;
+  if(pt){h['X-Player-Token']=pt;h['X-Player-Id']=pi;}
+  fetch(url,{headers:h}).then(r=>r.ok?r.json():null).then(d=>cb(d!=null?d:fallback)).catch(()=>cb(fallback));
 }
 function _apiPost(url,data){
-  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(()=>{});
+  var h={'Content-Type':'application/json'};
+  var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
+  var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
+  var pi=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_id')||_wsPid||'':'';
+  if(gt)h['X-GM-Token']=gt;
+  if(pt){h['X-Player-Token']=pt;h['X-Player-Id']=pi;}
+  fetch(url,{method:'POST',headers:h,body:JSON.stringify(data)}).catch(()=>{});
 }
 
 const MBState={
@@ -106,7 +126,7 @@ const MBState={
 
   // ── Mapa: estado sincronizado via WS, persistido pelo servidor ──
   map:{
-    default(){return{tokens:[],gridSize:50,showGrid:true,fog:{enabled:false,cleared:{}},walls:[],bgColor:'#1c1712',bgImage:null,panX:0,panY:0};},
+    default(){return{tokens:[],gridSize:50,showGrid:true,fog:{enabled:false,cleared:{}},drawings:[],weather:{type:'none',intensity:1},walls:[],journalPins:[],audio:{playlist:[],currentId:null,playing:false,volume:0.6,startedAt:0,pausedAt:0},bgColor:'#1c1712',bgImage:null,panX:0,panY:0};},
     save(code,data){
       if(!code||code==='LOCAL')return;
       const{tokens:_t,...settings}=data;
@@ -142,6 +162,13 @@ const MBState={
     },
     clear(code){
       if(code&&code!=='LOCAL')_wsSend({type:'init',room:code,data:[]});
+    }
+  },
+
+  // ── Roll Tables: estado WS, persistido pelo servidor ──
+  rolltables:{
+    save(code,list){
+      if(code&&code!=='LOCAL')_wsSend({type:'rolltables',room:code,data:Array.isArray(list)?list:[]});
     }
   },
 

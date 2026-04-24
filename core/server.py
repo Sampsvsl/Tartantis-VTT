@@ -85,9 +85,10 @@ def _ws_ensure_room(c):
                 'init':       saved.get('init', []),
                 'init_turn':  saved.get('init_turn', 0),
                 'blind_roll': saved.get('blind_roll', False),
+                'rolltables': saved.get('rolltables', []),
             }
         else:
-            _ws_room_state[c]={'map':{},'tokens':{},'init':[],'init_turn':0,'blind_roll':False}
+            _ws_room_state[c]={'map':{},'tokens':{},'init':[],'init_turn':0,'blind_roll':False,'rolltables':[]}
         _ws_room_clients[c]=[]
 def _ws_send(client,text):
     try:
@@ -171,8 +172,29 @@ GM_PASS_FILE  = DATA_DIR / 'gm-password.txt'
 CAMPAIGNS_DIR = DATA_DIR / 'campaigns'
 IMAGES_DIR    = DATA_DIR / 'images'
 ROOMS_DIR     = DATA_DIR / 'rooms'
-ALLOWED_IMG_TYPES = {'bg', 'tokens', 'avatars'}
+ALLOWED_IMG_TYPES = {'bg', 'tokens', 'avatars', 'audio'}
 ALLOWED_IMG_EXTS  = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif'}
+ALLOWED_BG_VIDEO_EXTS = {'.mp4', '.webm', '.ogg', '.mov', '.m4v'}
+ALLOWED_AUDIO_EXTS = {'.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.webm'}
+ALLOWED_MEDIA_EXTS_BY_TYPE = {
+    'bg': ALLOWED_IMG_EXTS | ALLOWED_BG_VIDEO_EXTS,
+    'tokens': ALLOWED_IMG_EXTS,
+    'avatars': ALLOWED_IMG_EXTS,
+    'audio': ALLOWED_AUDIO_EXTS,
+}
+MIME_BY_EXT = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+    '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
+    '.tiff': 'image/tiff', '.tif': 'image/tiff',
+    '.mp4': 'video/mp4', '.webm': 'video/webm', '.ogg': 'video/ogg',
+    '.mov': 'video/quicktime', '.m4v': 'video/mp4',
+    '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4',
+    '.aac': 'audio/aac', '.flac': 'audio/flac',
+}
+
+
+def _allowed_media_exts(itype: str):
+    return ALLOWED_MEDIA_EXTS_BY_TYPE.get(itype, ALLOWED_IMG_EXTS)
 
 # ══════════════════════════════════════════════════════════
 #  Helpers — Fichas e estado da sala no disco
@@ -233,6 +255,7 @@ def _persist_room_state(code: str, st: dict) -> None:
             'init':       st.get('init', []),
             'init_turn':  st.get('init_turn', 0),
             'blind_roll': st.get('blind_roll', False),
+            'rolltables': st.get('rolltables', []),
         })
     except Exception:
         pass
@@ -470,6 +493,17 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
             self._json_error(401, 'Autenticação de Mestre necessária.')
             return False
         return True
+
+    def _require_any_auth(self) -> bool:
+        """Aceita token de GM ou token de jogador válido."""
+        if _gm_valid(self._gm_token()):
+            return True
+        pid  = self.headers.get('X-Player-Id', '')
+        ptok = self.headers.get('X-Player-Token', '')
+        if pid and _player_valid(pid, ptok):
+            return True
+        self._json_error(401, 'Autenticação necessária.')
+        return False
 
     def _serve_static(self, file_path, base_dir=None):
         try:
@@ -779,20 +813,21 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         itype = qs.get('type', ['bg'])[0]
         if itype not in ALLOWED_IMG_TYPES:
             self._json_error(400, 'Tipo inválido.'); return
+        allowed_exts = _allowed_media_exts(itype)
         base   = IMAGES_DIR / itype
         images = []
         folders = []
         if base.exists():
             entries = sorted(base.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True)
             for f in entries:
-                if f.is_file() and f.suffix.lower() in ALLOWED_IMG_EXTS:
+                if f.is_file() and f.suffix.lower() in allowed_exts:
                     images.append({'filename': f.name, 'folder': '',
                                    'url': f'/api/images/{itype}/{f.name}',
                                    'sizeKB': round(f.stat().st_size / 1024)})
                 elif f.is_dir() and not f.name.startswith('.'):
                     folders.append(f.name)
                     for sf in sorted(f.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-                        if sf.is_file() and sf.suffix.lower() in ALLOWED_IMG_EXTS:
+                        if sf.is_file() and sf.suffix.lower() in allowed_exts:
                             images.append({'filename': sf.name, 'folder': f.name,
                                            'url': f'/api/images/{itype}/{f.name}/{sf.name}',
                                            'sizeKB': round(sf.stat().st_size / 1024)})
@@ -818,9 +853,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         if not fpath.is_file():
             self.send_error(404); return
         ext  = fpath.suffix.lower()
-        mime = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-                '.gif': 'image/gif', '.webp': 'image/webp', '.bmp': 'image/bmp',
-                '.tiff': 'image/tiff', '.tif': 'image/tiff'}.get(ext, 'application/octet-stream')
+        mime = MIME_BY_EXT.get(ext, 'application/octet-stream')
         data = fpath.read_bytes()
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -853,7 +886,10 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         # Sanitiza nome e gera nome único
         name = re.sub(r'[^a-zA-Z0-9._-]', '_', name)[:80]
         ext  = ('.' + name.rsplit('.', 1)[-1].lower()) if '.' in name else '.bin'
-        if ext not in ALLOWED_IMG_EXTS:
+        allowed_exts = _allowed_media_exts(itype)
+        if ext not in allowed_exts:
+            if itype == 'bg':
+                self._json_error(400, 'Formato de mídia de fundo não suportado.'); return
             ext = '.jpg'
         ts       = str(int(time.time() * 1000))
         filename = f"{ts}_{name}"
@@ -959,6 +995,16 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                 mt=msg.get('type','');mr=msg.get('room','');data=msg.get('data')
                 if mt=='join' and mr:
                     pid_joining = msg.get('pid','')
+                    ws_token    = msg.get('token','')
+                    # Valida identidade antes de aceitar na sala
+                    if pid_joining == 'gm':
+                        if not _gm_valid(ws_token):
+                            _ws_send(client, '{"type":"error","data":"auth_failed"}')
+                            break
+                    elif pid_joining:
+                        if not _player_valid(pid_joining, ws_token):
+                            _ws_send(client, '{"type":"error","data":"auth_failed"}')
+                            break
                     # Kick qualquer conexão anterior com o mesmo pid na mesma sala
                     if pid_joining and pid_joining != 'gm':
                         _ws_kick_pid(mr, pid_joining)
@@ -981,6 +1027,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                             'init':st['init'],
                             'init_turn':st['init_turn'],
                             'blind_roll':st['blind_roll'],
+                            'rolltables':st.get('rolltables',[]),
                             'players': lobby_data.get('players', [])
                         }
                     }))
@@ -996,6 +1043,9 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                     elif mt=='init':st['init']=data if isinstance(data,list) else [];persist=True
                     elif mt=='init_turn':st['init_turn']=int(data) if isinstance(data,(int,float)) else 0;persist=True
                     elif mt=='blind_roll':st['blind_roll']=bool(data);persist=True
+                    elif mt=='rolltables':st['rolltables']=data if isinstance(data,list) else [];persist=True
+                    elif mt=='ping' and isinstance(data,dict):
+                        pass
                     elif mt=='chat' and data:_append_chat(mr,data)
                 # Persiste estado da sala no disco (fora do lock para não bloquear)
                 if persist:
@@ -1039,7 +1089,9 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         elif p == '/api/gm/change':             self._gm_change2(body)
         elif p == '/api/campaigns':             self._campaign_create2(body)
         elif p == '/api/player/login':          self._player_login2(body)
-        elif p == '/api/save':                  self._save_direct(raw_body)
+        elif p == '/api/save':
+            if not self._require_gm(): return
+            self._save_direct(raw_body)
         elif p.startswith('/api/room/'):        self._room_post(p, raw_body)
         elif p == '/api/images/folder/create':  self._folder_create(body)
         elif p == '/api/images/folder/delete':  self._folder_delete(body)
@@ -1173,6 +1225,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         code = parts[2]
         if not re.match(r'^[A-Za-z0-9_\-]+$', code):
             self._json_error(400, 'Código de sala inválido'); return
+        if not self._require_any_auth(): return
         resource = parts[3]
 
         if resource == 'char' and len(parts) == 5:
@@ -1227,6 +1280,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         code = parts[2]
         if not re.match(r'^[A-Za-z0-9_\-]+$', code):
             self._json_error(400, 'Código de sala inválido'); return
+        if not self._require_any_auth(): return
         resource = parts[3]
 
         try:
@@ -1274,7 +1328,11 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                     'gridOffsetY': data.get('gridOffsetY', 0),
                     'gridColor': data.get('gridColor', 'gold'),
                     'fog':       data.get('fog', {'enabled': False, 'cleared': {}}),
+                    'drawings':  data.get('drawings', []),
+                    'weather':   data.get('weather', {'type': 'none', 'intensity': 1}),
                     'walls':     data.get('walls', []),
+                    'journalPins': data.get('journalPins', []),
+                    'audio':     data.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0}),
                     'tokens':    data.get('tokens', []),
                     'panX':      data.get('panX', 0),
                     'panY':      data.get('panY', 0),
@@ -1304,7 +1362,11 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
                         'gridOffsetY': data.get('gridOffsetY', existing.get('gridOffsetY', 0)),
                         'gridColor':   data.get('gridColor',   existing.get('gridColor', 'gold')),
                         'fog':         data.get('fog',         existing.get('fog', {'enabled': False, 'cleared': {}})),
+                        'drawings':    data.get('drawings',    existing.get('drawings', [])),
+                        'weather':     data.get('weather',     existing.get('weather', {'type': 'none', 'intensity': 1})),
                         'walls':       data.get('walls',       existing.get('walls', [])),
+                        'journalPins': data.get('journalPins', existing.get('journalPins', [])),
+                        'audio':       data.get('audio',       existing.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0})),
                         'tokens':      data.get('tokens',      existing.get('tokens', [])),
                         'panX':        data.get('panX',        existing.get('panX', 0)),
                         'panY':        data.get('panY',        existing.get('panY', 0)),

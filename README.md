@@ -42,6 +42,10 @@ chmod +x TartantisVTT-x86_64.AppImage
 ./TartantisVTT-x86_64.AppImage
 ```
 
+Atualização automática no Linux:
+- O launcher pergunta se deseja atualizar quando detecta nova versão.
+- Para atualização in-place, instale o utilitário `AppImageUpdate` no sistema.
+
 **Raspberry Pi (servidor 24/7)**
 
 ```bash
