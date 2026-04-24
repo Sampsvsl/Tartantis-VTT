@@ -2071,9 +2071,9 @@ body.is-player .player-only { display: block !important; }
         <button class="rtab active" data-tab-page="main" onclick="switchRTab('chat')">💬 Chat</button>
         <button class="rtab" data-tab-page="main" onclick="switchRTab('dice')">🎲 Dados</button>
         <button class="rtab" data-tab-page="main" onclick="switchRTab('init')">🗡 Turno</button>
-        <button class="rtab" data-tab-page="main" onclick="switchRTab('scenes')">🗺 Cenas</button>
-        <button class="rtab" data-tab-page="extra" onclick="switchRTab('rolltables')">🎴 Roll Tables</button>
-        <button class="rtab" data-tab-page="extra" onclick="switchRTab('audio')">🎵 Audio</button>
+        <button class="rtab gm-only" data-tab-page="main" onclick="switchRTab('scenes')">🗺 Cenas</button>
+        <button class="rtab gm-only" data-tab-page="extra" onclick="switchRTab('rolltables')">🎴 Roll Tables</button>
+        <button class="rtab gm-only" data-tab-page="extra" onclick="switchRTab('audio')">🎵 Audio</button>
         <button class="rtab gm-only" data-tab-page="extra" onclick="switchRTab('toklib')" id="tab-toklib" style="display:none">🗃 Tokens</button>
       </div>
       <button class="rtab-nav rtab-next" onclick="setRightTabsPage('extra')" title="Mostrar mais abas">▶</button>
@@ -2160,7 +2160,7 @@ body.is-player .player-only { display: block !important; }
     </div>
 
     <!-- Roll Tables -->
-    <div class="rtab-content" id="rtab-rolltables">
+    <div class="rtab-content gm-only" id="rtab-rolltables">
       <div class="dice-panel">
         <div class="rt-wrap" style="margin-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
           <div class="rt-head">Roll Tables (Encontros, Loot, Eventos)</div>
@@ -2174,7 +2174,7 @@ body.is-player .player-only { display: block !important; }
     </div>
 
     <!-- Audio -->
-    <div class="rtab-content" id="rtab-audio">
+    <div class="rtab-content gm-only" id="rtab-audio">
       <div class="dice-panel">
         <div class="audio-wrap" style="margin-top:8px;flex:1;display:flex;flex-direction:column;min-height:0">
           <div class="audio-head">Audio / Playlist</div>
@@ -2207,7 +2207,7 @@ body.is-player .player-only { display: block !important; }
     </div>
 
     <!-- Cenas -->
-    <div class="rtab-content" id="rtab-scenes">
+    <div class="rtab-content gm-only" id="rtab-scenes">
       <div class="dice-panel" style="gap:10px;overflow-y:auto">
         <div class="rt-wrap" style="margin-top:8px">
           <div class="rt-head">Cenas e Fundo do Mapa</div>
