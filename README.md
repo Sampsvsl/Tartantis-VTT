@@ -81,3 +81,5 @@ Se o Tartantis está ajudando sua mesa, você pode apoiar o desenvolvimento em:
 ## Licença
 
 Distribuído sob a licença MIT. Veja [LICENSE](LICENSE) para detalhes.
+
+O código é open source, mas o nome "Tartantis VTT", o logo e a identidade visual do projeto continuam sujeitos à política de marca em [TRADEMARKS.md](TRADEMARKS.md).

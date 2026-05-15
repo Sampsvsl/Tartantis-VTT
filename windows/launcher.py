@@ -24,6 +24,7 @@ import http.server
 import socketserver
 import xmlrpc.server
 import tempfile
+from typing import Optional
 from pathlib import Path
 
 # --- Configuração de Caminhos ---
@@ -45,6 +46,7 @@ except ImportError:
     updater = None
 
 PORT = 30000
+PORT_RANGE = 11
 SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
 APP_DIR       = BASE_DIR / 'app'
 LOG_FILE      = EXE_DIR / '.server.log'
@@ -65,6 +67,20 @@ def wait_for_server(port: int, timeout: float = 12.0) -> bool:
         except (ConnectionRefusedError, OSError):
             time.sleep(0.3)
     return False
+
+
+def detect_server_port(base_port: int = 30000, count: int = 11, timeout: float = 12.0) -> Optional[int]:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        for p in range(base_port, base_port + count):
+            try:
+                with urllib.request.urlopen(f'http://127.0.0.1:{p}/api/info', timeout=0.6) as resp:
+                    if resp.status == 200:
+                        return p
+            except Exception:
+                pass
+        time.sleep(0.3)
+    return None
 
 
 def get_local_ip() -> str:
@@ -115,7 +131,15 @@ def main():
             creationflags=0x08000000 if sys.platform == 'win32' else 0
         )
 
-    if not wait_for_server(PORT, timeout=12):
+    selected_port = detect_server_port(PORT, PORT_RANGE, timeout=12)
+    if selected_port is None:
+        # Fallback: mantém comportamento anterior para mensagem de erro em ambientes sem /api/info
+        if wait_for_server(PORT, timeout=1.0):
+            selected_port = PORT
+        else:
+            selected_port = None
+
+    if selected_port is None:
         if sys.platform == 'win32':
             import ctypes
             ctypes.windll.user32.MessageBoxW(0, f"Falha ao iniciar o servidor na porta {PORT}.\nVerifique: {LOG_FILE}", "Tartantis VTT", 0x10)
@@ -126,8 +150,11 @@ def main():
             server_proc.terminate()
         sys.exit(1)
 
+    # Garante regra para a porta efetiva em uso
+    threading.Thread(target=open_firewall_port, args=(selected_port,), daemon=True).start()
+
     local_ip = get_local_ip()
-    url = f"http://{local_ip}:{PORT}/portal.html"
+    url = f"http://127.0.0.1:{selected_port}/portal.html"
 
     webbrowser.open(url)
 

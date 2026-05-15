@@ -2,6 +2,16 @@
 let _ws=null,_wsRoom=null,_wsCbs={},_wsStateOnce=null,_wsPending=[];
 function _wsSend(msg){if(_ws&&_ws.readyState===WebSocket.OPEN)_ws.send(JSON.stringify(msg));else _wsPending.push(msg);}
 let _wsPid='';
+function _readAuth(key){
+  if(typeof sessionStorage!=='undefined'){
+    var v=sessionStorage.getItem(key)||'';
+    if(v)return v;
+  }
+  if(typeof localStorage!=='undefined'){
+    return localStorage.getItem(key)||'';
+  }
+  return '';
+}
 function _wsConnect(room,callbacks,onStateLoaded,pid){
   _wsRoom=room;_wsCbs=callbacks||{};_wsStateOnce=onStateLoaded||null;_wsPid=pid||'';
   const proto=location.protocol==='https:'?'wss:':'ws:';
@@ -9,8 +19,8 @@ function _wsConnect(room,callbacks,onStateLoaded,pid){
   const url=`${proto}//${location.hostname}:${wsPort}/ws`;
   _ws=new WebSocket(url);
   _ws.onopen=()=>{
-    var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
-    var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
+    var gt=_readAuth('tvtt_gm_tok');
+    var pt=_readAuth('tvtt_plr_tok');
     _ws.send(JSON.stringify({type:'join',room,pid:_wsPid,token:gt||pt}));
     _wsPending.forEach(m=>_ws.send(JSON.stringify(m)));_wsPending=[];
   };
@@ -40,20 +50,25 @@ function _wsConnect(room,callbacks,onStateLoaded,pid){
 // ── Helpers internos ──────────────────────────────────────
 function _apiGet(url,cb,fallback){
   var h={};
-  var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
-  var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
-  var pi=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_id')||_wsPid||'':'';
+  var gt=_readAuth('tvtt_gm_tok');
+  var pt=_readAuth('tvtt_plr_tok');
+  var pi=_readAuth('tvtt_plr_id')||_wsPid||'';
   if(gt)h['X-GM-Token']=gt;
   if(pt){h['X-Player-Token']=pt;h['X-Player-Id']=pi;}
   fetch(url,{headers:h}).then(r=>r.ok?r.json():null).then(d=>cb(d!=null?d:fallback)).catch(()=>cb(fallback));
 }
-function _apiPost(url,data){
-  var h={'Content-Type':'application/json'};
-  var gt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_gm_tok')||'':'';
-  var pt=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_tok')||'':'';
-  var pi=typeof sessionStorage!=='undefined'?sessionStorage.getItem('tvtt_plr_id')||_wsPid||'':'';
+function _authHeaders(jsonContentType){
+  var h={};
+  if(jsonContentType)h['Content-Type']='application/json';
+  var gt=_readAuth('tvtt_gm_tok');
+  var pt=_readAuth('tvtt_plr_tok');
+  var pi=_readAuth('tvtt_plr_id')||_wsPid||'';
   if(gt)h['X-GM-Token']=gt;
   if(pt){h['X-Player-Token']=pt;h['X-Player-Id']=pi;}
+  return h;
+}
+function _apiPost(url,data){
+  var h=_authHeaders(true);
   fetch(url,{method:'POST',headers:h,body:JSON.stringify(data)}).catch(()=>{});
 }
 
@@ -75,7 +90,15 @@ const MBState={
     _cache:null,
     save(data){
       this._cache=data;
-      fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(()=>{});
+      fetch('/api/save',{method:'POST',headers:_authHeaders(true),body:JSON.stringify(data)})
+        .then(response => {
+          if (!response.ok) {
+            console.error('Failed to save table:', response.status, response.statusText);
+          }
+        })
+        .catch(error => {
+          console.error('Error during save request:', error);
+        });
     },
     loadFromDisk(cb){
       fetch('/api/load').then(r=>r.ok?r.json():null).then(data=>{
@@ -97,7 +120,7 @@ const MBState={
     },
     reset(){
       this._cache=null;
-      fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:'null'}).catch(()=>{});
+      fetch('/api/save',{method:'POST',headers:_authHeaders(true),body:'null'}).catch(()=>{});
     },
     getSalaCode(){const t=this.get();return t?t.salaCode:null;}
   },
@@ -209,7 +232,7 @@ MBState.userTable={
     fetch('/api/load').then(r=>r.ok?r.json():null).then(data=>cb(data,false)).catch(()=>cb(null,false));
   },
   save(uid,data){
-    return fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(e=>Promise.reject(e));
+    return fetch('/api/save',{method:'POST',headers:_authHeaders(true),body:JSON.stringify(data)}).catch(e=>Promise.reject(e));
   },
   create(uid,name){
     const salaCode=MBState.table._genCode();

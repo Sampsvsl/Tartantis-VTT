@@ -216,7 +216,9 @@ body { overflow: hidden; user-select: none; }
   gap: 6px;
   max-height: 40vh;
   overflow-y: auto;
-  padding: 4px 6px 10px;
+  overflow-x: hidden;
+  padding: 4px 10px 10px 4px;
+  scrollbar-gutter: stable;
 }
 
 /* ── Chat ── */
@@ -808,6 +810,10 @@ body { overflow: hidden; user-select: none; }
   transition: left 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
               top 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
               transform 0.2s ease-out;
+}
+.token.dragging {
+  transition: none !important;
+  cursor: grabbing;
 }
 .token.animating {
   z-index: 15;
@@ -2548,7 +2554,7 @@ body.is-player .player-only { display: block !important; }
     </div>
 
     <!-- Lista de cenas -->
-    <div id="scene-list" style="display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;padding-right:4px">
+    <div id="scene-list" style="display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;overflow-x:hidden;padding-right:12px;padding-left:4px;padding-top:4px;padding-bottom:4px;scrollbar-gutter:stable">
       <div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Carregando cenas…</div>
     </div>
   </div>
@@ -2656,6 +2662,10 @@ let _blindRoll = false;
 // Token sendo adicionado
 let pendingTokenPos = null;
 
+// Cena ativa (rastreamento)
+let _currentSceneId = null;
+let _sceneAutoSaveTimer = null;
+
 // Ficha de personagem
 const MB_ATTRS = ['forca','agi','intel','von'];
 const MB_SUBS  = ['raca','cls','aprim','hab','mag','extra'];
@@ -2747,6 +2757,7 @@ function _tokenSizePx(token) {
       const mapSettings = data.map || {};
       const tokens      = data.tokens || [];
       const prevBg      = MAP_DATA.bgImageURL;
+      _currentSceneId = data.id || null; // Rastreia qual cena está ativa
       MAP_DATA = { ...MBState.map.default(), ...mapSettings };
       if (MAP_DATA.bgImageURL !== prevBg) _clearBgMediaCache();
       MAP_DATA.tokens = tokens;
@@ -2767,9 +2778,11 @@ function _tokenSizePx(token) {
       _applyAudioState();
       renderWeather();
       updateGMPanelStates();
+      if (SESSION.role === 'gm') _loadSceneList();
       showToast('🗺 Cena "' + (data.name || 'Cena') + '" ativada');
     }
   },function onStateLoaded(state){
+    if(typeof state.activeSceneId==='string'&&state.activeSceneId){_currentSceneId=state.activeSceneId;}
     if(state.map&&Object.keys(state.map).length)MAP_DATA={...MAP_DATA,...state.map};
     if(Array.isArray(state.tokens))MAP_DATA.tokens=state.tokens;
     if(Array.isArray(state.init))INIT_LIST=state.init;
@@ -2868,6 +2881,16 @@ function _tokenSizePx(token) {
         btn.onclick = () => toggleCondition(btn);
         btn.innerHTML = `<span class="cond-badge-prev" style="background:${c.color}">${c.code}</span>${c.label}`;
         condGrid.appendChild(btn);
+      });
+    }
+
+    // Auto-ativar cena padrão ao abrir app (GM apenas, e se nenhuma estiver ativa)
+    if (role === 'gm' && !_currentSceneId) {
+      _loadScenesData((scenes) => {
+        if (scenes && scenes.length > 0) {
+          // Ativa a primeira cena da lista
+          _activateSceneAuto(scenes[0].id);
+        }
       });
     }
   }
@@ -5289,6 +5312,7 @@ function createTokenEl(token) {
   });
   el.addEventListener('mousedown', e => {
     if (e.button === 2) return; // botão direito reservado para pan do mapa
+    e.preventDefault();
     // Régua: inicia a medição a partir do centro do token
     if (ACTIVE_TOOL === 'ruler' && e.button === 0) {
       e.stopPropagation();
@@ -5307,8 +5331,13 @@ function createTokenEl(token) {
       // Drag start
       isDraggingToken = true; dragToken = el;
       const [mx, my] = clientToMap(e.clientX, e.clientY);
-      dragOffX = token.x - mx;
-      dragOffY = token.y - my;
+      const renderedX = parseFloat(el.style.left);
+      const renderedY = parseFloat(el.style.top);
+      const startX = Number.isFinite(renderedX) ? renderedX : (token.x || 0);
+      const startY = Number.isFinite(renderedY) ? renderedY : (token.y || 0);
+      dragOffX = startX - mx;
+      dragOffY = startY - my;
+      el.classList.add('dragging');
     }
   });
 
@@ -5335,6 +5364,7 @@ function removeToken(id) {
   if (el) el.remove();
   if (SELECTED_TOKEN === id) SELECTED_TOKEN = null;
   deleteToken(id);
+  _autoSaveCurrentScene();
   showToast('🗑 Token removido');
 }
 
@@ -5411,6 +5441,7 @@ function showCtxMenu(cx, cy, type) {
       addCtxItem(`↻ Girar +45° (${rot + 45}°)`, () => rotateToken(ctxTokenId, 45));
       if (rot !== 0) {
         addCtxItem('⬌ Resetar Rotação', () => rotateToken(ctxTokenId, 'reset'));
+    dragToken.classList.remove('dragging');
       }
       const sepR = document.createElement('hr');
       sepR.style.cssText = 'border:none;border-top:1px solid #3a2e1e;margin:3px 0;';
@@ -5597,11 +5628,13 @@ function saveMap() {
   MAP_DATA.panX = panOfsX;
   MAP_DATA.panY = panOfsY;
   MBState.map.save(SESSION.code, MAP_DATA); // map.save já strip tokens internamente
+  _autoSaveCurrentScene();
 }
 
 // Salva UM token de forma atômica (não sobrescreve tokens de outros clientes)
 function saveToken(token) {
   MBState.tokens.saveOne(SESSION.code, token);
+  _autoSaveCurrentScene();
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -8338,22 +8371,43 @@ function _sceneListTargets() {
     .filter(Boolean);
 }
 
+function _gmTokenOrWarn() {
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || localStorage.getItem('tvtt_gm_tok') || '';
+  if (tok) return tok;
+  showToast('❌ Sessão de Mestre ausente. Volte ao portal e entre novamente.');
+  return '';
+}
+
+/* Busca cenas do servidor e retorna (com callback) */
+function _loadScenesData(onLoaded) {
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || localStorage.getItem('tvtt_gm_tok') || '';
+  if (!tok) {
+    onLoaded([]);
+    return;
+  }
+  fetch('/api/room/' + SESSION.code + '/scenes', { headers: { 'X-GM-Token': tok } })
+    .then(async r => {
+      let data = null;
+      try { data = await r.json(); } catch (_) { data = null; }
+      if (!r.ok || (data && data.ok === false)) {
+        onLoaded([]);
+        return;
+      }
+      if (data && typeof data.activeSceneId === 'string' && data.activeSceneId) {
+        _currentSceneId = data.activeSceneId;
+      }
+      onLoaded((data && data.scenes) || []);
+    })
+    .catch(() => {
+      onLoaded([]);
+    });
+}
+
 /* Busca cenas do servidor e renderiza */
 function _loadSceneList() {
-  const targets = _sceneListTargets();
-  if (targets.length === 0) return;
-  targets.forEach(list => {
-    list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Carregando…</div>';
+  _loadScenesData((scenes) => {
+    _renderSceneList(scenes);
   });
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
-  fetch('/api/room/' + SESSION.code + '/scenes', { headers: { 'X-GM-Token': tok } })
-    .then(r => r.json())
-    .then(data => { _renderSceneList(data.scenes || []); })
-    .catch(() => {
-      targets.forEach(list => {
-        list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Erro ao carregar cenas.</div>';
-      });
-    });
 }
 
 /* Renderiza os cards de cena */
@@ -8361,17 +8415,22 @@ function _renderSceneList(scenes) {
   const targets = _sceneListTargets();
   if (targets.length === 0) return;
   targets.forEach(list => {
+    const compact = list.id === 'scene-list-side';
     if (scenes.length === 0) {
       list.innerHTML = '<div style="color:var(--dim);font-size:0.82rem;text-align:center;padding:20px">Nenhuma cena criada ainda.<br>Use "Salvar Cena Atual" para criar a primeira.</div>';
       return;
     }
     list.innerHTML = '';
     scenes.forEach(scene => {
+      const isActive = _currentSceneId === scene.id;
       const card = document.createElement('div');
-      card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;';
+      card.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:rgba(0,0,0,' + (isActive ? '0.5' : '0.3') + ');border:' + (isActive ? '2px solid var(--gold)' : '1px solid var(--border)') + ';border-radius:4px;';
+
+      const head = document.createElement('div');
+      head.style.cssText = 'display:flex;align-items:center;gap:10px;min-width:0;';
 
       const thumb = document.createElement('div');
-      thumb.style.cssText = 'width:54px;height:38px;border-radius:3px;overflow:hidden;flex-shrink:0;background:#111;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;';
+      thumb.style.cssText = 'width:' + (compact ? '46px' : '54px') + ';height:' + (compact ? '32px' : '38px') + ';border-radius:3px;overflow:hidden;flex-shrink:0;background:#111;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;';
       if (scene.bgImageURL) {
         const img = document.createElement('img');
         img.src = scene.bgImageURL;
@@ -8381,40 +8440,45 @@ function _renderSceneList(scenes) {
       } else {
         thumb.innerHTML = '<span style="font-size:1.2rem">🗺</span>';
       }
-      card.appendChild(thumb);
+      head.appendChild(thumb);
 
       const nameEl = document.createElement('div');
-      nameEl.style.cssText = 'flex:1;font-size:0.9rem;color:var(--pale);font-weight:500;';
-      nameEl.textContent = scene.name || 'Cena sem nome';
-      card.appendChild(nameEl);
+      nameEl.style.cssText = 'flex:1;min-width:0;font-size:' + (compact ? '0.86rem' : '0.9rem') + ';line-height:1.2;color:' + (isActive ? 'var(--gold)' : 'var(--pale)') + ';font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      nameEl.textContent = (isActive ? '▶ ' : '') + (scene.name || 'Cena sem nome');
+      head.appendChild(nameEl);
+
+      card.appendChild(head);
 
       const actions = document.createElement('div');
-      actions.style.cssText = 'display:flex;gap:5px;flex-shrink:0;';
+      actions.style.cssText = 'display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end;';
 
-      const btnActivate = document.createElement('button');
-      btnActivate.className = 'cta-btn sm';
-      btnActivate.style.cssText = 'font-size:0.75rem;padding:4px 8px;';
-      btnActivate.title = 'Ativar esta cena (substitui mapa atual)';
-      btnActivate.textContent = '▶ Ativar';
-      btnActivate.onclick = () => _activateScene(scene.id, scene.name);
-      actions.appendChild(btnActivate);
+      // Botão Ativar: esconder se cena já está ativa
+      if (!isActive) {
+        const btnActivate = document.createElement('button');
+        btnActivate.className = 'cta-btn sm';
+        btnActivate.style.cssText = 'font-size:0.7rem;padding:5px 10px;white-space:nowrap;';
+        btnActivate.title = 'Ativar esta cena (substitui mapa atual)';
+        btnActivate.textContent = compact ? '▶' : '▶ Ativar';
+        btnActivate.onclick = () => _activateScene(scene.id, scene.name);
+        actions.appendChild(btnActivate);
+      }
 
       const btnSave = document.createElement('button');
-      btnSave.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnSave.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:5px 7px;font-size:0.75rem;white-space:nowrap;';
       btnSave.title = 'Sobrescrever esta cena com o estado atual da mesa';
       btnSave.textContent = '💾';
       btnSave.onclick = () => _saveCurrentToScene(scene.id, scene.name);
       actions.appendChild(btnSave);
 
       const btnRename = document.createElement('button');
-      btnRename.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnRename.style.cssText = 'background:none;border:1px solid var(--border);color:var(--dim);cursor:pointer;border-radius:3px;padding:5px 7px;font-size:0.75rem;white-space:nowrap;';
       btnRename.title = 'Renomear cena';
       btnRename.textContent = '✏';
       btnRename.onclick = () => _renameScene(scene.id, scene.name);
       actions.appendChild(btnRename);
 
       const btnDel = document.createElement('button');
-      btnDel.style.cssText = 'background:none;border:1px solid rgba(139,26,26,0.5);color:#c87070;cursor:pointer;border-radius:3px;padding:4px 7px;font-size:0.75rem;';
+      btnDel.style.cssText = 'background:none;border:1px solid rgba(139,26,26,0.5);color:#c87070;cursor:pointer;border-radius:3px;padding:5px 7px;font-size:0.75rem;white-space:nowrap;';
       btnDel.title = 'Deletar cena';
       btnDel.textContent = '🗑';
       btnDel.onclick = () => _deleteScene(scene.id, scene.name);
@@ -8481,73 +8545,135 @@ function _buildScenePayload(name) {
 /* Ativa uma cena (substitui mesa inteira) */
 function _activateScene(sceneId, sceneName) {
   if (!confirm('Ativar a cena "' + sceneName + '"?\n\nIsso substituirá o mapa, paredes e tokens atuais para todos os jogadores.')) return;
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
-  fetch('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/activate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-GM-Token': tok },
-    body: '{}'
-  })
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) { closeModal('modal-scenes'); }
-      else { showToast('❌ Erro ao ativar cena'); }
-    })
-    .catch(() => showToast('❌ Erro de rede'));
+  const doActivate = () => {
+    _postScene('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/activate', {}, () => {
+      closeModal('modal-scenes');
+    });
+  };
+  if (_currentSceneId && _currentSceneId !== sceneId) {
+    _autoSaveCurrentSceneNow(doActivate);
+    return;
+  }
+  doActivate();
+}
+
+/* Auto-ativa uma cena sem confirmação (usado na inicialização) */
+function _activateSceneAuto(sceneId) {
+  const doActivate = () => {
+    _postScene('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/activate', {}, () => {
+      // Silencioso na inicialização
+    });
+  };
+  if (_currentSceneId && _currentSceneId !== sceneId) {
+    _autoSaveCurrentSceneNow(doActivate);
+    return;
+  }
+  doActivate();
 }
 
 /* Sobrescreve uma cena existente com o estado atual */
 function _saveCurrentToScene(sceneId, sceneName) {
   if (!confirm('Sobrescrever "' + sceneName + '" com o estado atual da mesa?\n\nTodos os dados anteriores desta cena serão substituídos.')) return;
   const payload = _buildScenePayload(sceneName);
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
-  fetch('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/save', {
+  _postScene('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/save', payload, () => {
+    showToast('💾 Cena "' + sceneName + '" salva!');
+    _loadSceneList();
+  });
+}
+
+/* Auto-save silencioso da cena ativa (chamado ao mover tokens) */
+function _autoSaveCurrentScene() {
+  if (SESSION.role !== 'gm' || !_currentSceneId) return;
+  if (_sceneAutoSaveTimer) clearTimeout(_sceneAutoSaveTimer);
+  _sceneAutoSaveTimer = setTimeout(() => {
+    _sceneAutoSaveTimer = null;
+    _autoSaveCurrentSceneNow();
+  }, 500);
+}
+
+/* Auto-save imediato (sem debounce), usado antes de trocar de cena */
+function _autoSaveCurrentSceneNow(onDone) {
+  const done = typeof onDone === 'function' ? onDone : null;
+  if (_sceneAutoSaveTimer) {
+    clearTimeout(_sceneAutoSaveTimer);
+    _sceneAutoSaveTimer = null;
+  }
+  if (SESSION.role !== 'gm' || !_currentSceneId) {
+    if (done) done();
+    return;
+  }
+  const tok = sessionStorage.getItem('tvtt_gm_tok') || localStorage.getItem('tvtt_gm_tok') || '';
+  if (!tok) {
+    if (done) done();
+    return;
+  }
+  const payload = _buildScenePayload(null); // null = não altera nome
+  fetch('/api/room/' + SESSION.code + '/scenes/' + _currentSceneId + '/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-GM-Token': tok },
     body: JSON.stringify(payload)
-  })
-    .then(r => r.json())
-    .then(() => { showToast('💾 Cena "' + sceneName + '" salva!'); _loadSceneList(); })
-    .catch(() => showToast('❌ Erro ao salvar'));
+  }).finally(() => {
+    if (done) done();
+  });
 }
 
 /* Renomeia uma cena */
 function _renameScene(sceneId, currentName) {
   const name = prompt('Novo nome para a cena:', currentName);
   if (!name || !name.trim() || name.trim() === currentName) return;
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
-  fetch('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/rename', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-GM-Token': tok },
-    body: JSON.stringify({ name: name.trim() })
-  })
-    .then(() => { _loadSceneList(); })
-    .catch(() => showToast('❌ Erro ao renomear'));
+  _postScene('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/rename', { name: name.trim() }, () => {
+    _loadSceneList();
+  });
 }
 
 /* Deleta uma cena */
 function _deleteScene(sceneId, sceneName) {
   if (!confirm('Deletar a cena "' + sceneName + '"?\n\nEsta ação não pode ser desfeita.')) return;
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
-  fetch('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/delete', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-GM-Token': tok },
-    body: '{}'
-  })
-    .then(() => { showToast('🗑 Cena deletada'); _loadSceneList(); })
-    .catch(() => showToast('❌ Erro ao deletar'));
+  _postScene('/api/room/' + SESSION.code + '/scenes/' + sceneId + '/delete', {}, () => {
+    showToast('🗑 Cena deletada');
+    _loadSceneList();
+  });
 }
 
 /* Helper POST genérico */
 function _postScene(url, payload, onSuccess) {
-  const tok = sessionStorage.getItem('tvtt_gm_tok') || '';
+  const tok = _gmTokenOrWarn();
+  if (!tok) return;
+  let body = '{}';
+  try {
+    body = JSON.stringify(payload ?? {});
+  } catch (e) {
+    showToast('❌ Falha ao montar dados da cena');
+    return;
+  }
+
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-GM-Token': tok },
-    body: JSON.stringify(payload)
+    body
   })
-    .then(r => r.json())
-    .then(d => { if (d.scene || d.ok !== false) onSuccess(d); else showToast('❌ ' + (d.error || 'Erro')); })
-    .catch(() => showToast('❌ Erro de rede'));
+    .then(async r => {
+      let data = null;
+      try {
+        data = await r.json();
+      } catch (_) {
+        data = null;
+      }
+
+      if (!r.ok || (data && data.ok === false)) {
+        throw new Error((data && data.error) ? data.error : ('Erro HTTP ' + r.status));
+      }
+
+      onSuccess(data || {});
+    })
+    .catch((err) => {
+      const msg = (err && err.message) ? err.message : 'Erro de rede';
+      if (/failed to fetch/i.test(msg)) {
+        showToast('❌ Falha de rede: verifique se abriu via /portal.html e se o servidor está ativo.');
+        return;
+      }
+      showToast('❌ ' + msg);
+    });
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -8631,6 +8757,12 @@ document.addEventListener('mouseup', e => {
     isRightPanning = false;
     const stage = document.getElementById('map-stage');
     if (stage) stage.style.cursor = ACTIVE_TOOL === 'move' ? 'grab' : 'crosshair';
+  }
+  if (e.button === 0 && isDraggingToken && dragToken) {
+    const mapContainer = document.getElementById('map-container');
+    if (!mapContainer || !mapContainer.contains(e.target)) {
+      mapMouseUp(e);
+    }
   }
 });
 

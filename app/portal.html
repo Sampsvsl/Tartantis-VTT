@@ -357,7 +357,7 @@ hr.divider { border:none;border-top:1px solid rgba(200,113,42,.18);margin:16px 0
 /* ════════════════════════════════════════
    ESTADO
 ════════════════════════════════════════ */
-let _gmTok   = sessionStorage.getItem('tvtt_gm_tok')  || '';
+let _gmTok   = sessionStorage.getItem('tvtt_gm_tok')  || localStorage.getItem('tvtt_gm_tok') || '';
 let _plrTok  = sessionStorage.getItem('tvtt_plr_tok') || '';
 let _plrId   = sessionStorage.getItem('tvtt_plr_id')  || '';
 let _camp    = null;   // campanha atual
@@ -391,8 +391,16 @@ function toast(msg) {
 
 const gmH = () => ({'Content-Type':'application/json','X-GM-Token':_gmTok});
 
-function saveGM(tok)  { _gmTok = tok; sessionStorage.setItem('tvtt_gm_tok', tok); }
-function clearGM()    { _gmTok = '';  sessionStorage.removeItem('tvtt_gm_tok'); }
+function saveGM(tok)  {
+  _gmTok = tok;
+  sessionStorage.setItem('tvtt_gm_tok', tok);
+  localStorage.setItem('tvtt_gm_tok', tok);
+}
+function clearGM()    {
+  _gmTok = '';
+  sessionStorage.removeItem('tvtt_gm_tok');
+  localStorage.removeItem('tvtt_gm_tok');
+}
 function savePLR(pid,tok) { _plrId=pid;_plrTok=tok; sessionStorage.setItem('tvtt_plr_id',pid); sessionStorage.setItem('tvtt_plr_tok',tok); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 

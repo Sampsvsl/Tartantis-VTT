@@ -69,6 +69,20 @@ def _ws_kick_pid(code, pid):
             _ws_send(c, '{"type":"kicked"}')
             try: _ws_room_clients[code].remove(c)
             except ValueError: pass
+def _ensure_default_scene(code: str) -> None:
+    """Cria cena padrão se nenhuma existir (primeira abertura do app)"""
+    scenes_dir = _scenes_dir(code)
+    if not scenes_dir.exists() or len(list(scenes_dir.glob('*.json'))) == 0:
+        default_scene = {
+            'id': 'scene_default',
+            'name': 'Cena Padrão',
+            'createdAt': int(_time()),
+            'map': {},
+            'tokens': [],
+        }
+        scenes_dir.mkdir(parents=True, exist_ok=True)
+        _write_json(_scene_file(code, 'scene_default'), default_scene)
+
 def _ws_ensure_room(c):
     if c not in _ws_room_state:
         # Tenta carregar estado persistido do disco (funções definidas após este bloco)
@@ -86,9 +100,12 @@ def _ws_ensure_room(c):
                 'init_turn':  saved.get('init_turn', 0),
                 'blind_roll': saved.get('blind_roll', False),
                 'rolltables': saved.get('rolltables', []),
+                'activeSceneId': saved.get('activeSceneId'),
             }
         else:
-            _ws_room_state[c]={'map':{},'tokens':{},'init':[],'init_turn':0,'blind_roll':False,'rolltables':[]}
+            _ws_room_state[c]={'map':{},'tokens':{},'init':[],'init_turn':0,'blind_roll':False,'rolltables':[],'activeSceneId':None}
+        # Garante que existe pelo menos uma cena padrão (primeira abertura do app)
+        _ensure_default_scene(c)
         _ws_room_clients[c]=[]
 def _ws_send(client,text):
     try:
@@ -160,10 +177,14 @@ def _get_persistent_data_dir():
         test_file.unlink()
         return local_data
     except Exception:
-        # 2. Fallback para pasta do usuário (~/.TartantisVTT/data)
-        if platform.system() == 'Linux':
-            return Path.home() / '.TartantisVTT' / 'data'
-        return PROJECT_DIR / 'data'
+        # 2. Fallback para pasta de usuário por sistema operacional
+        sys_name = platform.system()
+        if sys_name == 'Windows':
+            base = os.environ.get('LOCALAPPDATA') or str(Path.home() / 'AppData' / 'Local')
+            return Path(base) / 'TartantisVTT' / 'data'
+        if sys_name == 'Darwin':
+            return Path.home() / 'Library' / 'Application Support' / 'TartantisVTT' / 'data'
+        return Path.home() / '.TartantisVTT' / 'data'
 
 DATA_DIR = _get_persistent_data_dir()
 print(f"[*] Diretório de dados: {DATA_DIR}")
@@ -236,9 +257,23 @@ def _list_scenes(code: str) -> list:
             pass
     return scenes
 
+def _get_active_scene_id(code: str):
+    with _ws_hub_lock:
+        st = _ws_room_state.get(code)
+        if isinstance(st, dict) and st.get('activeSceneId'):
+            return st.get('activeSceneId')
+    saved = _read_json(_room_state_file(code), {})
+    if isinstance(saved, dict):
+        return saved.get('activeSceneId')
+    return None
+
 def _write_json(path: Path, data) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
+    except Exception as e:
+        print(f"[ERROR] Failed to write JSON to {path}: {e}")
+        raise
 
 def _read_json(path: Path, default=None):
     try:
@@ -256,9 +291,11 @@ def _persist_room_state(code: str, st: dict) -> None:
             'init_turn':  st.get('init_turn', 0),
             'blind_roll': st.get('blind_roll', False),
             'rolltables': st.get('rolltables', []),
+            'activeSceneId': st.get('activeSceneId'),
         })
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[ERROR] Failed to persist room state for {code}: {e}")
+        raise
 
 def _append_chat(code: str, entry: dict) -> None:
     """Acrescenta mensagem ao arquivo de chat da sala."""
@@ -1252,7 +1289,7 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         elif resource == 'scenes':
             if len(parts) == 4:
                 # GET /api/room/{code}/scenes → lista todas as cenas
-                self._json_ok({'scenes': _list_scenes(code)})
+                self._json_ok({'scenes': _list_scenes(code), 'activeSceneId': _get_active_scene_id(code)})
             elif len(parts) == 5:
                 # GET /api/room/{code}/scenes/{id} → retorna cena completa
                 scene_id = parts[4]
@@ -1311,120 +1348,127 @@ class MesaHandler(http.server.SimpleHTTPRequestHandler):
         elif resource == 'scenes':
             # Todas as operações de escrita em cenas são exclusivas do GM
             if not self._require_gm(): return
-            # POST /api/room/{code}/scenes → cria nova cena
-            if len(parts) == 4:
-                if not isinstance(data, dict):
-                    self._json_error(400, 'body inválido'); return
-                import uuid as _uuid
-                scene_id = 'scene_' + _uuid.uuid4().hex[:10]
-                scene = {
-                    'id':        scene_id,
-                    'name':      data.get('name', 'Nova Cena'),
-                    'bgImageURL': data.get('bgImageURL', ''),
-                    'bgColor':   data.get('bgColor', '#1c1712'),
-                    'gridSize':  data.get('gridSize', 50),
-                    'showGrid':  data.get('showGrid', True),
-                    'gridOffsetX': data.get('gridOffsetX', 0),
-                    'gridOffsetY': data.get('gridOffsetY', 0),
-                    'gridColor': data.get('gridColor', 'gold'),
-                    'fog':       data.get('fog', {'enabled': False, 'cleared': {}}),
-                    'drawings':  data.get('drawings', []),
-                    'weather':   data.get('weather', {'type': 'none', 'intensity': 1}),
-                    'walls':     data.get('walls', []),
-                    'journalPins': data.get('journalPins', []),
-                    'audio':     data.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0}),
-                    'tokens':    data.get('tokens', []),
-                    'panX':      data.get('panX', 0),
-                    'panY':      data.get('panY', 0),
-                    'zoom':      data.get('zoom', 1),
-                    'createdAt': int(__import__('time').time() * 1000),
-                }
-                _write_json(_scene_file(code, scene_id), scene)
-                self._json_ok({'scene': scene})
+            try:
+                # POST /api/room/{code}/scenes → cria nova cena
+                if len(parts) == 4:
+                    if not isinstance(data, dict):
+                        self._json_error(400, 'body inválido'); return
+                    scene_id = 'scene_' + secrets.token_hex(5)
+                    scene = {
+                        'id':        scene_id,
+                        'name':      data.get('name', 'Nova Cena'),
+                        'bgImageURL': data.get('bgImageURL', ''),
+                        'bgColor':   data.get('bgColor', '#1c1712'),
+                        'gridSize':  data.get('gridSize', 50),
+                        'showGrid':  data.get('showGrid', True),
+                        'gridOffsetX': data.get('gridOffsetX', 0),
+                        'gridOffsetY': data.get('gridOffsetY', 0),
+                        'gridColor': data.get('gridColor', 'gold'),
+                        'fog':       data.get('fog', {'enabled': False, 'cleared': {}}),
+                        'drawings':  data.get('drawings', []),
+                        'weather':   data.get('weather', {'type': 'none', 'intensity': 1}),
+                        'walls':     data.get('walls', []),
+                        'journalPins': data.get('journalPins', []),
+                        'audio':     data.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0}),
+                        'tokens':    data.get('tokens', []),
+                        'panX':      data.get('panX', 0),
+                        'panY':      data.get('panY', 0),
+                        'zoom':      data.get('zoom', 1),
+                        'createdAt': int(__import__('time').time() * 1000),
+                    }
+                    _write_json(_scene_file(code, scene_id), scene)
+                    self._json_ok({'scene': scene})
 
-            elif len(parts) == 6:
-                scene_id = parts[4]
-                action   = parts[5]
-                if not re.match(r'^[A-Za-z0-9_\-]+$', scene_id):
-                    self._json_error(400, 'scene_id inválido'); return
+                elif len(parts) == 6:
+                    scene_id = parts[4]
+                    action   = parts[5]
+                    if not re.match(r'^[A-Za-z0-9_\-]+$', scene_id):
+                        self._json_error(400, 'scene_id inválido'); return
 
-                if action == 'save':
-                    # POST /api/room/{code}/scenes/{id}/save → salva estado atual na cena
-                    existing = _read_json(_scene_file(code, scene_id), {})
-                    if not existing:
-                        self._json_error(404, 'Cena não encontrada'); return
-                    existing.update({
-                        'bgImageURL':  data.get('bgImageURL',  existing.get('bgImageURL', '')),
-                        'bgColor':     data.get('bgColor',     existing.get('bgColor', '#1c1712')),
-                        'gridSize':    data.get('gridSize',    existing.get('gridSize', 50)),
-                        'showGrid':    data.get('showGrid',    existing.get('showGrid', True)),
-                        'gridOffsetX': data.get('gridOffsetX', existing.get('gridOffsetX', 0)),
-                        'gridOffsetY': data.get('gridOffsetY', existing.get('gridOffsetY', 0)),
-                        'gridColor':   data.get('gridColor',   existing.get('gridColor', 'gold')),
-                        'fog':         data.get('fog',         existing.get('fog', {'enabled': False, 'cleared': {}})),
-                        'drawings':    data.get('drawings',    existing.get('drawings', [])),
-                        'weather':     data.get('weather',     existing.get('weather', {'type': 'none', 'intensity': 1})),
-                        'walls':       data.get('walls',       existing.get('walls', [])),
-                        'journalPins': data.get('journalPins', existing.get('journalPins', [])),
-                        'audio':       data.get('audio',       existing.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0})),
-                        'tokens':      data.get('tokens',      existing.get('tokens', [])),
-                        'panX':        data.get('panX',        existing.get('panX', 0)),
-                        'panY':        data.get('panY',        existing.get('panY', 0)),
-                        'zoom':        data.get('zoom',        existing.get('zoom', 1)),
-                    })
-                    _write_json(_scene_file(code, scene_id), existing)
-                    self._json_ok({'scene': existing})
+                    if action == 'save':
+                        # POST /api/room/{code}/scenes/{id}/save → salva estado atual na cena
+                        if not isinstance(data, dict):
+                            self._json_error(400, 'body inválido'); return
+                        existing = _read_json(_scene_file(code, scene_id), {})
+                        if not existing:
+                            self._json_error(404, 'Cena não encontrada'); return
+                        existing.update({
+                            'bgImageURL':  data.get('bgImageURL',  existing.get('bgImageURL', '')),
+                            'bgColor':     data.get('bgColor',     existing.get('bgColor', '#1c1712')),
+                            'gridSize':    data.get('gridSize',    existing.get('gridSize', 50)),
+                            'showGrid':    data.get('showGrid',    existing.get('showGrid', True)),
+                            'gridOffsetX': data.get('gridOffsetX', existing.get('gridOffsetX', 0)),
+                            'gridOffsetY': data.get('gridOffsetY', existing.get('gridOffsetY', 0)),
+                            'gridColor':   data.get('gridColor',   existing.get('gridColor', 'gold')),
+                            'fog':         data.get('fog',         existing.get('fog', {'enabled': False, 'cleared': {}})),
+                            'drawings':    data.get('drawings',    existing.get('drawings', [])),
+                            'weather':     data.get('weather',     existing.get('weather', {'type': 'none', 'intensity': 1})),
+                            'walls':       data.get('walls',       existing.get('walls', [])),
+                            'journalPins': data.get('journalPins', existing.get('journalPins', [])),
+                            'audio':       data.get('audio',       existing.get('audio', {'playlist': [], 'currentId': None, 'playing': False, 'volume': 0.6, 'startedAt': 0, 'pausedAt': 0})),
+                            'tokens':      data.get('tokens',      existing.get('tokens', [])),
+                            'panX':        data.get('panX',        existing.get('panX', 0)),
+                            'panY':        data.get('panY',        existing.get('panY', 0)),
+                            'zoom':        data.get('zoom',        existing.get('zoom', 1)),
+                        })
+                        _write_json(_scene_file(code, scene_id), existing)
+                        self._json_ok({'scene': existing})
 
-                elif action == 'activate':
-                    # POST /api/room/{code}/scenes/{id}/activate → ativa cena para todos
-                    scene = _read_json(_scene_file(code, scene_id))
-                    if not scene:
-                        self._json_error(404, 'Cena não encontrada'); return
-                    # Atualiza estado da sala em memória
-                    with _ws_hub_lock:
-                        _ws_ensure_room(code)
-                        st = _ws_room_state[code]
-                        map_settings = {k: v for k, v in scene.items() if k not in ('tokens', 'id', 'name', 'createdAt')}
-                        st['map'] = map_settings
-                        tokens_list = scene.get('tokens', [])
-                        st['tokens'] = {t['id']: t for t in tokens_list if isinstance(t, dict) and 'id' in t}
-                    _persist_room_state(code, _ws_room_state[code])
-                    # Broadcast para todos os clientes
-                    _ws_broadcast(code, json.dumps({
-                        'type': 'scene_loaded',
-                        'room': code,
-                        'data': {
-                            'id':     scene_id,
-                            'name':   scene.get('name', 'Cena'),
-                            'map':    map_settings,
-                            'tokens': tokens_list,
-                        }
-                    }))
-                    self._json_ok({'ok': True, 'sceneId': scene_id})
+                    elif action == 'activate':
+                        # POST /api/room/{code}/scenes/{id}/activate → ativa cena para todos
+                        scene = _read_json(_scene_file(code, scene_id))
+                        if not scene:
+                            self._json_error(404, 'Cena não encontrada'); return
+                        # Atualiza estado da sala em memória
+                        with _ws_hub_lock:
+                            _ws_ensure_room(code)
+                            st = _ws_room_state[code]
+                            map_settings = {k: v for k, v in scene.items() if k not in ('tokens', 'id', 'name', 'createdAt')}
+                            st['map'] = map_settings
+                            tokens_list = scene.get('tokens', [])
+                            st['tokens'] = {t['id']: t for t in tokens_list if isinstance(t, dict) and 'id' in t}
+                            st['activeSceneId'] = scene_id
+                        _persist_room_state(code, _ws_room_state[code])
+                        # Broadcast para todos os clientes
+                        _ws_broadcast(code, json.dumps({
+                            'type': 'scene_loaded',
+                            'room': code,
+                            'data': {
+                                'id':     scene_id,
+                                'name':   scene.get('name', 'Cena'),
+                                'map':    map_settings,
+                                'tokens': tokens_list,
+                            }
+                        }))
+                        self._json_ok({'ok': True, 'sceneId': scene_id})
 
-                elif action == 'rename':
-                    # POST /api/room/{code}/scenes/{id}/rename → renomeia cena
-                    name = (data or {}).get('name', '').strip()
-                    if not name:
-                        self._json_error(400, 'nome inválido'); return
-                    existing = _read_json(_scene_file(code, scene_id), {})
-                    if not existing:
-                        self._json_error(404, 'Cena não encontrada'); return
-                    existing['name'] = name
-                    _write_json(_scene_file(code, scene_id), existing)
-                    self._json_ok({})
+                    elif action == 'rename':
+                        # POST /api/room/{code}/scenes/{id}/rename → renomeia cena
+                        if not isinstance(data, dict):
+                            self._json_error(400, 'body inválido'); return
+                        name = (data or {}).get('name', '').strip()
+                        if not name:
+                            self._json_error(400, 'nome inválido'); return
+                        existing = _read_json(_scene_file(code, scene_id), {})
+                        if not existing:
+                            self._json_error(404, 'Cena não encontrada'); return
+                        existing['name'] = name
+                        _write_json(_scene_file(code, scene_id), existing)
+                        self._json_ok({})
 
-                elif action == 'delete':
-                    # POST /api/room/{code}/scenes/{id}/delete → apaga cena
-                    f = _scene_file(code, scene_id)
-                    if f.exists():
-                        f.unlink()
-                    self._json_ok({})
+                    elif action == 'delete':
+                        # POST /api/room/{code}/scenes/{id}/delete → apaga cena
+                        f = _scene_file(code, scene_id)
+                        if f.exists():
+                            f.unlink()
+                        self._json_ok({})
 
+                    else:
+                        self._json_error(404, 'ação desconhecida')
                 else:
-                    self._json_error(404, 'ação desconhecida')
-            else:
-                self._json_error(404, 'not found')
+                    self._json_error(404, 'not found')
+            except Exception as e:
+                self._json_error(500, f'Falha ao gravar cena: {e}')
 
         else:
             self._json_error(404, 'not found')
