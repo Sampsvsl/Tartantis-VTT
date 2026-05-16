@@ -11,6 +11,7 @@ import webbrowser
 import threading
 import runpy
 import urllib.request
+import traceback
 from typing import Optional
 from pathlib import Path
 
@@ -37,6 +38,7 @@ PORT_RANGE = 11
 SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
 APP_DIR       = BASE_DIR / 'app'
 LOG_FILE      = EXE_DIR / '.server.log'
+STARTUP_TIMEOUT = 40.0
 
 
 def wait_for_server(port: int, timeout: float = 12.0) -> bool:
@@ -75,8 +77,20 @@ def get_local_ip() -> str:
         return '127.0.0.1'
 
 
+def _read_log_tail(path: Path, max_lines: int = 12) -> str:
+    try:
+        text = path.read_text(encoding='utf-8', errors='ignore')
+        lines = [ln for ln in text.splitlines() if ln.strip()]
+        if not lines:
+            return ''
+        return '\n'.join(lines[-max_lines:])
+    except Exception:
+        return ''
+
+
 def main():
     is_frozen = getattr(sys, 'frozen', False)
+    srv_error = {'trace': ''}
 
     if not SERVER_SCRIPT.exists():
         if sys.platform == 'win32':
@@ -96,8 +110,8 @@ def main():
         def run_srv():
             try:
                 runpy.run_path(str(SERVER_SCRIPT), run_name='__main__')
-            except Exception as e:
-                import traceback
+            except Exception:
+                srv_error['trace'] = traceback.format_exc()
                 traceback.print_exc(file=f_log)
                 f_log.flush()
                 
@@ -110,20 +124,28 @@ def main():
             creationflags=0x08000000 if sys.platform == 'win32' else 0
         )
 
-    selected_port = detect_server_port(PORT, PORT_RANGE, timeout=12)
+    selected_port = detect_server_port(PORT, PORT_RANGE, timeout=STARTUP_TIMEOUT)
     if selected_port is None:
         # Fallback: mantém comportamento anterior para mensagem de erro em ambientes sem /api/info
-        if wait_for_server(PORT, timeout=1.0):
+        if wait_for_server(PORT, timeout=2.0):
             selected_port = PORT
         else:
             selected_port = None
 
     if selected_port is None:
+        extra = ''
+        if srv_error['trace']:
+            extra = '\n\nDetalhes técnicos:\n' + srv_error['trace'][-1200:]
+        else:
+            tail = _read_log_tail(LOG_FILE)
+            if tail:
+                extra = '\n\nUltimas linhas do log:\n' + tail[-1200:]
+
         if sys.platform == 'win32':
             import ctypes
-            ctypes.windll.user32.MessageBoxW(0, f"Falha ao iniciar o servidor na porta {PORT}.\nVerifique: {LOG_FILE}", "Tartantis VTT", 0x10)
+            ctypes.windll.user32.MessageBoxW(0, f"Falha ao iniciar o servidor entre as portas {PORT}-{PORT + PORT_RANGE - 1}.\nVerifique: {LOG_FILE}{extra}", "Tartantis VTT", 0x10)
         else:
-            print(f"Falha ao iniciar o servidor. Log: {LOG_FILE}")
+            print(f"Falha ao iniciar o servidor. Log: {LOG_FILE}{extra}")
         
         if server_proc:
             server_proc.terminate()
