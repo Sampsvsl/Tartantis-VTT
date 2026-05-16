@@ -30,7 +30,7 @@ Chat em tempo real via WebSocket, com sincronização imediata de mapa, tokens e
 ## Instalação
 
 **Windows**
-Baixe o `.exe` na [pagina de releases](../../releases/latest), execute e pronto. O app abre o firewall automaticamente, inicia o servidor e mostra o link para os jogadores.
+Baixe `TartantisVTT-Windows-Portable.zip` na [pagina de releases](../../releases/latest), extraia e execute `TartantisVTT.exe` direto. Na primeira execucao, o Windows pode exibir o prompt padrao de firewall para liberar a porta local da mesa.
 
 **macOS**
 Baixe `TartantisVTT-macOS.zip` em [releases](../../releases/latest), extraia e mova o `.app` para Aplicativos. Na primeira execução, clique com o botão direito em **Abrir** para passar pelo Gatekeeper.

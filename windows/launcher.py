@@ -10,20 +10,7 @@ import time
 import webbrowser
 import threading
 import runpy
-import base64
-import hashlib
-import json
-import re
-import secrets
-import shutil
-import struct
 import urllib.request
-import urllib.parse
-import platform
-import http.server
-import socketserver
-import xmlrpc.server
-import tempfile
 from typing import Optional
 from pathlib import Path
 
@@ -50,12 +37,6 @@ PORT_RANGE = 11
 SERVER_SCRIPT = BASE_DIR / 'core' / 'server.py'
 APP_DIR       = BASE_DIR / 'app'
 LOG_FILE      = EXE_DIR / '.server.log'
-
-
-def open_firewall_port(port: int):
-    rule_name = f"TartantisVTT-TCP{port}"
-    subprocess.run(['netsh', 'advfirewall', 'firewall', 'delete', 'rule', f'name={rule_name}'], capture_output=True)
-    subprocess.run(['netsh', 'advfirewall', 'firewall', 'add', 'rule', f'name={rule_name}', 'dir=in', 'action=allow', 'protocol=TCP', f'localport={port}', 'profile=any', 'description=Tartantis VTT'], capture_output=True)
 
 
 def wait_for_server(port: int, timeout: float = 12.0) -> bool:
@@ -95,8 +76,6 @@ def get_local_ip() -> str:
 
 
 def main():
-    threading.Thread(target=open_firewall_port, args=(PORT,), daemon=True).start()
-
     is_frozen = getattr(sys, 'frozen', False)
 
     if not SERVER_SCRIPT.exists():
@@ -149,9 +128,6 @@ def main():
         if server_proc:
             server_proc.terminate()
         sys.exit(1)
-
-    # Garante regra para a porta efetiva em uso
-    threading.Thread(target=open_firewall_port, args=(selected_port,), daemon=True).start()
 
     local_ip = get_local_ip()
     url = f"http://127.0.0.1:{selected_port}/portal.html"
@@ -210,38 +186,6 @@ def main():
         update_label = tk.Label(root, text='', fg=GOLD, bg=BG, cursor='hand2', font=('', 8, 'underline'))
         update_label.pack(pady=(0, 8))
 
-        def _download_with_progress(url: str, out_path: Path):
-            def _hook(blocks, block_size, total_size):
-                if total_size <= 0:
-                    return
-                pct = int(min(100, (blocks * block_size * 100) / total_size))
-                root.after(0, lambda: update_label.config(text=f'Baixando atualização... {pct}%'))
-            urllib.request.urlretrieve(url, str(out_path), reporthook=_hook)
-
-        def _start_auto_update(ver: str, url: str):
-            try:
-                if not url or not url.lower().endswith('.exe'):
-                    webbrowser.open(url)
-                    return
-                update_label.config(text='Preparando atualização automática...')
-                tmp_dir = Path(tempfile.gettempdir()) / 'TartantisVTT-updater'
-                tmp_dir.mkdir(parents=True, exist_ok=True)
-                installer_path = tmp_dir / f'Instalador_TartantisVTT_v{ver}.exe'
-                _download_with_progress(url, installer_path)
-                update_label.config(text='Atualizando... fechando app atual')
-                subprocess.Popen([
-                    str(installer_path),
-                    '--update-dir', str(EXE_DIR),
-                    '--wait-pid', str(os.getpid()),
-                ], creationflags=0x08000000)
-                root.after(150, root.destroy)
-            except Exception:
-                update_label.config(text='Falha no auto-update. Abrindo página do release...')
-                try:
-                    webbrowser.open('https://github.com/Sampsvsl/Tartantis-VTT/releases/latest')
-                except Exception:
-                    pass
-
         def check_updates_task():
             if not updater:
                 return
@@ -252,13 +196,14 @@ def main():
                         update_label.config(text=f'Nova versão: v{ver} disponível')
                         ok = messagebox.askyesno(
                             'Atualização disponível',
-                            f'Nova versão v{ver} encontrada.\n\nDeseja atualizar agora automaticamente?'
+                            f'Nova versão v{ver} encontrada.\n\nDeseja abrir a página oficial do release para atualizar manualmente?'
                         )
-                        if ok:
-                            threading.Thread(target=_start_auto_update, args=(ver, uurl), daemon=True).start()
-                        else:
+                        if not ok:
                             update_label.config(text=f'Nova versão: v{ver} — Clique para baixar')
                             update_label.bind('<Button-1>', lambda e: webbrowser.open(uurl))
+                            return
+                        webbrowser.open(uurl or 'https://github.com/Sampsvsl/Tartantis-VTT/releases/latest')
+                        update_label.config(text=f'Nova versão: v{ver} — Página de download aberta')
                     root.after(0, _ask_and_handle)
             except:
                 pass

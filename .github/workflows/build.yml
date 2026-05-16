@@ -9,7 +9,7 @@ on:
 jobs:
 
   # ─────────────────────────────────────────────
-  #  Windows — Instalador
+  #  Windows — Pacote portatil
   # ─────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
@@ -31,7 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TartantisVTT-Windows
-          path: dist/Instalador_TartantisVTT.exe
+          path: dist/TartantisVTT-Windows-Portable.zip
 
   # ─────────────────────────────────────────────
   #  Linux — AppImage
@@ -118,7 +118,7 @@ jobs:
           tag_name: ${{ steps.rel.outputs.tag }}
           name: Release ${{ steps.rel.outputs.tag }}
           files: |
-            dist/Instalador_TartantisVTT.exe
+            dist/TartantisVTT-Windows-Portable.zip
             dist/TartantisVTT-x86_64.AppImage
             dist/TartantisVTT-x86_64.AppImage.zsync
             dist/TartantisVTT-macOS.zip

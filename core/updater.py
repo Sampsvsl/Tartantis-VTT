@@ -31,7 +31,7 @@ def _platform_key(platform_hint: Optional[str] = None) -> str:
 def _pick_asset_url(assets: List[Dict[str, str]], platform_hint: Optional[str] = None) -> Optional[str]:
     key = _platform_key(platform_hint)
     targets = {
-        'windows': ['instalador_tartantisvtt.exe', 'tartantisvtt.exe'],
+        'windows': ['tartantisvtt-windows-portable.zip', 'instalador_tartantisvtt.exe', 'tartantisvtt.exe'],
         'linux': ['tartantisvtt-x86_64.appimage'],
         'macos': ['tartantisvtt-macos.zip'],
     }
